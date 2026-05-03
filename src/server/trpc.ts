@@ -1,7 +1,8 @@
 import { initTRPC } from '@trpc/server'
+import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch'
 
 // Replace with a real createContext function when auth is added.
-export const createTRPCContext = async (_opts: { req: Request }) => {
+export const createTRPCContext = async (_opts: FetchCreateContextFnOptions) => {
   return {}
 }
 

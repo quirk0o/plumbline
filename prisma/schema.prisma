@@ -350,3 +350,75 @@ model Sim {
 
   @@map("sims")
 }
+
+model SimPersonalityTrait {
+  simId              String
+  personalityTraitId String
+  createdAt          DateTime @default(now())
+
+  sim              Sim              @relation(fields: [simId], references: [id], onDelete: Cascade)
+  personalityTrait PersonalityTrait @relation(fields: [personalityTraitId], references: [id])
+
+  @@id([simId, personalityTraitId])
+  @@map("sim_personality_traits")
+}
+
+model SimTrait {
+  simId     String
+  traitId   String
+  createdAt DateTime @default(now())
+
+  sim   Sim   @relation(fields: [simId], references: [id], onDelete: Cascade)
+  trait Trait @relation(fields: [traitId], references: [id])
+
+  @@id([simId, traitId])
+  @@map("sim_traits")
+}
+
+model SimSkill {
+  simId     String
+  skillId   String
+  level     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sim   Sim   @relation(fields: [simId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+
+  @@id([simId, skillId])
+  @@map("sim_skills")
+}
+
+model SimAspiration {
+  id           String    @id @default(cuid())
+  simId        String
+  aspirationId String
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  sim        Sim        @relation(fields: [simId], references: [id], onDelete: Cascade)
+  aspiration Aspiration @relation(fields: [aspirationId], references: [id])
+
+  @@unique([simId, aspirationId])
+  @@map("sim_aspirations")
+}
+
+model SimCareer {
+  id             String         @id @default(cuid())
+  simId          String
+  careerId       String?
+  employmentType EmploymentType
+  level          Int?
+  branch         String?
+  customName     String?
+  customGoal     String?
+  startedAt      DateTime
+  endedAt        DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  sim    Sim     @relation(fields: [simId], references: [id], onDelete: Cascade)
+  career Career? @relation(fields: [careerId], references: [id])
+
+  @@map("sim_careers")
+}

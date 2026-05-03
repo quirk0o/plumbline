@@ -26,7 +26,7 @@ SimsTrack-526 is a Next.js (App Router) + tRPC + Prisma app for tracking Sims 4 
 | Hidden traits | Excluded entirely | Not tracked by players |
 | Life-stage availability | `minLifeStage?` + `maxLifeStage?` on both `Skill` and `Aspiration` | Consistent approach; no separate type enum |
 | DLC gating | Nullable `packId` FK on all content items | Enables JOIN-based filtering; base game = null |
-| Family relationships | One canonical row per pair; inverse derived in code | No sync risk; both sides queryable via OR + index |
+| Family relationships | Store only direct parent-child edges (BIOLOGICAL / ADOPTIVE / STEP); derived labels computed at app layer | Adding a parent requires no cascading updates; recursive CTEs handle traversal at small scale (~200 Sims) |
 | Social relationships | Undirected; service normalises pair order (simAId < simBId) | No duplicate rows; uniqueness enforced cleanly |
 | Aspiration status | `completedAt DateTime?` — null = active | Eliminates redundant status enum |
 | Career history | `SimCareer` with `startedAt`/`endedAt` | Full history; `endedAt null` = current job |
@@ -51,16 +51,7 @@ enum OccultType        { VAMPIRE SPELLCASTER MERMAID WEREWOLF FAIRY
 enum CauseOfDeath      { OLD_AGE DROWNING FIRE ELECTROCUTION HUNGER
                          OVEREXERTION EMBARRASSMENT ANGER LAUGHTER COWPLANT
                          PUFFERFISH MURPHY_BED STEAM POISON METEOR }
-enum FamilyRelationshipType {
-  PARENT CHILD
-  GRANDPARENT GRANDCHILD
-  GREAT_GRANDPARENT GREAT_GRANDCHILD
-  SIBLING HALF_SIBLING STEP_SIBLING
-  STEP_PARENT STEP_CHILD
-  ADOPTIVE_PARENT ADOPTED_CHILD
-  AUNT_UNCLE NIECE_NEPHEW COUSIN
-  PARENT_IN_LAW CHILD_IN_LAW SIBLING_IN_LAW
-}
+enum FamilyRelationshipType { BIOLOGICAL ADOPTIVE STEP }
 enum RomanticStatus    { NONE DATING ENGAGED MARRIED EX_PARTNER WIDOWED }
 ```
 
@@ -108,7 +99,7 @@ enum RomanticStatus    { NONE DATING ENGAGED MARRIED EX_PARTNER WIDOWED }
 | Model | Fields | Notes |
 |---|---|---|
 | `UserPack` | `userId→User` · `packId→Pack` · `createdAt` · `@@id([userId, packId])` | Which packs a user has installed |
-| `Legacy` | `id` · `name` · `userId→User` (cascade) · timestamps | One distinct playthrough |
+| `Legacy` | `id` · `name` · `userId→User` (cascade) · `founderSimId?→Sim` @unique (SetNull) · timestamps | `founderSimId` set after the founding Sim is created |
 | `Household` | `id` · `name` · `legacyId→Legacy` (cascade) · timestamps | Max 8 Sims — enforced at app layer |
 | `Sim` | `id` · `firstName` · `lastName` · `householdId→Household` (cascade) · `lifeStage LifeStage` · `gender Gender` · `pronounSubject String` · `pronounObject String` · `pronounPossessive String` · `occultType OccultType?` · `causeOfDeath CauseOfDeath?` · timestamps | `causeOfDeath` non-null = deceased |
 
@@ -130,20 +121,20 @@ enum RomanticStatus    { NONE DATING ENGAGED MARRIED EX_PARTNER WIDOWED }
 
 | Model | Fields | Notes |
 |---|---|---|
-| `FamilyRelationship` | `id` · `fromSimId→Sim` · `toSimId→Sim` · `type FamilyRelationshipType` · timestamps · `@@unique([fromSimId, toSimId])` · `@@index([toSimId])` | One canonical row per pair; inverse derived in code |
+| `FamilyRelationship` | `id` · `parentId→Sim` · `childId→Sim` · `type FamilyRelationshipType` @default(BIOLOGICAL) · `createdAt` · `@@unique([parentId, childId])` · `@@index([childId])` | Stores only direct parent-child edges; derived relationships (grandparent, sibling, in-law, etc.) are computed at the app layer |
 | `SocialRelationship` | `id` · `simAId→Sim` · `simBId→Sim` · `friendshipScore Int` · `romanceScore Int` · `romanticStatus RomanticStatus` · timestamps · `@@unique([simAId, simBId])` · `@@index([simBId])` | Service layer always stores with simAId < simBId (lexicographic) to prevent duplicate pairs |
 
-**Family inverse map (app-layer constant — ~15 entries):**
+**Derived relationships (computed at app layer, not stored):**
 
-```
-PARENT        ↔ CHILD              GRANDPARENT       ↔ GRANDCHILD
-GREAT_GRANDPARENT ↔ GREAT_GRANDCHILD
-STEP_PARENT   ↔ STEP_CHILD         ADOPTIVE_PARENT   ↔ ADOPTED_CHILD
-PARENT_IN_LAW ↔ CHILD_IN_LAW       AUNT_UNCLE        ↔ NIECE_NEPHEW
-SIBLING       ↔ SIBLING            HALF_SIBLING      ↔ HALF_SIBLING
-STEP_SIBLING  ↔ STEP_SIBLING       COUSIN            ↔ COUSIN
-SIBLING_IN_LAW ↔ SIBLING_IN_LAW
-```
+| Label | How it's derived |
+|---|---|
+| Grandparent / Grandchild | 2-hop traversal up/down `FamilyRelationship` |
+| Sibling | Shared `parentId` in `FamilyRelationship` |
+| Half-sibling | Shared one parent only |
+| Step-sibling | Shared step-parent (STEP type) |
+| Aunt/Uncle · Niece/Nephew | Parent's sibling |
+| Cousin | Parent's sibling's child |
+| In-law | Spouse's parent / child's spouse (via `SocialRelationship`) |
 
 ---
 

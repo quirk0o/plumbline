@@ -99,25 +99,9 @@ enum CauseOfDeath {
 }
 
 enum FamilyRelationshipType {
-  PARENT
-  CHILD
-  GRANDPARENT
-  GRANDCHILD
-  GREAT_GRANDPARENT
-  GREAT_GRANDCHILD
-  SIBLING
-  HALF_SIBLING
-  STEP_SIBLING
-  STEP_PARENT
-  STEP_CHILD
-  ADOPTIVE_PARENT
-  ADOPTED_CHILD
-  AUNT_UNCLE
-  NIECE_NEPHEW
-  COUSIN
-  PARENT_IN_LAW
-  CHILD_IN_LAW
-  SIBLING_IN_LAW
+  BIOLOGICAL
+  ADOPTIVE
+  STEP
 }
 
 enum RomanticStatus {
@@ -297,13 +281,15 @@ model UserPack {
 }
 
 model Legacy {
-  id        String   @id @default(cuid())
-  name      String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  userId       String
+  founderSimId String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  founderSim Sim?        @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
   households Household[]
 
   @@map("legacies")
@@ -343,8 +329,9 @@ model Sim {
   skills               SimSkill[]
   aspirations          SimAspiration[]
   careers              SimCareer[]
-  familyFrom           FamilyRelationship[]  @relation("FamilyFrom")
-  familyTo             FamilyRelationship[]  @relation("FamilyTo")
+  parentsOf            FamilyRelationship[]  @relation("ParentOf")
+  childOf              FamilyRelationship[]  @relation("ChildOf")
+  foundedLegacy        Legacy?               @relation("LegacyFounder")
   socialRelationshipsA SocialRelationship[]  @relation("SocialA")
   socialRelationshipsB SocialRelationship[]  @relation("SocialB")
 
@@ -425,17 +412,16 @@ model SimCareer {
 
 model FamilyRelationship {
   id        String                 @id @default(cuid())
-  fromSimId String
-  toSimId   String
-  type      FamilyRelationshipType
+  parentId  String
+  childId   String
+  type      FamilyRelationshipType @default(BIOLOGICAL)
   createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
 
-  fromSim Sim @relation("FamilyFrom", fields: [fromSimId], references: [id], onDelete: Cascade)
-  toSim   Sim @relation("FamilyTo", fields: [toSimId], references: [id], onDelete: Cascade)
+  parent Sim @relation("ParentOf", fields: [parentId], references: [id], onDelete: Cascade)
+  child  Sim @relation("ChildOf",  fields: [childId],  references: [id], onDelete: Cascade)
 
-  @@unique([fromSimId, toSimId])
-  @@index([toSimId])
+  @@unique([parentId, childId])
+  @@index([childId])
   @@map("family_relationships")
 }
 

@@ -1,9 +1,10 @@
 import { initTRPC } from '@trpc/server'
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch'
+import { db } from './db'
 
-// Replace with a real createContext function when auth is added.
+// Add session/auth to the returned object when authentication is implemented.
 export const createTRPCContext = async (_opts: FetchCreateContextFnOptions) => {
-  return {}
+  return { db }
 }
 
 type Context = Awaited<ReturnType<typeof createTRPCContext>>

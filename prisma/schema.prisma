@@ -5,3 +5,440 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum PackType {
+  BASE_GAME
+  EXPANSION
+  GAME_PACK
+  STUFF_PACK
+  KIT
+}
+
+enum TraitType {
+  BONUS
+  REWARD
+  DEATH // traits acquired at death; governs ghost Sim behaviour
+}
+
+enum TraitCategory {
+  EMOTIONAL
+  HOBBY
+  LIFESTYLE
+  SOCIAL
+}
+
+enum AspirationCategory {
+  ATHLETIC
+  CREATIVITY
+  DEVIANCE
+  FAMILY
+  FOOD
+  FORTUNE
+  KNOWLEDGE
+  LOVE
+  NATURE
+  POPULARITY
+}
+
+enum CareerType {
+  STANDARD
+  ACTIVE
+  PART_TIME
+}
+
+enum EmploymentType {
+  EMPLOYED
+  SELF_EMPLOYED
+}
+
+enum LifeStage {
+  NEWBORN
+  INFANT
+  TODDLER
+  CHILD
+  TEEN
+  YOUNG_ADULT
+  ADULT
+  ELDER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+}
+
+enum OccultType {
+  VAMPIRE
+  SPELLCASTER
+  MERMAID
+  WEREWOLF
+  FAIRY
+  ALIEN
+  GHOST
+  PLANT_SIM
+  SERVO
+}
+
+enum CauseOfDeath {
+  OLD_AGE
+  DROWNING
+  FIRE
+  ELECTROCUTION
+  HUNGER
+  OVEREXERTION
+  EMBARRASSMENT
+  ANGER
+  LAUGHTER
+  COWPLANT
+  PUFFERFISH
+  MURPHY_BED
+  STEAM
+  POISON
+  METEOR
+}
+
+enum FamilyRelationshipType {
+  BIOLOGICAL
+  ADOPTIVE
+  STEP
+}
+
+enum RomanticStatus {
+  NONE
+  DATING
+  ENGAGED
+  MARRIED
+  EX_PARTNER
+  WIDOWED
+}
+
+model Pack {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      PackType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  personalityTraits PersonalityTrait[]
+  traits            Trait[]
+  aspirations       Aspiration[]
+  skills            Skill[]
+  careers           Career[]
+  userPacks         UserPack[]
+
+  @@map("packs")
+}
+
+model PersonalityTrait {
+  id           String         @id @default(cuid())
+  name         String         @unique
+  category     TraitCategory?
+  minLifeStage LifeStage?
+  maxLifeStage LifeStage?
+  packId       String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  pack                 Pack?                 @relation(fields: [packId], references: [id])
+  simPersonalityTraits SimPersonalityTrait[]
+
+  @@map("personality_traits")
+}
+
+model Trait {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  type      TraitType
+  packId    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  pack        Pack?        @relation(fields: [packId], references: [id])
+  simTraits   SimTrait[]
+  aspirations Aspiration[] @relation("AspirationBonusTrait")
+
+  @@map("traits")
+}
+
+model Aspiration {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  category     AspirationCategory
+  bonusTraitId String?
+  minLifeStage LifeStage?
+  maxLifeStage LifeStage?
+  packId       String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  bonusTrait     Trait?          @relation("AspirationBonusTrait", fields: [bonusTraitId], references: [id])
+  pack           Pack?           @relation(fields: [packId], references: [id])
+  simAspirations SimAspiration[]
+
+  @@map("aspirations")
+}
+
+model Skill {
+  id           String     @id @default(cuid())
+  name         String     @unique
+  minLifeStage LifeStage?
+  maxLifeStage LifeStage?
+  maxLevel     Int
+  packId       String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  pack      Pack?      @relation(fields: [packId], references: [id])
+  simSkills SimSkill[]
+
+  @@map("skills")
+}
+
+model Career {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  type        CareerType
+  branchAName String?
+  branchBName String?
+  packId      String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  pack       Pack?       @relation(fields: [packId], references: [id])
+  simCareers SimCareer[]
+
+  @@map("careers")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  userPacks UserPack[]
+  legacies  Legacy[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model UserPack {
+  userId    String
+  packId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack Pack @relation(fields: [packId], references: [id])
+
+  @@id([userId, packId])
+  @@map("user_packs")
+}
+
+model Legacy {
+  id           String   @id @default(cuid())
+  name         String
+  userId       String
+  founderSimId String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  founderSim Sim?        @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
+  households Household[]
+
+  @@map("legacies")
+}
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  legacyId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  legacy Legacy @relation(fields: [legacyId], references: [id], onDelete: Cascade)
+  sims   Sim[]
+
+  @@map("households")
+}
+
+model Sim {
+  id                String        @id @default(cuid())
+  firstName         String
+  lastName          String
+  householdId       String
+  lifeStage         LifeStage
+  gender            Gender
+  pronounSubject    String
+  pronounObject     String
+  pronounPossessive String
+  occultType        OccultType?
+  causeOfDeath      CauseOfDeath?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  household            Household             @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  personalityTraits    SimPersonalityTrait[]
+  traits               SimTrait[]
+  skills               SimSkill[]
+  aspirations          SimAspiration[]
+  careers              SimCareer[]
+  parentsOf            FamilyRelationship[]  @relation("ParentOf")
+  childOf              FamilyRelationship[]  @relation("ChildOf")
+  foundedLegacy        Legacy?               @relation("LegacyFounder")
+  socialRelationshipsA SocialRelationship[]  @relation("SocialA")
+  socialRelationshipsB SocialRelationship[]  @relation("SocialB")
+
+  @@map("sims")
+}
+
+model SimPersonalityTrait {
+  simId              String
+  personalityTraitId String
+  createdAt          DateTime @default(now())
+
+  sim              Sim              @relation(fields: [simId], references: [id], onDelete: Cascade)
+  personalityTrait PersonalityTrait @relation(fields: [personalityTraitId], references: [id])
+
+  @@id([simId, personalityTraitId])
+  @@map("sim_personality_traits")
+}
+
+model SimTrait {
+  simId     String
+  traitId   String
+  createdAt DateTime @default(now())
+
+  sim   Sim   @relation(fields: [simId], references: [id], onDelete: Cascade)
+  trait Trait @relation(fields: [traitId], references: [id])
+
+  @@id([simId, traitId])
+  @@map("sim_traits")
+}
+
+model SimSkill {
+  simId     String
+  skillId   String
+  level     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sim   Sim   @relation(fields: [simId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+
+  @@id([simId, skillId])
+  @@map("sim_skills")
+}
+
+model SimAspiration {
+  id           String    @id @default(cuid())
+  simId        String
+  aspirationId String
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  sim        Sim        @relation(fields: [simId], references: [id], onDelete: Cascade)
+  aspiration Aspiration @relation(fields: [aspirationId], references: [id])
+
+  @@unique([simId, aspirationId])
+  @@map("sim_aspirations")
+}
+
+model SimCareer {
+  id             String         @id @default(cuid())
+  simId          String
+  careerId       String?
+  employmentType EmploymentType
+  level          Int?
+  branch         String?
+  customName     String?
+  customGoal     String?
+  startedAt      DateTime
+  endedAt        DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  sim    Sim     @relation(fields: [simId], references: [id], onDelete: Cascade)
+  career Career? @relation(fields: [careerId], references: [id])
+
+  @@map("sim_careers")
+}
+
+model FamilyRelationship {
+  id        String                 @id @default(cuid())
+  parentId  String
+  childId   String
+  type      FamilyRelationshipType @default(BIOLOGICAL)
+  createdAt DateTime               @default(now())
+
+  parent Sim @relation("ParentOf", fields: [parentId], references: [id], onDelete: Cascade)
+  child  Sim @relation("ChildOf",  fields: [childId],  references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+  @@index([childId])
+  @@map("family_relationships")
+}
+
+model SocialRelationship {
+  id              String         @id @default(cuid())
+  simAId          String
+  simBId          String
+  friendshipScore Int
+  romanceScore    Int
+  romanticStatus  RomanticStatus
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  simA Sim @relation("SocialA", fields: [simAId], references: [id], onDelete: Cascade)
+  simB Sim @relation("SocialB", fields: [simBId], references: [id], onDelete: Cascade)
+
+  @@unique([simAId, simBId])
+  @@index([simBId])
+  @@map("social_relationships")
+}

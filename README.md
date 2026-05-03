@@ -6,7 +6,7 @@ A personal web application for tracking a Sims game playthrough. Supports random
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 16.2.4 (App Router) |
 | Language | TypeScript |
 | API | tRPC (mounted at `/api/trpc/[trpc]`) |
 | Client data fetching | TanStack Query (via tRPC) |

@@ -283,3 +283,70 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("verification_tokens")
 }
+
+model UserPack {
+  userId    String
+  packId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack Pack @relation(fields: [packId], references: [id])
+
+  @@id([userId, packId])
+  @@map("user_packs")
+}
+
+model Legacy {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  households Household[]
+
+  @@map("legacies")
+}
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  legacyId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  legacy Legacy @relation(fields: [legacyId], references: [id], onDelete: Cascade)
+  sims   Sim[]
+
+  @@map("households")
+}
+
+model Sim {
+  id                String        @id @default(cuid())
+  firstName         String
+  lastName          String
+  householdId       String
+  lifeStage         LifeStage
+  gender            Gender
+  pronounSubject    String
+  pronounObject     String
+  pronounPossessive String
+  occultType        OccultType?
+  causeOfDeath      CauseOfDeath?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  household            Household             @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  personalityTraits    SimPersonalityTrait[]
+  traits               SimTrait[]
+  skills               SimSkill[]
+  aspirations          SimAspiration[]
+  careers              SimCareer[]
+  familyFrom           FamilyRelationship[]  @relation("FamilyFrom")
+  familyTo             FamilyRelationship[]  @relation("FamilyTo")
+  socialRelationshipsA SocialRelationship[]  @relation("SocialA")
+  socialRelationshipsB SocialRelationship[]  @relation("SocialB")
+
+  @@map("sims")
+}

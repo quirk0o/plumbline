@@ -422,3 +422,37 @@ model SimCareer {
 
   @@map("sim_careers")
 }
+
+model FamilyRelationship {
+  id        String                 @id @default(cuid())
+  fromSimId String
+  toSimId   String
+  type      FamilyRelationshipType
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  fromSim Sim @relation("FamilyFrom", fields: [fromSimId], references: [id], onDelete: Cascade)
+  toSim   Sim @relation("FamilyTo", fields: [toSimId], references: [id], onDelete: Cascade)
+
+  @@unique([fromSimId, toSimId])
+  @@index([toSimId])
+  @@map("family_relationships")
+}
+
+model SocialRelationship {
+  id              String         @id @default(cuid())
+  simAId          String
+  simBId          String
+  friendshipScore Int
+  romanceScore    Int
+  romanticStatus  RomanticStatus
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  simA Sim @relation("SocialA", fields: [simAId], references: [id], onDelete: Cascade)
+  simB Sim @relation("SocialB", fields: [simBId], references: [id], onDelete: Cascade)
+
+  @@unique([simAId, simBId])
+  @@index([simBId])
+  @@map("social_relationships")
+}

@@ -128,3 +128,101 @@ enum RomanticStatus {
   EX_PARTNER
   WIDOWED
 }
+
+model Pack {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      PackType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  personalityTraits PersonalityTrait[]
+  traits            Trait[]
+  aspirations       Aspiration[]
+  skills            Skill[]
+  careers           Career[]
+  userPacks         UserPack[]
+
+  @@map("packs")
+}
+
+model PersonalityTrait {
+  id           String         @id @default(cuid())
+  name         String         @unique
+  category     TraitCategory?
+  minLifeStage LifeStage?
+  maxLifeStage LifeStage?
+  packId       String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  pack                 Pack?                 @relation(fields: [packId], references: [id])
+  simPersonalityTraits SimPersonalityTrait[]
+
+  @@map("personality_traits")
+}
+
+model Trait {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  type      TraitType
+  packId    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  pack        Pack?        @relation(fields: [packId], references: [id])
+  simTraits   SimTrait[]
+  aspirations Aspiration[] @relation("AspirationBonusTrait")
+
+  @@map("traits")
+}
+
+model Aspiration {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  category     AspirationCategory
+  bonusTraitId String?
+  minLifeStage LifeStage?
+  maxLifeStage LifeStage?
+  packId       String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  bonusTrait     Trait?          @relation("AspirationBonusTrait", fields: [bonusTraitId], references: [id])
+  pack           Pack?           @relation(fields: [packId], references: [id])
+  simAspirations SimAspiration[]
+
+  @@map("aspirations")
+}
+
+model Skill {
+  id           String     @id @default(cuid())
+  name         String     @unique
+  minLifeStage LifeStage?
+  maxLifeStage LifeStage?
+  maxLevel     Int
+  packId       String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  pack      Pack?      @relation(fields: [packId], references: [id])
+  simSkills SimSkill[]
+
+  @@map("skills")
+}
+
+model Career {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  type        CareerType
+  branchAName String?
+  branchBName String?
+  packId      String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  pack       Pack?       @relation(fields: [packId], references: [id])
+  simCareers SimCareer[]
+
+  @@map("careers")
+}

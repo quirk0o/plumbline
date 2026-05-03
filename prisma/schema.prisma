@@ -17,7 +17,7 @@ enum PackType {
 enum TraitType {
   BONUS
   REWARD
-  DEATH
+  DEATH // traits acquired at death; governs ghost Sim behaviour
 }
 
 enum TraitCategory {

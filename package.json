@@ -16,18 +16,21 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@tanstack/react-query": "^5.100.8",
     "@trpc/client": "^11.17.0",
     "@trpc/react-query": "^11.17.0",
     "@trpc/server": "^11.17.0",
     "next": "16.2.4",
+    "pg": "^8.20.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.2"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",

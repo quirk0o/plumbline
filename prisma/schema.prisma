@@ -5,3 +5,126 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum PackType {
+  BASE_GAME
+  EXPANSION
+  GAME_PACK
+  STUFF_PACK
+  KIT
+}
+
+enum TraitType {
+  BONUS
+  REWARD
+  DEATH
+}
+
+enum TraitCategory {
+  EMOTIONAL
+  HOBBY
+  LIFESTYLE
+  SOCIAL
+}
+
+enum AspirationCategory {
+  ATHLETIC
+  CREATIVITY
+  DEVIANCE
+  FAMILY
+  FOOD
+  FORTUNE
+  KNOWLEDGE
+  LOVE
+  NATURE
+  POPULARITY
+}
+
+enum CareerType {
+  STANDARD
+  ACTIVE
+  PART_TIME
+}
+
+enum EmploymentType {
+  EMPLOYED
+  SELF_EMPLOYED
+}
+
+enum LifeStage {
+  NEWBORN
+  INFANT
+  TODDLER
+  CHILD
+  TEEN
+  YOUNG_ADULT
+  ADULT
+  ELDER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+}
+
+enum OccultType {
+  VAMPIRE
+  SPELLCASTER
+  MERMAID
+  WEREWOLF
+  FAIRY
+  ALIEN
+  GHOST
+  PLANT_SIM
+  SERVO
+}
+
+enum CauseOfDeath {
+  OLD_AGE
+  DROWNING
+  FIRE
+  ELECTROCUTION
+  HUNGER
+  OVEREXERTION
+  EMBARRASSMENT
+  ANGER
+  LAUGHTER
+  COWPLANT
+  PUFFERFISH
+  MURPHY_BED
+  STEAM
+  POISON
+  METEOR
+}
+
+enum FamilyRelationshipType {
+  PARENT
+  CHILD
+  GRANDPARENT
+  GRANDCHILD
+  GREAT_GRANDPARENT
+  GREAT_GRANDCHILD
+  SIBLING
+  HALF_SIBLING
+  STEP_SIBLING
+  STEP_PARENT
+  STEP_CHILD
+  ADOPTIVE_PARENT
+  ADOPTED_CHILD
+  AUNT_UNCLE
+  NIECE_NEPHEW
+  COUSIN
+  PARENT_IN_LAW
+  CHILD_IN_LAW
+  SIBLING_IN_LAW
+}
+
+enum RomanticStatus {
+  NONE
+  DATING
+  ENGAGED
+  MARRIED
+  EX_PARTNER
+  WIDOWED
+}

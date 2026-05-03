@@ -26,4 +26,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(db),
   providers: [...authConfig.providers, emailProvider],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user?.id) token.id = user.id
+      return token
+    },
+    session({ session, token }) {
+      if (token.id) session.user.id = token.id as string
+      return session
+    },
+  },
 })

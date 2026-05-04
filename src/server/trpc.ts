@@ -10,17 +10,17 @@ export const createTRPCContext = async (_opts: FetchCreateContextFnOptions) => {
 }
 
 type Context = Awaited<ReturnType<typeof createTRPCContext>>
+type AuthedSession = Session & { user: { id: string } }
+
+function isAuthedSession(session: Session | null): session is AuthedSession {
+  return typeof session?.user?.id === 'string'
+}
 
 const t = initTRPC.context<Context>().create()
 
 const enforceAuth = t.middleware(({ ctx, next }) => {
-  if (!ctx.session?.user?.id) throw new TRPCError({ code: 'UNAUTHORIZED' })
-  return next({
-    ctx: {
-      ...ctx,
-      session: ctx.session as Session & { user: { id: string } },
-    },
-  })
+  if (!isAuthedSession(ctx.session)) throw new TRPCError({ code: 'UNAUTHORIZED' })
+  return next({ ctx: { ...ctx, session: ctx.session } })
 })
 
 export const router = t.router

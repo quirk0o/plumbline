@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${jakarta.variable}`} data-theme="light">
+    <html lang="en" className={`${cormorant.variable} ${jakarta.variable}`} data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: flashPreventionScript }} />
       </head>

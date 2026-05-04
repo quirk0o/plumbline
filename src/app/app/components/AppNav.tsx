@@ -23,7 +23,7 @@ export function AppNav({ name, email, image }: AppNavProps) {
   return (
     <nav className={styles.nav}>
       <Link href="/app" className={styles.logo}>
-        <Plumbob size={16} />
+        <Plumbob size={12} />
         SimsTrack
       </Link>
 

@@ -8,6 +8,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 In Next.js 16, `middleware.ts` was renamed to `proxy.ts`. The request-interception file in this project is **`src/proxy.ts`** and it exports a named `proxy` function (not `middleware`). Never suggest renaming it or creating a `middleware.ts`. See `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`.
 <!-- END:nextjs-agent-rules -->
 
+# Code Quality Rules
+
+**No lint or TypeScript suppressions — ever.** The following are illegal in this codebase:
+- `// eslint-disable` (any form: next-line, line, block)
+- `// @ts-ignore`
+- `// @ts-expect-error`
+- `// @ts-nocheck`
+- `// tslint:disable`
+
+If a suppression seems necessary, the correct fix is to resolve the underlying issue — change the code, fix the type, or update the config. Suppressions mask real problems and are never acceptable.
+
 # Local Development: Signing In
 
 Use the **magic link** flow:

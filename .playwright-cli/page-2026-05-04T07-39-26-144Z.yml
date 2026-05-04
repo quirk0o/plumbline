@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e7]:
+        - heading "SimsTrack" [level=1] [ref=e8]
+        - paragraph [ref=e9]: Your Sims universe, tracked
+      - generic [ref=e34]:
+        - generic [ref=e35]: ◇
+        - paragraph [ref=e36]: Check your inbox
+        - paragraph [ref=e37]:
+          - text: A sign-in link is on its way to
+          - strong [ref=e38]: test@example.com
+  - button "Open Next.js Dev Tools" [ref=e29] [cursor=pointer]:
+    - img [ref=e30]
+  - alert [ref=e33]

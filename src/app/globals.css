@@ -46,7 +46,7 @@
   /* Status colors */
   --error:   #b91c1c;
   --success: #15803d;
-  --warning: #b45309;
+  --warning: var(--color-amber-700);
   --info:    #0284c7;
 
   /* Pack type badge colours */

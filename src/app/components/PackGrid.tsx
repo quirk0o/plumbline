@@ -19,6 +19,7 @@ const SECTION_LABELS: Record<PackType, string> = {
 
 function badgeClass(type: PackType): string {
   switch (type) {
+    case PackType.BASE_GAME:
     case PackType.EXPANSION:  return styles.badgeExpansion
     case PackType.GAME_PACK:  return styles.badgeGamePack
     case PackType.STUFF_PACK: return styles.badgeStuffPack

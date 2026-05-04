@@ -150,7 +150,7 @@
 
 .input:focus {
   border-color: var(--green);
-  box-shadow: 0 0 0 3px var(--green-glow);
+  box-shadow: var(--focus-ring);
 }
 
 .submitButton {
@@ -208,12 +208,7 @@
   text-align: center;
   margin-bottom: 1.25rem;
   padding: 0.6875rem 1rem;
-  background: rgba(185, 28, 28, 0.08);
-  border: 1px solid rgba(185, 28, 28, 0.18);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 18%, transparent);
   border-radius: var(--radius-base);
-}
-
-[data-theme="dark"] .error {
-  background: rgba(252, 165, 165, 0.08);
-  border-color: rgba(252, 165, 165, 0.18);
 }

@@ -440,6 +440,7 @@ model SocialRelationship {
   simA Sim @relation("SocialA", fields: [simAId], references: [id], onDelete: Cascade)
   simB Sim @relation("SocialB", fields: [simBId], references: [id], onDelete: Cascade)
 
+  // Enforce simAId < simBId at the application layer to prevent duplicate inverse pairs
   @@unique([simAId, simBId])
   @@index([simBId])
   @@map("social_relationships")

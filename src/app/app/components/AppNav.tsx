@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Plumbob } from '@/components/Plumbob'
@@ -45,8 +46,7 @@ export function AppNav({ name, email, image }: AppNavProps) {
       <div className={styles.user}>
         <ThemeToggle />
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt={name ?? ''} className={styles.avatar} />
+          <Image src={image} alt={name ?? ''} width={32} height={32} className={styles.avatar} />
         ) : (
           <div className={styles.avatarInitial}>{initial}</div>
         )}

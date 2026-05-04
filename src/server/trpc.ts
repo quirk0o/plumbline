@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from '@trpc/server'
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch'
+import type { Session } from 'next-auth'
 import { db } from './db'
 import { auth } from '../../auth'
 
@@ -9,12 +10,17 @@ export const createTRPCContext = async (_opts: FetchCreateContextFnOptions) => {
 }
 
 type Context = Awaited<ReturnType<typeof createTRPCContext>>
+type AuthedSession = Session & { user: { id: string } }
+
+function isAuthedSession(session: Session | null): session is AuthedSession {
+  return typeof session?.user?.id === 'string'
+}
 
 const t = initTRPC.context<Context>().create()
 
 const enforceAuth = t.middleware(({ ctx, next }) => {
-  if (!ctx.session?.user) throw new TRPCError({ code: 'UNAUTHORIZED' })
-  return next({ ctx: { ...ctx, session: ctx.session } })
+  if (!isAuthedSession(ctx.session)) throw new TRPCError({ code: 'UNAUTHORIZED' })
+  return next({ ctx: { ...ctx, session: ctx.session as AuthedSession } })
 })
 
 export const router = t.router

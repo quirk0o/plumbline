@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { auth } from '../../../auth'
 import { db } from '@/server/db'
 import { PackType } from '@prisma/client'
@@ -6,13 +7,14 @@ import styles from './page.module.css'
 
 export default async function DashboardPage() {
   const session = await auth()
-  const userId = session!.user.id
+  const userId = session?.user?.id
+  if (!userId) redirect('/auth/signin')
 
   const ownedCount = await db.userPack.count({
     where: { userId, pack: { type: { not: PackType.BASE_GAME } } },
   })
 
-  const firstName = session!.user.name?.split(' ')[0] ?? null
+  const firstName = session.user.name?.split(' ')[0] ?? null
   const greeting = firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'
 
   return (

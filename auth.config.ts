@@ -8,6 +8,7 @@ export const authConfig: NextAuthConfig = {
     error: '/auth/error',
     newUser: '/app/onboarding/packs',
   },
+  // Sessions stored in JWT cookies; the sessions DB table will remain empty
   session: { strategy: 'jwt' },
   callbacks: {
     authorized({ auth: session }) {

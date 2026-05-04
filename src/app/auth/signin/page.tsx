@@ -1,16 +1,14 @@
 import { Suspense } from 'react'
 import SignInForm from './SignInForm'
+import { MiniPlumbob } from '@/components/Plumbob'
 import styles from './signin.module.css'
 
 export default function SignInPage() {
   return (
     <main className={styles.page}>
-      <div className={styles.grid} aria-hidden="true" />
       <div className={styles.card}>
         <div className={styles.plumbobWrap}>
-          <div className={styles.plumbob}>
-            <div className={styles.plumbobInner} />
-          </div>
+          <MiniPlumbob />
         </div>
 
         <div className={styles.header}>

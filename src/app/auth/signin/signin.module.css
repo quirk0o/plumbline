@@ -1,25 +1,10 @@
 .page {
   min-height: 100vh;
   background: var(--bg);
-  background-image:
-    radial-gradient(ellipse at 15% 60%, rgba(52, 211, 153, 0.07) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 15%, rgba(251, 191, 36, 0.04) 0%, transparent 50%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(52, 211, 153, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(52, 211, 153, 0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
 }
 
 .card {
@@ -29,70 +14,27 @@
   max-width: 400px;
   background: var(--bg-card);
   border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 3rem 2.5rem;
+  box-shadow: var(--shadow-lg);
   animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  box-shadow:
-    0 0 0 1px rgba(52, 211, 153, 0.04),
-    0 20px 80px rgba(0, 0, 0, 0.6),
-    0 0 80px rgba(52, 211, 153, 0.04);
 }
 
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .plumbobWrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   animation: fadeUp 0.7s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.plumbob {
+.plumbobWrap svg {
   width: 44px;
-  height: 44px;
-  position: relative;
-  animation: float 4s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-7px) rotate(3deg); }
-}
-
-.plumbobInner {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #52e8a8 0%, #059669 45%, #34d399 100%);
-  transform: rotate(45deg);
-  border-radius: 5px;
-  box-shadow:
-    0 0 16px rgba(52, 211, 153, 0.7),
-    0 0 40px rgba(52, 211, 153, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  animation: glow 2.5s ease-in-out infinite;
-}
-
-@keyframes glow {
-  0%, 100% {
-    box-shadow:
-      0 0 16px rgba(52, 211, 153, 0.7),
-      0 0 40px rgba(52, 211, 153, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-  50% {
-    box-shadow:
-      0 0 24px rgba(52, 211, 153, 0.9),
-      0 0 60px rgba(52, 211, 153, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  }
+  height: 48px;
 }
 
 .header {
@@ -115,10 +57,9 @@
 .subtitle {
   font-family: var(--font-body);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-subtle);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  opacity: 0.7;
 }
 
 .form {
@@ -132,8 +73,9 @@
   justify-content: center;
   gap: 0.625rem;
   padding: 0.8125rem 1.25rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 0.9rem;
@@ -144,10 +86,10 @@
 }
 
 .googleButton:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--bg-card-hover);
+  border-color: var(--border-bright);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .googleIcon {
@@ -164,16 +106,15 @@
 .dividerLine {
   flex: 1;
   height: 1px;
-  background: rgba(52, 211, 153, 0.12);
+  background: var(--border);
 }
 
 .dividerText {
   font-family: var(--font-body);
   font-size: 0.6875rem;
-  color: var(--text-muted);
+  color: var(--text-subtle);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  opacity: 0.6;
 }
 
 .emailForm {
@@ -185,8 +126,9 @@
 .input {
   width: 100%;
   padding: 0.8125rem 1rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 0.9rem;
@@ -195,12 +137,12 @@
 }
 
 .input::placeholder {
-  color: rgba(134, 239, 172, 0.35);
+  color: var(--text-subtle);
 }
 
 .input:focus {
-  border-color: rgba(52, 211, 153, 0.5);
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.08);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-glow);
 }
 
 .submitButton {
@@ -208,7 +150,8 @@
   padding: 0.8125rem;
   background: var(--green);
   border: none;
-  color: #071a10;
+  border-radius: var(--radius-base);
+  color: var(--bg);
   font-family: var(--font-body);
   font-size: 0.9rem;
   font-weight: 600;
@@ -221,7 +164,7 @@
 .submitButton:hover {
   background: var(--green-bright);
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(52, 211, 153, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .success {
@@ -248,16 +191,22 @@
   font-size: 0.875rem;
   color: var(--text-muted);
   line-height: 1.6;
-  opacity: 0.8;
 }
 
 .error {
-  color: #fca5a5;
+  color: #b91c1c;
   font-family: var(--font-body);
   font-size: 0.8125rem;
   text-align: center;
   margin-bottom: 1.25rem;
   padding: 0.6875rem 1rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-base);
+}
+
+[data-theme="dark"] .error {
+  color: #fca5a5;
   background: rgba(248, 113, 113, 0.08);
-  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.18);
 }

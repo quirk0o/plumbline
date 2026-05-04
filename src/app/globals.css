@@ -56,6 +56,8 @@
   --plumbob-tr: #22c55e;
   --plumbob-bl: #166f4a;
   --plumbob-br: #0a4530;
+  --plumbob-glow:       rgba(34, 197, 94, 0.45);
+  --plumbob-glow-outer: rgba(34, 197, 94, 0.15);
 
   /* Radius scale */
   --radius-xs:   4px;
@@ -106,6 +108,8 @@
   --plumbob-tr: #34d399;
   --plumbob-bl: #166f4a;
   --plumbob-br: #0a4530;
+  --plumbob-glow:       rgba(52, 211, 153, 0.7);
+  --plumbob-glow-outer: rgba(52, 211, 153, 0.25);
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.20);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.30);

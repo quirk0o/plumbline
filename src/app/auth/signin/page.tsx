@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import SignInForm from './SignInForm'
-import { MiniPlumbob } from '@/components/Plumbob'
 import styles from './signin.module.css'
 
 export default function SignInPage() {
@@ -8,7 +7,9 @@ export default function SignInPage() {
     <main className={styles.page}>
       <div className={styles.card}>
         <div className={styles.plumbobWrap}>
-          <MiniPlumbob />
+          <div className={styles.plumbob}>
+            <div className={styles.plumbobInner} />
+          </div>
         </div>
 
         <div className={styles.header}>

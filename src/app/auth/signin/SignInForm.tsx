@@ -3,6 +3,7 @@
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { MiniPlumbob } from '@/components/Plumbob'
 import styles from './signin.module.css'
 
 function GoogleIcon() {
@@ -41,7 +42,7 @@ export default function SignInForm() {
 
       {emailSent ? (
         <div className={styles.success}>
-          <span className={styles.successIcon}>◇</span>
+          <span className={styles.successIcon}><MiniPlumbob /></span>
           <p className={styles.successTitle}>Check your inbox</p>
           <p className={styles.successText}>
             A sign-in link is on its way to<br />

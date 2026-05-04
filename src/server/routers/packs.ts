@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { PackType } from '@prisma/client'
+import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure } from '../trpc'
 
 const PACK_TYPE_ORDER: PackType[] = [
@@ -41,6 +42,8 @@ export const packsRouter = router({
         })
         return { isOwned: false }
       }
+      await ctx.db.pack.findUniqueOrThrow({ where: { id: input.packId } })
+        .catch(() => { throw new TRPCError({ code: 'NOT_FOUND', message: 'Pack not found' }) })
       await ctx.db.userPack.create({ data: { userId, packId: input.packId } })
       return { isOwned: true }
     }),

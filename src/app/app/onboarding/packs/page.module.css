@@ -11,10 +11,10 @@
 
 .stepLabel {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(237, 250, 240, 0.25);
+  color: var(--text-subtle);
   margin-bottom: 0.5rem;
 }
 
@@ -29,7 +29,7 @@
 
 .subtitle {
   font-size: 0.875rem;
-  color: rgba(237, 250, 240, 0.42);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -50,7 +50,7 @@
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 0.8125rem;
-  border-radius: 6px;
+  border-radius: var(--radius-base);
   border: none;
   cursor: pointer;
   text-decoration: none;
@@ -64,15 +64,16 @@
 
 .btnSkip {
   font-size: 0.75rem;
-  color: rgba(237, 250, 240, 0.22);
+  color: var(--text-subtle);
   text-decoration: underline;
   text-underline-offset: 3px;
   background: none;
   border: none;
   cursor: pointer;
   font-family: var(--font-body);
+  transition: color 0.15s;
 }
 
 .btnSkip:hover {
-  color: rgba(237, 250, 240, 0.4);
+  color: var(--text-muted);
 }

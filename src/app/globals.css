@@ -43,6 +43,12 @@
   /* Amber accent (legacy/heir callouts only) */
   --amber:        var(--color-amber-600);
 
+  /* Status colors */
+  --error:   #b91c1c;
+  --success: #15803d;
+  --warning: #b45309;
+  --info:    #0284c7;
+
   /* Pack type badge colours */
   --pack-expansion:   var(--color-green-400);
   --pack-game:        var(--color-amber-400);
@@ -96,6 +102,11 @@
   --green-glow:   rgba(74, 175, 114, 0.15);
 
   --amber:        #fbbf24;
+
+  --error:   #fca5a5;
+  --success: #86efac;
+  --warning: #fbbf24;
+  --info:    #38bdf8;
 
   --pack-expansion:   #4aaf72;
   --pack-game:        #fbbf24;

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BigPlumbob, MiniPlumbob } from '@/components/Plumbob'
+import { Plumbob } from '@/components/Plumbob'
 import { ThemeToggle } from '@/components/ThemeProvider'
 import styles from './page.module.css'
 
@@ -35,7 +35,7 @@ export default function Home() {
     <div className={styles.page}>
       <nav className={styles.nav}>
         <div className={styles.navLogo}>
-          <MiniPlumbob />
+          <Plumbob size={16} />
           <span>SimsTrack</span>
         </div>
         <div className={styles.navRight}>
@@ -49,7 +49,7 @@ export default function Home() {
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <p className={styles.eyebrow}>
-            <MiniPlumbob />
+            <Plumbob size={16} />
             Legacy Challenge Companion
           </p>
           <h1 className={styles.headline}>
@@ -71,14 +71,14 @@ export default function Home() {
           <div className={styles.glowOuter} />
           <div className={styles.glowInner} />
           <div className={styles.plumbobWrapper}>
-            <BigPlumbob width={260} />
+            <Plumbob size={260} glow />
           </div>
         </div>
       </section>
 
       <div className={styles.sectionDivider}>
         <span className={styles.dividerLine} />
-        <span className={styles.dividerGem}><MiniPlumbob /></span>
+        <span className={styles.dividerGem}><Plumbob size={16} /></span>
         <span className={styles.dividerLine} />
       </div>
 
@@ -90,7 +90,7 @@ export default function Home() {
         <div className={styles.featuresGrid}>
           {features.map((feature) => (
             <article key={feature.title} className={styles.featureCard}>
-              <div className={styles.featureGem}><MiniPlumbob /></div>
+              <div className={styles.featureGem}><Plumbob size={16} /></div>
               <h3 className={styles.featureName}>{feature.title}</h3>
               <p className={styles.featureDesc}>{feature.description}</p>
             </article>
@@ -101,7 +101,7 @@ export default function Home() {
       <section className={styles.ctaSection}>
         <div className={styles.ctaDecor}>
           <div className={styles.ctaGlow} />
-          <BigPlumbob width={80} />
+          <Plumbob size={80} glow />
         </div>
         <h2 className={styles.ctaTitle}>Begin your legacy today.</h2>
         <p className={styles.ctaSubtitle}>Free to use. Your stories, always remembered.</p>
@@ -113,7 +113,7 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <div className={styles.footerLogo}>
-          <MiniPlumbob />
+          <Plumbob size={16} />
           <span>SimsTrack</span>
         </div>
         <p className={styles.footerCopy}>© 2026</p>

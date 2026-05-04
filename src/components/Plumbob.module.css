@@ -1,44 +1,5 @@
-/* ── Shared gradient (dark mode / default) ─────────────────────── */
-.bigInner,
-.miniInner {
-  background: linear-gradient(135deg, var(--plumbob-tl) 0%, var(--plumbob-tr) 45%, var(--green-bright) 100%);
-  transform: rotate(45deg);
-  border-radius: 20%;
-}
-
-/* ── Light mode: shift darker ───────────────────────────────────── */
-:root:not([data-theme="dark"]) .bigInner,
-:root:not([data-theme="dark"]) .miniInner {
-  background: linear-gradient(135deg, var(--plumbob-tr) 0%, var(--plumbob-bl) 82%, var(--green) 100%);
-}
-
-/* ── Big plumbob ────────────────────────────────────────────────── */
-.bigWrap {
-  display: block;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.bigInner {
-  display: block;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  box-shadow:
-    0 0 5px var(--plumbob-glow),
-    0 0 10px var(--plumbob-glow-outer);
-}
-
-.bigInner::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 45%);
-  border-radius: inherit;
-}
-
-/* ── Mini plumbob (no glow) ─────────────────────────────────────── */
-.miniWrap {
+/* ── Wrap ───────────────────────────────────────────────────────── */
+.wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -46,6 +7,51 @@
   vertical-align: middle;
 }
 
-.miniInner {
+/* ── Diamond (shared across all sizes) ─────────────────────────── */
+.inner {
   display: block;
+  background: linear-gradient(135deg, var(--plumbob-tl) 0%, var(--plumbob-tr) 45%, var(--green-bright) 100%);
+  transform: rotate(45deg);
+  border-radius: 20%;
+  position: relative;
+}
+
+.inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 45%);
+  border-radius: inherit;
+}
+
+/* ── Light mode: shift darker ───────────────────────────────────── */
+:root:not([data-theme="dark"]) .inner {
+  background: linear-gradient(135deg, var(--plumbob-tr) 0%, var(--plumbob-bl) 82%, var(--green) 100%);
+}
+
+/* ── Glow (opt-in) ──────────────────────────────────────────────── */
+.withGlow .inner {
+  box-shadow:
+    0 0 5px var(--plumbob-glow),
+    0 0 10px var(--plumbob-glow-outer);
+}
+
+/* ── Pulsing glow (opt-in, for featured placements) ────────────── */
+.withPulse .inner {
+  animation: glowPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 16px var(--plumbob-glow),
+      0 0 40px var(--plumbob-glow-outer),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 24px var(--plumbob-glow),
+      0 0 60px var(--plumbob-glow-outer),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
 }

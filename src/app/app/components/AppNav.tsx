@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { MiniPlumbob } from '@/components/Plumbob'
+import { Plumbob } from '@/components/Plumbob'
 import { ThemeToggle } from '@/components/ThemeProvider'
 import styles from './AppNav.module.css'
 
@@ -23,7 +23,7 @@ export function AppNav({ name, email, image }: AppNavProps) {
   return (
     <nav className={styles.nav}>
       <Link href="/app" className={styles.logo}>
-        <MiniPlumbob />
+        <Plumbob size={16} />
         SimsTrack
       </Link>
 

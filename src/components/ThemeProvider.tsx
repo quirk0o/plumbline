@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -26,15 +26,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.setAttribute('data-theme', resolved)
   }, [])
 
-  const toggle = () => {
-    const next: Theme = theme === 'light' ? 'dark' : 'light'
-    setTheme(next)
-    localStorage.setItem('simstrack-theme', next)
-    document.documentElement.setAttribute('data-theme', next)
-  }
+  const toggle = useCallback(() => {
+    setTheme(prev => {
+      const next: Theme = prev === 'light' ? 'dark' : 'light'
+      localStorage.setItem('simstrack-theme', next)
+      document.documentElement.setAttribute('data-theme', next)
+      return next
+    })
+  }, [])
+
+  const value = useMemo(() => ({ theme, toggle }), [theme, toggle])
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )

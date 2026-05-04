@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { auth } from '../../../auth'
+import { auth } from '@/lib/auth'
 import { AppNav } from './components/AppNav'
 
 export default async function AppLayout({

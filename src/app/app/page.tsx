@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { auth } from '../../../auth'
+import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
 import { PackType } from '@prisma/client'
 import styles from './page.module.css'

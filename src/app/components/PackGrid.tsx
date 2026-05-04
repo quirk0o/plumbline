@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { PackType } from '@prisma/client'
 import { trpc } from '@/trpc/client'
@@ -40,37 +40,47 @@ interface PackGridProps {
 }
 
 export function PackGrid({ initialGroups }: PackGridProps) {
-  const [groups, setGroups] = useState<PackGroups>(initialGroups)
   const [showSaved, setShowSaved] = useState(false)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const utils = trpc.useUtils()
 
-  const { data } = trpc.packs.getAll.useQuery(undefined, {
+  const { data: groups } = trpc.packs.getAll.useQuery(undefined, {
     initialData: initialGroups,
     staleTime: 30_000,
   })
 
   useEffect(() => {
-    if (data) setGroups(data)
-  }, [data])
+    return () => {
+      if (savedTimerRef.current !== null) clearTimeout(savedTimerRef.current)
+    }
+  }, [])
 
   const toggleMutation = trpc.packs.toggle.useMutation({
     onMutate: async ({ packId }) => {
       await utils.packs.getAll.cancel()
-      setGroups(prev =>
-        prev.map(g => ({
+      const previousGroups = utils.packs.getAll.getData()
+      utils.packs.getAll.setData(undefined, prev =>
+        prev?.map(g => ({
           ...g,
           packs: g.packs.map(p =>
             p.id === packId ? { ...p, isOwned: !p.isOwned } : p
           ),
         }))
       )
+      return { previousGroups }
     },
     onSuccess: () => {
+      if (savedTimerRef.current !== null) clearTimeout(savedTimerRef.current)
       setShowSaved(true)
-      setTimeout(() => setShowSaved(false), 1500)
+      savedTimerRef.current = setTimeout(() => {
+        setShowSaved(false)
+        savedTimerRef.current = null
+      }, 1500)
     },
-    onError: () => {
-      utils.packs.getAll.invalidate()
+    onError: (_err, _variables, context) => {
+      if (context?.previousGroups !== undefined) {
+        utils.packs.getAll.setData(undefined, context.previousGroups)
+      }
     },
     onSettled: () => {
       utils.packs.getAll.invalidate()

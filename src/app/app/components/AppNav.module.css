@@ -15,11 +15,13 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 700;
-  font-size: 0.875rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text);
   text-decoration: none;
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .links {
@@ -32,27 +34,28 @@
 
 .link {
   padding: 0.3rem 0.625rem;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 500;
-  color: rgba(237, 250, 240, 0.45);
+  color: var(--text-muted);
   text-decoration: none;
   transition: color 0.12s, background 0.12s;
 }
 
 .link:hover {
-  color: rgba(237, 250, 240, 0.75);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  background: var(--bg-card-hover);
 }
 
 .linkActive {
   color: var(--green) !important;
+  background: var(--green-glow) !important;
 }
 
 .user {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -62,15 +65,15 @@
   height: 26px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  border: 1px solid var(--border-bright);
 }
 
 .avatarInitial {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  background: var(--green-glow);
+  border: 1px solid var(--border-bright);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,7 +84,7 @@
 
 .signOut {
   font-size: 0.68rem;
-  color: rgba(237, 250, 240, 0.25);
+  color: var(--text-subtle);
   background: none;
   border: none;
   cursor: pointer;
@@ -91,5 +94,5 @@
 }
 
 .signOut:hover {
-  color: rgba(237, 250, 240, 0.5);
+  color: var(--text-muted);
 }

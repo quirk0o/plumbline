@@ -1,3 +1,5 @@
+import styles from './error.module.css'
+
 const errorMessages: Record<string, string> = {
   OAuthAccountNotLinked: 'This email is already linked to a different sign-in method.',
   EmailSignin: 'Failed to send the sign-in email. Please try again.',
@@ -15,10 +17,10 @@ export default async function AuthErrorPage({
   const message = (error && errorMessages[error]) ?? 'An authentication error occurred.'
 
   return (
-    <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1rem', padding: '2rem' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Authentication error</h1>
-      <p>{message}</p>
-      <a href="/auth/signin">Back to sign in</a>
+    <main className={styles.page}>
+      <h1 className={styles.title}>Authentication error</h1>
+      <p className={styles.message}>{message}</p>
+      <a href="/auth/signin" className={styles.link}>Back to sign in</a>
     </main>
   )
 }

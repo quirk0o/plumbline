@@ -128,7 +128,7 @@
   --transition-slow: 0.3s;
 
   /* Focus ring */
-  --focus-ring: 0 0 0 3px var(--green-glow);
+  --focus-ring: 0 0 0 3px rgba(34, 135, 76, 0.55);
 }
 
 /* ─── Semantic tokens — dark (Forest Night) ───────────────────── */

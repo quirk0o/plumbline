@@ -27,7 +27,7 @@
 .navLogo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 600;
@@ -79,7 +79,7 @@
 .eyebrow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
@@ -347,7 +347,7 @@
 .footerLogo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 600;

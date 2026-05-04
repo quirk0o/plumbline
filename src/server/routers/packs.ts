@@ -11,7 +11,7 @@ const PACK_TYPE_ORDER: PackType[] = [
 
 export const packsRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session!.user!.id!
+    const userId = ctx.session.user.id
     const packs = await ctx.db.pack.findMany({
       where: { type: { not: PackType.BASE_GAME } },
       include: { userPacks: { where: { userId } } },
@@ -31,7 +31,7 @@ export const packsRouter = router({
   toggle: protectedProcedure
     .input(z.object({ packId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session!.user!.id!
+      const userId = ctx.session.user.id
       const existing = await ctx.db.userPack.findUnique({
         where: { userId_packId: { userId, packId: input.packId } },
       })

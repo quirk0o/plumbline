@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
+import { PackType } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { fetchPacksForUser } from '@/lib/packs'
 
@@ -9,7 +10,7 @@ export const packsRouter = router({
   }),
 
   toggle: protectedProcedure
-    .input(z.object({ packId: z.string() }))
+    .input(z.object({ packId: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const existing = await ctx.db.userPack.findUnique({
@@ -21,8 +22,10 @@ export const packsRouter = router({
         })
         return { isOwned: false }
       }
-      await ctx.db.pack.findUniqueOrThrow({ where: { id: input.packId } })
-        .catch(() => { throw new TRPCError({ code: 'NOT_FOUND', message: 'Pack not found' }) })
+      const pack = await ctx.db.pack.findUnique({ where: { id: input.packId } })
+      if (!pack || pack.type === PackType.BASE_GAME) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pack not found' })
+      }
       await ctx.db.userPack.create({ data: { userId, packId: input.packId } })
       return { isOwned: true }
     }),

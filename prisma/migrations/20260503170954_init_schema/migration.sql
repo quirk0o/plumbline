@@ -176,6 +176,7 @@ CREATE TABLE "legacies" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "founderSimId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -329,6 +330,9 @@ CREATE UNIQUE INDEX "verification_tokens_token_key" ON "verification_tokens"("to
 CREATE UNIQUE INDEX "verification_tokens_identifier_token_key" ON "verification_tokens"("identifier", "token");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "legacies_founderSimId_key" ON "legacies"("founderSimId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "sim_aspirations_simId_aspirationId_key" ON "sim_aspirations"("simId", "aspirationId");
 
 -- CreateIndex
@@ -375,6 +379,9 @@ ALTER TABLE "user_packs" ADD CONSTRAINT "user_packs_packId_fkey" FOREIGN KEY ("p
 
 -- AddForeignKey
 ALTER TABLE "legacies" ADD CONSTRAINT "legacies_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "legacies" ADD CONSTRAINT "legacies_founderSimId_fkey" FOREIGN KEY ("founderSimId") REFERENCES "sims"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "households" ADD CONSTRAINT "households_legacyId_fkey" FOREIGN KEY ("legacyId") REFERENCES "legacies"("id") ON DELETE CASCADE ON UPDATE CASCADE;

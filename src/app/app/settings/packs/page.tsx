@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { auth } from '../../../../../auth'
 import { db } from '@/server/db'
 import { PackGrid } from '@/app/components/PackGrid'
@@ -6,7 +7,8 @@ import styles from './page.module.css'
 
 export default async function SettingsPacksPage() {
   const session = await auth()
-  const userId = session!.user.id
+  const userId = session?.user?.id
+  if (!userId) redirect('/auth/signin')
 
   const grouped = await fetchPacksForUser(userId, db)
 

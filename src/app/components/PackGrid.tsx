@@ -112,8 +112,8 @@ export function PackGrid({ initialGroups }: PackGridProps) {
                     <Image
                       src={pack.imageUrl}
                       alt=""
-                      width={200}
-                      height={200}
+                      fill
+                      sizes="(max-width: 600px) 80px, 120px"
                       className={styles.coverImage}
                     />
                   ) : null}

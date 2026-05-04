@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -12,19 +12,12 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light')
-
-  useEffect(() => {
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'light'
     const stored = localStorage.getItem('simstrack-theme') as Theme | null
-    const resolved: Theme =
-      stored === 'light' || stored === 'dark'
-        ? stored
-        : window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'
-    setTheme(resolved)
-    document.documentElement.setAttribute('data-theme', resolved)
-  }, [])
+    if (stored === 'light' || stored === 'dark') return stored
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
 
   const toggle = useCallback(() => {
     setTheme(prev => {

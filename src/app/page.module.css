@@ -1,17 +1,12 @@
 /* ─── Page shell ──────────────────────────────────────────────── */
-
 .page {
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse 55% 50% at 78% 18%, rgba(52, 211, 153, 0.06) 0%, transparent 100%),
-    radial-gradient(ellipse 40% 35% at 15% 85%, rgba(245, 158, 11, 0.04) 0%, transparent 100%),
-    var(--bg);
+  background: var(--bg);
   display: flex;
   flex-direction: column;
 }
 
 /* ─── Nav ─────────────────────────────────────────────────────── */
-
 .nav {
   position: sticky;
   top: 0;
@@ -21,8 +16,12 @@
   justify-content: space-between;
   padding: 1.25rem 5vw;
   backdrop-filter: blur(16px);
-  background: rgba(7, 19, 14, 0.82);
+  background: rgba(250, 247, 240, 0.88);
   border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] .nav {
+  background: rgba(12, 21, 16, 0.88);
 }
 
 .navLogo {
@@ -30,10 +29,16 @@
   align-items: center;
   gap: 0.5rem;
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text);
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .navSignIn {
@@ -43,18 +48,17 @@
   color: var(--text-muted);
   padding: 0.5rem 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-base);
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 
 .navSignIn:hover {
   color: var(--text);
   border-color: var(--border-bright);
-  background: rgba(52, 211, 153, 0.06);
+  background: var(--bg-card-hover);
 }
 
 /* ─── Hero ────────────────────────────────────────────────────── */
-
 .hero {
   flex: 1;
   display: grid;
@@ -78,7 +82,7 @@
   gap: 0.5rem;
   font-family: var(--font-body);
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--green);
@@ -97,7 +101,7 @@
 
 .headline em {
   font-style: italic;
-  color: var(--green-bright);
+  color: var(--green);
 }
 
 .description {
@@ -119,7 +123,7 @@
   color: var(--bg);
   background: var(--green);
   padding: 0.875rem 1.875rem;
-  border-radius: 8px;
+  border-radius: var(--radius-base);
   width: fit-content;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
   animation: fadeUp 0.7s ease-out 0.28s both;
@@ -128,7 +132,7 @@
 .ctaButton:hover {
   background: var(--green-bright);
   transform: translateY(-2px);
-  box-shadow: 0 10px 32px rgba(52, 211, 153, 0.28);
+  box-shadow: var(--shadow-lg);
 }
 
 .ctaArrow {
@@ -141,7 +145,6 @@
 }
 
 /* ─── Hero visual ─────────────────────────────────────────────── */
-
 .heroVisual {
   display: flex;
   align-items: center;
@@ -155,7 +158,7 @@
   width: 420px;
   height: 420px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
   animation: breathe 5s ease-in-out infinite;
 }
 
@@ -164,7 +167,7 @@
   width: 260px;
   height: 260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.14) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
   animation: breathe 5s ease-in-out 0.8s infinite;
 }
 
@@ -172,13 +175,18 @@
   position: relative;
   z-index: 1;
   filter:
-    drop-shadow(0 0 20px rgba(52, 211, 153, 0.55))
-    drop-shadow(0 0 60px rgba(52, 211, 153, 0.2));
+    drop-shadow(0 0 20px rgba(26, 92, 53, 0.3))
+    drop-shadow(0 0 60px rgba(26, 92, 53, 0.1));
   animation: floatSway 8s ease-in-out infinite;
 }
 
-/* ─── Divider ─────────────────────────────────────────────────── */
+[data-theme="dark"] .plumbobWrapper {
+  filter:
+    drop-shadow(0 0 20px rgba(74, 175, 114, 0.55))
+    drop-shadow(0 0 60px rgba(74, 175, 114, 0.2));
+}
 
+/* ─── Divider ─────────────────────────────────────────────────── */
 .sectionDivider {
   display: flex;
   align-items: center;
@@ -199,7 +207,6 @@
 }
 
 /* ─── Features ────────────────────────────────────────────────── */
-
 .features {
   padding: 6rem 5vw 7rem;
 }
@@ -235,7 +242,7 @@
 .featureCard {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 1.875rem;
   display: flex;
   flex-direction: column;
@@ -247,7 +254,7 @@
   border-color: var(--border-bright);
   background: var(--bg-card-hover);
   transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(52, 211, 153, 0.06);
+  box-shadow: var(--shadow-lg);
 }
 
 .featureGem {
@@ -271,7 +278,6 @@
 }
 
 /* ─── CTA section ─────────────────────────────────────────────── */
-
 .ctaSection {
   border-top: 1px solid var(--border);
   padding: 7rem 5vw;
@@ -295,7 +301,7 @@
   width: 160px;
   height: 160px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
   animation: breathe 4s ease-in-out infinite;
 }
 
@@ -303,9 +309,15 @@
   position: relative;
   z-index: 1;
   filter:
-    drop-shadow(0 0 12px rgba(52, 211, 153, 0.6))
-    drop-shadow(0 0 32px rgba(52, 211, 153, 0.25));
+    drop-shadow(0 0 12px rgba(26, 92, 53, 0.3))
+    drop-shadow(0 0 32px rgba(26, 92, 53, 0.1));
   animation: floatSway 8s ease-in-out infinite;
+}
+
+[data-theme="dark"] .ctaDecor > svg {
+  filter:
+    drop-shadow(0 0 12px rgba(74, 175, 114, 0.6))
+    drop-shadow(0 0 32px rgba(74, 175, 114, 0.25));
 }
 
 .ctaTitle {
@@ -324,7 +336,6 @@
 }
 
 /* ─── Footer ──────────────────────────────────────────────────── */
-
 .footer {
   display: flex;
   align-items: center;
@@ -347,45 +358,34 @@
 .footerCopy {
   font-family: var(--font-body);
   font-size: 0.8125rem;
-  color: var(--text-muted);
-  opacity: 0.5;
+  color: var(--text-subtle);
 }
 
 /* ─── Animations ──────────────────────────────────────────────── */
-
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(22px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
 @keyframes breathe {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.12); opacity: 0.65; }
+  50%       { transform: scale(1.12); opacity: 0.65; }
 }
 
 @keyframes floatSway {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  35% { transform: translateY(-12px) rotate(2.5deg); }
-  70% { transform: translateY(-6px) rotate(-1.5deg); }
+  35%       { transform: translateY(-12px) rotate(2.5deg); }
+  70%       { transform: translateY(-6px) rotate(-1.5deg); }
 }
 
 /* ─── Responsive ──────────────────────────────────────────────── */
-
 @media (max-width: 1024px) {
-  .featuresGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .featuresGrid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -395,26 +395,9 @@
     padding: 3.5rem 5vw 4rem;
     gap: 3.5rem;
   }
-
-  .heroVisual {
-    order: -1;
-  }
-
-  .glowOuter {
-    width: 240px;
-    height: 240px;
-  }
-
-  .glowInner {
-    width: 160px;
-    height: 160px;
-  }
-
-  .featuresGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .ctaSection {
-    padding: 5rem 5vw;
-  }
+  .heroVisual { order: -1; }
+  .glowOuter  { width: 240px; height: 240px; }
+  .glowInner  { width: 160px; height: 160px; }
+  .featuresGrid { grid-template-columns: 1fr; }
+  .ctaSection { padding: 5rem 5vw; }
 }

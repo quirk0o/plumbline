@@ -20,7 +20,7 @@ const t = initTRPC.context<Context>().create()
 
 const enforceAuth = t.middleware(({ ctx, next }) => {
   if (!isAuthedSession(ctx.session)) throw new TRPCError({ code: 'UNAUTHORIZED' })
-  return next({ ctx: { ...ctx, session: ctx.session } })
+  return next({ ctx: { ...ctx, session: ctx.session as AuthedSession } })
 })
 
 export const router = t.router

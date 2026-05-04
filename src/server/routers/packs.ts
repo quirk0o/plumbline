@@ -17,8 +17,8 @@ export const packsRouter = router({
         where: { userId_packId: { userId, packId: input.packId } },
       })
       if (existing) {
-        await ctx.db.userPack.delete({
-          where: { userId_packId: { userId, packId: input.packId } },
+        await ctx.db.userPack.deleteMany({
+          where: { userId, packId: input.packId },
         })
         return { isOwned: false }
       }

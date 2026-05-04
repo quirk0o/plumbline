@@ -18,7 +18,7 @@ function GoogleIcon() {
 
 export default function SignInForm() {
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/'
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/app'
   const error = searchParams.get('error')
   const [email, setEmail] = useState('')
   const [emailSent, setEmailSent] = useState(false)

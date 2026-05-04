@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { auth } from '../../../../auth'
+import { auth } from '../../../../../auth'
 import { db } from '@/server/db'
 import { PackType } from '@prisma/client'
 import { PackGrid } from '@/app/components/PackGrid'
@@ -15,9 +14,8 @@ const PACK_TYPE_ORDER: PackType[] = [
 
 export default async function OnboardingPacksPage() {
   const session = await auth()
-  if (!session?.user) redirect('/auth/signin')
+  const userId = session!.user.id
 
-  const userId = session.user.id!
   const packs = await db.pack.findMany({
     where: { type: { not: PackType.BASE_GAME } },
     include: { userPacks: { where: { userId } } },
@@ -28,7 +26,10 @@ export default async function OnboardingPacksPage() {
     type,
     packs: packs
       .filter(p => p.type === type)
-      .map(({ userPacks, createdAt: _ca, updatedAt: _ua, ...p }) => ({ ...p, isOwned: userPacks.length > 0 })),
+      .map(({ userPacks, createdAt: _ca, updatedAt: _ua, ...p }) => ({
+        ...p,
+        isOwned: userPacks.length > 0,
+      })),
   })).filter(g => g.packs.length > 0)
 
   return (
@@ -44,10 +45,10 @@ export default async function OnboardingPacksPage() {
       <PackGrid initialGroups={grouped} />
 
       <div className={styles.ctaRow}>
-        <Link href="/" className={styles.btnContinue}>
+        <Link href="/app" className={styles.btnContinue}>
           Continue →
         </Link>
-        <Link href="/" className={styles.btnSkip}>
+        <Link href="/app" className={styles.btnSkip}>
           Skip for now
         </Link>
       </div>

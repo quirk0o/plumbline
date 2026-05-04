@@ -42,7 +42,7 @@ export default function SignInForm() {
 
       {emailSent ? (
         <div className={styles.success}>
-          <span className={styles.successIcon}><MiniPlumbob /></span>
+          <span className={styles.successIcon}><MiniPlumbob size={44} /></span>
           <p className={styles.successTitle}>Check your inbox</p>
           <p className={styles.successText}>
             A sign-in link is on its way to<br />

@@ -1,3 +1,5 @@
+import styles from './Plumbob.module.css'
+
 interface PlumbobProps {
   width?: number
 }
@@ -21,19 +23,18 @@ export function Plumbob({ width = 260 }: PlumbobProps) {
   )
 }
 
-export function MiniPlumbob() {
+export function MiniPlumbob({ size = 16 }: { size?: number }) {
+  const inner = Math.round(size * 0.625)
   return (
-    <svg
-      width="14"
-      height="15"
-      viewBox="0 0 100 110"
-      xmlns="http://www.w3.org/2000/svg"
+    <span
+      className={styles.miniWrap}
+      style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <polygon points="50,5 5,57 50,66"    fill="var(--plumbob-tl)" />
-      <polygon points="50,5 95,57 50,66"   fill="var(--plumbob-tr)" />
-      <polygon points="50,105 5,57 50,66"  fill="var(--plumbob-bl)" />
-      <polygon points="50,105 95,57 50,66" fill="var(--plumbob-br)" />
-    </svg>
+      <span
+        className={styles.miniInner}
+        style={{ width: inner, height: inner }}
+      />
+    </span>
   )
 }

@@ -1,0 +1,15 @@
+.miniWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.miniInner {
+  background: linear-gradient(135deg, var(--plumbob-tl) 0%, var(--plumbob-tr) 45%, var(--green-bright) 100%);
+  transform: rotate(45deg);
+  border-radius: 20%;
+  box-shadow:
+    0 0 5px var(--plumbob-glow),
+    0 0 10px var(--plumbob-glow-outer);
+}

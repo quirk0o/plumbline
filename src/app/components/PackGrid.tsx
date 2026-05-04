@@ -23,7 +23,7 @@ function badgeClass(type: PackType): string {
     case PackType.GAME_PACK:  return styles.badgeGamePack
     case PackType.STUFF_PACK: return styles.badgeStuffPack
     case PackType.KIT:        return styles.badgeKit
-    default: return styles.badgeExpansion
+    default: throw new Error(`Unknown pack type: ${String(type)}`)
   }
 }
 
@@ -34,6 +34,7 @@ function coverClass(type: PackType): string {
     case PackType.GAME_PACK:  return styles.coverGamePack
     case PackType.STUFF_PACK: return styles.coverStuffPack
     case PackType.KIT:        return styles.coverKit
+    default: throw new Error(`Unknown pack type: ${String(type)}`)
   }
 }
 

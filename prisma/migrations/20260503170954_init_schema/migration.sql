@@ -29,7 +29,7 @@ CREATE TYPE "OccultType" AS ENUM ('VAMPIRE', 'SPELLCASTER', 'MERMAID', 'WEREWOLF
 CREATE TYPE "CauseOfDeath" AS ENUM ('OLD_AGE', 'DROWNING', 'FIRE', 'ELECTROCUTION', 'HUNGER', 'OVEREXERTION', 'EMBARRASSMENT', 'ANGER', 'LAUGHTER', 'COWPLANT', 'PUFFERFISH', 'MURPHY_BED', 'STEAM', 'POISON', 'METEOR');
 
 -- CreateEnum
-CREATE TYPE "FamilyRelationshipType" AS ENUM ('PARENT', 'CHILD', 'GRANDPARENT', 'GRANDCHILD', 'GREAT_GRANDPARENT', 'GREAT_GRANDCHILD', 'SIBLING', 'HALF_SIBLING', 'STEP_SIBLING', 'STEP_PARENT', 'STEP_CHILD', 'ADOPTIVE_PARENT', 'ADOPTED_CHILD', 'AUNT_UNCLE', 'NIECE_NEPHEW', 'COUSIN', 'PARENT_IN_LAW', 'CHILD_IN_LAW', 'SIBLING_IN_LAW');
+CREATE TYPE "FamilyRelationshipType" AS ENUM ('BIOLOGICAL', 'ADOPTIVE', 'STEP');
 
 -- CreateEnum
 CREATE TYPE "RomanticStatus" AS ENUM ('NONE', 'DATING', 'ENGAGED', 'MARRIED', 'EX_PARTNER', 'WIDOWED');
@@ -273,11 +273,10 @@ CREATE TABLE "sim_careers" (
 -- CreateTable
 CREATE TABLE "family_relationships" (
     "id" TEXT NOT NULL,
-    "fromSimId" TEXT NOT NULL,
-    "toSimId" TEXT NOT NULL,
-    "type" "FamilyRelationshipType" NOT NULL,
+    "parentId" TEXT NOT NULL,
+    "childId" TEXT NOT NULL,
+    "type" "FamilyRelationshipType" NOT NULL DEFAULT 'BIOLOGICAL'::"FamilyRelationshipType",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "family_relationships_pkey" PRIMARY KEY ("id")
 );
@@ -333,10 +332,10 @@ CREATE UNIQUE INDEX "verification_tokens_identifier_token_key" ON "verification_
 CREATE UNIQUE INDEX "sim_aspirations_simId_aspirationId_key" ON "sim_aspirations"("simId", "aspirationId");
 
 -- CreateIndex
-CREATE INDEX "family_relationships_toSimId_idx" ON "family_relationships"("toSimId");
+CREATE INDEX "family_relationships_childId_idx" ON "family_relationships"("childId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "family_relationships_fromSimId_toSimId_key" ON "family_relationships"("fromSimId", "toSimId");
+CREATE UNIQUE INDEX "family_relationships_parentId_childId_key" ON "family_relationships"("parentId", "childId");
 
 -- CreateIndex
 CREATE INDEX "social_relationships_simBId_idx" ON "social_relationships"("simBId");
@@ -414,10 +413,10 @@ ALTER TABLE "sim_careers" ADD CONSTRAINT "sim_careers_simId_fkey" FOREIGN KEY ("
 ALTER TABLE "sim_careers" ADD CONSTRAINT "sim_careers_careerId_fkey" FOREIGN KEY ("careerId") REFERENCES "careers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "family_relationships" ADD CONSTRAINT "family_relationships_fromSimId_fkey" FOREIGN KEY ("fromSimId") REFERENCES "sims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "family_relationships" ADD CONSTRAINT "family_relationships_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "sims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "family_relationships" ADD CONSTRAINT "family_relationships_toSimId_fkey" FOREIGN KEY ("toSimId") REFERENCES "sims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "family_relationships" ADD CONSTRAINT "family_relationships_childId_fkey" FOREIGN KEY ("childId") REFERENCES "sims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "social_relationships" ADD CONSTRAINT "social_relationships_simAId_fkey" FOREIGN KEY ("simAId") REFERENCES "sims"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { PackType } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import type { RouterOutputs } from '@/trpc/client'
@@ -108,12 +109,12 @@ export function PackGrid({ initialGroups }: PackGridProps) {
                   style={{ background: COVER_GRADIENTS[pack.type] }}
                 >
                   {pack.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={pack.imageUrl}
                       alt=""
+                      width={200}
+                      height={200}
                       className={styles.coverImage}
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                     />
                   ) : null}
                   <span className={styles.coverEmoji} aria-hidden>{pack.icon ?? '📦'}</span>

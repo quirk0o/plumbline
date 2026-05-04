@@ -1,4 +1,4 @@
-# SimsTrack
+# SimTrack
 
 A personal web application for tracking a Sims game playthrough. Supports randomizing Sim traits, storing family trees, and tracking challenges.
 
@@ -21,7 +21,7 @@ React components call tRPC procedures via a typed client. tRPC procedures live i
 ## Project Structure
 
 ```
-simstrack-526/
+simtrack-526/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx
@@ -58,7 +58,7 @@ npm run db:generate  # Regenerate Prisma client
 ## Environment Variables
 
 ```
-DATABASE_URL=postgresql://user:password@localhost:5432/simstrack
+DATABASE_URL=postgresql://user:password@localhost:5432/simtrack
 ```
 
 ## Content Management

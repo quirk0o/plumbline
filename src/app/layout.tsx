@@ -21,11 +21,11 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'SimsTrack',
+  title: 'SimTrack',
   description: 'Chronicle your Sims legacies — track every generation, household, and story.',
 }
 
-const flashPreventionScript = `(function(){try{var t=localStorage.getItem('simstrack-theme');var r=t==='dark'||t==='light'?t:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',r);}catch(e){}})();`
+const flashPreventionScript = `(function(){try{var t=localStorage.getItem('simtrack-theme');var r=t==='dark'||t==='light'?t:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',r);}catch(e){}})();`
 
 export default function RootLayout({
   children,

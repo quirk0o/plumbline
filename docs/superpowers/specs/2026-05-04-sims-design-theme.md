@@ -1,4 +1,4 @@
-# SimsTrack Design Theme — Parchment & Forest
+# SimTrack Design Theme — Parchment & Forest
 
 **Date:** 2026-05-04
 **Status:** Approved
@@ -192,7 +192,7 @@ The component reads the current theme from `data-theme` on `<html>` to swap face
 
 ## Dark Mode Toggle
 
-**Storage:** `localStorage` key `simstrack-theme` → `"light"` | `"dark"`.
+**Storage:** `localStorage` key `simtrack-theme` → `"light"` | `"dark"`.
 
 **Behaviour:**
 1. On first visit (no stored preference), default to light mode.

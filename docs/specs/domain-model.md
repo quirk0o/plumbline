@@ -1,6 +1,6 @@
-# SimsTrack Domain Model
+# SimTrack Domain Model
 
-Research findings and domain concepts for the SimsTrack application. Describes what exists in The Sims 4 and how the application models it — not how it is stored.
+Research findings and domain concepts for the SimTrack application. Describes what exists in The Sims 4 and how the application models it — not how it is stored.
 
 ---
 

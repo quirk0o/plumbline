@@ -14,7 +14,7 @@ export default function SignInPage() {
         </div>
 
         <div className={styles.header}>
-          <h1 className={styles.title}>SimsTrack</h1>
+          <h1 className={styles.title}>SimTrack</h1>
           <p className={styles.subtitle}>Your Sims universe, tracked</p>
         </div>
 

@@ -1,14 +1,14 @@
-# SimsTrack Brand Direction
+# SimTrack Brand Direction
 
 **A living reference for designers and developers.**
 
 ---
 
-## What SimsTrack Is
+## What SimTrack Is
 
-SimsTrack is a dedicated chronicle for players running The Sims Legacy Challenges — most prominently the 10-Generation Legacy Challenge. It gives players a place to track every Sim, every generation, every relationship, and every milestone their stories produce.
+SimTrack is a dedicated chronicle for players running The Sims Legacy Challenges — most prominently the 10-Generation Legacy Challenge. It gives players a place to track every Sim, every generation, every relationship, and every milestone their stories produce.
 
-The product exists because Legacy Challenge players care deeply about narrative continuity. They name heirs, record births and deaths, document personality quirks, and mourn Sims who aged out. SimsTrack is the keeper of those records.
+The product exists because Legacy Challenge players care deeply about narrative continuity. They name heirs, record births and deaths, document personality quirks, and mourn Sims who aged out. SimTrack is the keeper of those records.
 
 **Taglines in use:**
 - "Your Sims universe, tracked"
@@ -24,7 +24,7 @@ Players running multi-generational challenges who want more than a screenshot fo
 
 ## Brand Personality
 
-SimsTrack should feel like a beautifully kept journal — warm, literary, and refined. The aesthetic reference is a leather-bound field notebook or a handsome reference volume, not a dashboard or a game client.
+SimTrack should feel like a beautifully kept journal — warm, literary, and refined. The aesthetic reference is a leather-bound field notebook or a handsome reference volume, not a dashboard or a game client.
 
 What that means in practice:
 
@@ -32,7 +32,7 @@ What that means in practice:
 - **Literary, not game-y.** Typography leans toward the serif tradition. Prose in the UI can have a slight narrative register — "Begin your legacy" lands better than "Create account."
 - **Refined, not precious.** Elegance should serve usability. Decorative elements earn their place. Nothing is ornamental for its own sake.
 
-The Sims franchise has always had a charming, personal, slightly whimsical quality. SimsTrack should feel like a natural companion to that — not a fansite, not a corporate product, but a thoughtful tool made by someone who plays and cares.
+The Sims franchise has always had a charming, personal, slightly whimsical quality. SimTrack should feel like a natural companion to that — not a fansite, not a corporate product, but a thoughtful tool made by someone who plays and cares.
 
 ---
 
@@ -84,7 +84,7 @@ The forest continues at night. Dark mode backgrounds use deep forest green (`#0c
 
 ## Pack Type Badge Colors
 
-Content packs in The Sims have distinct types. SimsTrack uses a dedicated color per type so players can scan their packs at a glance. These colors are vivid and distinct — they intentionally break from the green/amber palette to be immediately readable as category signals.
+Content packs in The Sims have distinct types. SimTrack uses a dedicated color per type so players can scan their packs at a glance. These colors are vivid and distinct — they intentionally break from the green/amber palette to be immediately readable as category signals.
 
 | Pack Type | Light Mode | Dark Mode |
 |---|---|---|
@@ -113,7 +113,7 @@ The pairing works because both faces have a slightly humanist quality. Neither i
 
 ## The Plumbob
 
-The plumbob is the iconic green diamond that floats above Sims in the game. It is SimsTrack's brand symbol.
+The plumbob is the iconic green diamond that floats above Sims in the game. It is SimTrack's brand symbol.
 
 ### Where it appears
 
@@ -162,4 +162,4 @@ Avoid these — they undermine the brand even when individually they seem harmle
 - **Green text.** Green is interactive. If you reach for green to make text feel "on-brand," use `--text` or `--text-muted` instead.
 - **Amber as a general accent.** Amber is earned — it marks heirs and legacy milestones. Using it elsewhere devalues those moments.
 - **Heavy animation or transitions.** The product should feel settled and calm. Micro-interactions are welcome; kinetic showpieces are not.
-- **Neon, high-saturation, or dark-editorial palettes.** These belong to a different genre. SimsTrack is a journal, not a game client.
+- **Neon, high-saturation, or dark-editorial palettes.** These belong to a different genre. SimTrack is a journal, not a game client.

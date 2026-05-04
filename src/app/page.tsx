@@ -36,7 +36,7 @@ export default function Home() {
       <nav className={styles.nav}>
         <div className={styles.navLogo}>
           <Plumbob size={16} />
-          <span>SimsTrack</span>
+          <span>SimTrack</span>
         </div>
         <div className={styles.navRight}>
           <ThemeToggle />
@@ -57,7 +57,7 @@ export default function Home() {
             every <em>story.</em>
           </h1>
           <p className={styles.description}>
-            SimsTrack is your dedicated chronicle for Sims legacies.
+            SimTrack is your dedicated chronicle for Sims legacies.
             Track every Sim, household, relationship, and milestone
             across generations of gameplay — nothing forgotten, everything remembered.
           </p>
@@ -114,7 +114,7 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.footerLogo}>
           <Plumbob size={16} />
-          <span>SimsTrack</span>
+          <span>SimTrack</span>
         </div>
         <p className={styles.footerCopy}>© 2026</p>
       </footer>

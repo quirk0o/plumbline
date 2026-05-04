@@ -301,7 +301,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light')
 
   useEffect(() => {
-    const stored = localStorage.getItem('simstrack-theme') as Theme | null
+    const stored = localStorage.getItem('simtrack-theme') as Theme | null
     const resolved: Theme =
       stored === 'light' || stored === 'dark'
         ? stored
@@ -315,7 +315,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggle = () => {
     const next: Theme = theme === 'light' ? 'dark' : 'light'
     setTheme(next)
-    localStorage.setItem('simstrack-theme', next)
+    localStorage.setItem('simtrack-theme', next)
     document.documentElement.setAttribute('data-theme', next)
   }
 
@@ -401,11 +401,11 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'SimsTrack',
+  title: 'SimTrack',
   description: 'Chronicle your Sims legacies — track every generation, household, and story.',
 }
 
-const flashPreventionScript = `(function(){try{var t=localStorage.getItem('simstrack-theme');var r=t==='dark'||t==='light'?t:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',r);}catch(e){}})();`
+const flashPreventionScript = `(function(){try{var t=localStorage.getItem('simtrack-theme');var r=t==='dark'||t==='light'?t:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',r);}catch(e){}})();`
 
 export default function RootLayout({
   children,
@@ -448,13 +448,13 @@ npm run dev
 Open http://localhost:3000. Hard-reload (Cmd+Shift+R) several times. The page should not flash between light and dark. Toggle the theme in the browser console:
 
 ```js
-localStorage.setItem('simstrack-theme', 'dark'); location.reload();
+localStorage.setItem('simtrack-theme', 'dark'); location.reload();
 ```
 
 Expected: page loads dark immediately with no white flash. Reset with:
 
 ```js
-localStorage.removeItem('simstrack-theme'); location.reload();
+localStorage.removeItem('simtrack-theme'); location.reload();
 ```
 
 - [ ] **Step 5: Commit**
@@ -504,7 +504,7 @@ export function AppNav({ name, email, image }: AppNavProps) {
     <nav className={styles.nav}>
       <Link href="/app" className={styles.logo}>
         <MiniPlumbob />
-        SimsTrack
+        SimTrack
       </Link>
 
       <div className={styles.links}>
@@ -718,7 +718,7 @@ export default function Home() {
       <nav className={styles.nav}>
         <div className={styles.navLogo}>
           <MiniPlumbob />
-          <span>SimsTrack</span>
+          <span>SimTrack</span>
         </div>
         <div className={styles.navRight}>
           <ThemeToggle />
@@ -739,7 +739,7 @@ export default function Home() {
             every <em>story.</em>
           </h1>
           <p className={styles.description}>
-            SimsTrack is your dedicated chronicle for Sims legacies.
+            SimTrack is your dedicated chronicle for Sims legacies.
             Track every Sim, household, relationship, and milestone
             across generations of gameplay — nothing forgotten, everything remembered.
           </p>
@@ -796,7 +796,7 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.footerLogo}>
           <MiniPlumbob />
-          <span>SimsTrack</span>
+          <span>SimTrack</span>
         </div>
         <p className={styles.footerCopy}>© 2026</p>
       </footer>
@@ -1256,7 +1256,7 @@ export default function SignInPage() {
         </div>
 
         <div className={styles.header}>
-          <h1 className={styles.title}>SimsTrack</h1>
+          <h1 className={styles.title}>SimTrack</h1>
           <p className={styles.subtitle}>Your Sims universe, tracked</p>
         </div>
 
@@ -1931,13 +1931,13 @@ git commit -m "feat(theme): update PackGrid with token-based styles and pack-typ
 ## Task 10: Brand Direction Document
 
 **Files:**
-- Create: `docs/superpowers/specs/2026-05-04-simstrack-brand.md`
+- Create: `docs/superpowers/specs/2026-05-04-simtrack-brand.md`
 
 - [ ] **Step 1: Write the living brand guide**
 
-Create `docs/superpowers/specs/2026-05-04-simstrack-brand.md`. This is a "what it is" document — not a changelog. Cover:
+Create `docs/superpowers/specs/2026-05-04-simtrack-brand.md`. This is a "what it is" document — not a changelog. Cover:
 
-- **Brand name & tagline:** SimsTrack — "Your Sims universe, tracked" / "Chronicle your Sims legacies"
+- **Brand name & tagline:** SimTrack — "Your Sims universe, tracked" / "Chronicle your Sims legacies"
 - **Audience:** Players running Legacy Challenges who want to record every generation, Sim, relationship, and milestone
 - **Personality:** Warm, literary, refined — like a beautifully kept journal. Not clinical or game-y. The Sims has a charming, personal quality; the design should too
 - **Visual identity:** Parchment & Forest. Warm cream backgrounds, deep forest green as the primary accent (plumbob green), honey amber as a secondary accent reserved for legacy and heir callouts. Cormorant Garamond for display headings; Plus Jakarta Sans for UI text
@@ -1949,8 +1949,8 @@ Create `docs/superpowers/specs/2026-05-04-simstrack-brand.md`. This is a "what i
 - [ ] **Step 2: Commit**
 
 ```bash
-git add docs/superpowers/specs/2026-05-04-simstrack-brand.md
-git commit -m "docs: add SimsTrack brand direction and design system guide"
+git add docs/superpowers/specs/2026-05-04-simtrack-brand.md
+git commit -m "docs: add SimTrack brand direction and design system guide"
 ```
 
 ---

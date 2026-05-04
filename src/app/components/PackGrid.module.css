@@ -89,6 +89,13 @@
   opacity: 0.32;
 }
 
+/* ── Cover gradients (per pack type) ── */
+.coverBaseGame  { background: linear-gradient(135deg, #0e2018, #162e22); }
+.coverExpansion { background: linear-gradient(135deg, #0e2018, #162e22); }
+.coverGamePack  { background: linear-gradient(135deg, #1e120a, #221508); }
+.coverStuffPack { background: linear-gradient(135deg, #14101e, #180e22); }
+.coverKit       { background: linear-gradient(135deg, #1e100e, #221210); }
+
 /* ── Badge ── */
 .badge {
   position: absolute;

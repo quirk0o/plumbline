@@ -17,14 +17,6 @@ const SECTION_LABELS: Record<PackType, string> = {
   [PackType.KIT]: 'Kits',
 }
 
-const COVER_GRADIENTS: Record<PackType, string> = {
-  [PackType.BASE_GAME]: 'linear-gradient(135deg, #0e2018, #162e22)',
-  [PackType.EXPANSION]: 'linear-gradient(135deg, #0e2018, #162e22)',
-  [PackType.GAME_PACK]: 'linear-gradient(135deg, #1e120a, #221508)',
-  [PackType.STUFF_PACK]: 'linear-gradient(135deg, #14101e, #180e22)',
-  [PackType.KIT]: 'linear-gradient(135deg, #1e100e, #221210)',
-}
-
 function badgeClass(type: PackType): string {
   switch (type) {
     case PackType.EXPANSION:  return styles.badgeExpansion
@@ -32,6 +24,16 @@ function badgeClass(type: PackType): string {
     case PackType.STUFF_PACK: return styles.badgeStuffPack
     case PackType.KIT:        return styles.badgeKit
     default: return styles.badgeExpansion
+  }
+}
+
+function coverClass(type: PackType): string {
+  switch (type) {
+    case PackType.BASE_GAME:  return styles.coverBaseGame
+    case PackType.EXPANSION:  return styles.coverExpansion
+    case PackType.GAME_PACK:  return styles.coverGamePack
+    case PackType.STUFF_PACK: return styles.coverStuffPack
+    case PackType.KIT:        return styles.coverKit
   }
 }
 
@@ -105,8 +107,7 @@ export function PackGrid({ initialGroups }: PackGridProps) {
                   <span className={`${styles.badge} ${badgeClass(pack.type)}`} aria-hidden>✓</span>
                 )}
                 <div
-                  className={`${styles.cover} ${!pack.isOwned ? styles.coverDimmed : ''}`}
-                  style={{ background: COVER_GRADIENTS[pack.type] }}
+                  className={`${styles.cover} ${coverClass(pack.type)} ${!pack.isOwned ? styles.coverDimmed : ''}`}
                 >
                   {pack.imageUrl ? (
                     <Image

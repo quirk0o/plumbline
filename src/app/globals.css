@@ -97,7 +97,9 @@
 
   --pack-expansion:   #4aaf72;
   --pack-game:        #fbbf24;
-  --pack-badge-text:  #0c1510;
+  --pack-stuff:       #a78bfa;
+  --pack-kit:         #fb7185;
+  --pack-badge-text:  var(--bg);
   --pack-card-footer: rgba(0, 0, 0, 0.22);
 
   --plumbob-tl: #a7f3c0;

@@ -23,6 +23,22 @@ export function Plumbob({ width = 260 }: PlumbobProps) {
   )
 }
 
+export function BigPlumbob({ width = 260 }: PlumbobProps) {
+  const radius = Math.round(width * 0.115)
+  return (
+    <span
+      className={styles.bigWrap}
+      style={{ width, height: width }}
+      aria-hidden="true"
+    >
+      <span
+        className={styles.bigInner}
+        style={{ borderRadius: radius }}
+      />
+    </span>
+  )
+}
+
 export function MiniPlumbob({ size = 16 }: { size?: number }) {
   const inner = Math.round(size * 0.625)
   return (

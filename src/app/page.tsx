@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plumbob, MiniPlumbob } from '@/components/Plumbob'
+import { BigPlumbob, MiniPlumbob } from '@/components/Plumbob'
 import { ThemeToggle } from '@/components/ThemeProvider'
 import styles from './page.module.css'
 
@@ -71,7 +71,7 @@ export default function Home() {
           <div className={styles.glowOuter} />
           <div className={styles.glowInner} />
           <div className={styles.plumbobWrapper}>
-            <Plumbob width={260} />
+            <BigPlumbob width={260} />
           </div>
         </div>
       </section>
@@ -101,7 +101,7 @@ export default function Home() {
       <section className={styles.ctaSection}>
         <div className={styles.ctaDecor}>
           <div className={styles.ctaGlow} />
-          <Plumbob width={80} />
+          <BigPlumbob width={80} />
         </div>
         <h2 className={styles.ctaTitle}>Begin your legacy today.</h2>
         <p className={styles.ctaSubtitle}>Free to use. Your stories, always remembered.</p>

@@ -49,12 +49,16 @@
   height: 100%;
   background: linear-gradient(135deg, var(--plumbob-tl) 0%, var(--plumbob-tr) 45%, var(--green-bright) 100%);
   transform: rotate(45deg);
-  border-radius: 5px;
+  border-radius: 20%;
   box-shadow:
     0 0 16px var(--plumbob-glow),
     0 0 40px var(--plumbob-glow-outer),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   animation: glow 2.5s ease-in-out infinite;
+}
+
+:root:not([data-theme="dark"]) .plumbobInner {
+  background: linear-gradient(135deg, var(--plumbob-tr) 0%, var(--plumbob-bl) 82%, var(--green) 100%);
 }
 
 @keyframes glow {

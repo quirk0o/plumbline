@@ -1,15 +1,51 @@
+/* ── Shared gradient (dark mode / default) ─────────────────────── */
+.bigInner,
+.miniInner {
+  background: linear-gradient(135deg, var(--plumbob-tl) 0%, var(--plumbob-tr) 45%, var(--green-bright) 100%);
+  transform: rotate(45deg);
+  border-radius: 20%;
+}
+
+/* ── Light mode: shift darker ───────────────────────────────────── */
+:root:not([data-theme="dark"]) .bigInner,
+:root:not([data-theme="dark"]) .miniInner {
+  background: linear-gradient(135deg, var(--plumbob-tr) 0%, var(--plumbob-bl) 82%, var(--green) 100%);
+}
+
+/* ── Big plumbob ────────────────────────────────────────────────── */
+.bigWrap {
+  display: block;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bigInner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  box-shadow:
+    0 0 5px var(--plumbob-glow),
+    0 0 10px var(--plumbob-glow-outer);
+}
+
+.bigInner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 45%);
+  border-radius: inherit;
+}
+
+/* ── Mini plumbob (no glow) ─────────────────────────────────────── */
 .miniWrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  vertical-align: middle;
 }
 
 .miniInner {
-  background: linear-gradient(135deg, var(--plumbob-tl) 0%, var(--plumbob-tr) 45%, var(--green-bright) 100%);
-  transform: rotate(45deg);
-  border-radius: 20%;
-  box-shadow:
-    0 0 5px var(--plumbob-glow),
-    0 0 10px var(--plumbob-glow-outer);
+  display: block;
 }

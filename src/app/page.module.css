@@ -305,7 +305,7 @@
   animation: breathe 4s ease-in-out infinite;
 }
 
-.ctaDecor > svg {
+.ctaDecor > *:not(.ctaGlow) {
   position: relative;
   z-index: 1;
   filter:
@@ -314,7 +314,7 @@
   animation: floatSway 8s ease-in-out infinite;
 }
 
-[data-theme="dark"] .ctaDecor > svg {
+[data-theme="dark"] .ctaDecor > *:not(.ctaGlow) {
   filter:
     drop-shadow(0 0 12px rgba(74, 175, 114, 0.6))
     drop-shadow(0 0 32px rgba(74, 175, 114, 0.25));

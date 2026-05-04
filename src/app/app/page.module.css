@@ -8,6 +8,7 @@
   font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 600;
+  font-style: italic;
   color: var(--text);
   margin-bottom: 2rem;
 }
@@ -26,22 +27,23 @@
   padding: 1.25rem 1.5rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   text-decoration: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .card:hover {
   border-color: var(--border-bright);
-  box-shadow: 0 4px 16px rgba(52, 211, 153, 0.06);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .cardLabel {
   font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(237, 250, 240, 0.35);
+  color: var(--text-subtle);
 }
 
 .cardValue {
@@ -53,11 +55,12 @@
 
 .cardAction {
   font-size: 0.75rem;
+  font-weight: 600;
   color: var(--green);
   margin-top: 0.25rem;
 }
 
 .placeholder {
   font-size: 0.875rem;
-  color: rgba(237, 250, 240, 0.2);
+  color: var(--text-subtle);
 }

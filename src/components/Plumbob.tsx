@@ -17,8 +17,6 @@ export function Plumbob({ width = 260 }: PlumbobProps) {
       <polygon points="50,105 5,57 50,66"  fill="var(--plumbob-bl)" />
       <polygon points="50,105 95,57 50,66" fill="var(--plumbob-br)" />
       <polygon points="50,5 5,57 27,31"    fill="rgba(255,255,255,0.16)" />
-      <line x1="50" y1="5"  x2="50" y2="105" stroke="rgba(0,0,0,0.08)" strokeWidth="0.6" />
-      <line x1="5"  y1="57" x2="95" y2="57"  stroke="rgba(0,0,0,0.08)" strokeWidth="0.6" />
     </svg>
   )
 }

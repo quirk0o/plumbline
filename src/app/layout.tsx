@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   description: 'Chronicle your Sims legacies — track every generation, household, and story.',
 }
 
-const flashPreventionScript = `(function(){try{var t=localStorage.getItem('simtrack-theme');var r=t==='dark'||t==='light'?t:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',r);}catch(e){}})();`
+const flashPreventionScript = `(function(){if('scrollRestoration'in history){history.scrollRestoration='manual'}try{var t=localStorage.getItem('simtrack-theme');var r=t==='dark'||t==='light'?t:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',r);}catch(e){}})();`
 
 export default function RootLayout({
   children,

@@ -81,18 +81,3 @@
   font-weight: 700;
   color: var(--green);
 }
-
-.signOut {
-  font-size: 0.68rem;
-  color: var(--text-subtle);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-body);
-  transition: color 0.12s;
-  padding: 0;
-}
-
-.signOut:hover {
-  color: var(--text-muted);
-}

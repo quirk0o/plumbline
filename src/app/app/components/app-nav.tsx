@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Plumbob } from '@/components/plumbob'
 import { ThemeToggle } from '@/components/theme-provider'
+import { Button } from '@/components/ui'
 import styles from './app-nav.module.css'
 
 interface AppNavProps {
@@ -50,12 +51,7 @@ export function AppNav({ name, email, image }: AppNavProps) {
         ) : (
           <div className={styles.avatarInitial}>{initial}</div>
         )}
-        <button
-          className={styles.signOut}
-          onClick={() => signOut({ callbackUrl: '/' })}
-        >
-          Sign out
-        </button>
+        <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/' })}>Sign out</Button>
       </div>
     </nav>
   )

@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plumbob } from '@/components/plumbob'
+import { Button, Input } from '@/components/ui'
 import styles from './signin.module.css'
 
 function GoogleIcon() {
@@ -52,14 +53,10 @@ export default function SignInForm() {
         </div>
       ) : (
         <>
-          <button
-            className={styles.googleButton}
-            onClick={() => signIn('google', { callbackUrl })}
-            type="button"
-          >
+          <Button variant="outline" fullWidth type="button" onClick={() => signIn('google', { callbackUrl })}>
             <GoogleIcon />
             Continue with Google
-          </button>
+          </Button>
 
           <div className={styles.divider}>
             <span className={styles.dividerLine} />
@@ -68,17 +65,15 @@ export default function SignInForm() {
           </div>
 
           <form onSubmit={handleEmailSignIn} className={styles.emailForm}>
-            <input
+            <Input
               type="email"
+              id="email"
               required
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={styles.input}
             />
-            <button type="submit" className={styles.submitButton}>
-              Send magic link
-            </button>
+            <Button variant="primary" fullWidth type="submit">Send magic link</Button>
           </form>
         </>
       )}

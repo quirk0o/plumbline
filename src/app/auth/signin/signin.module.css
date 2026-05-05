@@ -74,32 +74,6 @@
   animation: fadeUp 0.7s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.googleButton {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.625rem;
-  padding: 0.8125rem 1.25rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-base);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
-  letter-spacing: 0.01em;
-}
-
-.googleButton:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-bright);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
 .googleIcon {
   flex-shrink: 0;
 }
@@ -129,50 +103,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.input {
-  width: 100%;
-  padding: 0.8125rem 1rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-base);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  transition: border-color 0.18s, box-shadow 0.18s;
-  outline: none;
-}
-
-.input::placeholder {
-  color: var(--text-subtle);
-}
-
-.input:focus {
-  border-color: var(--green);
-  box-shadow: var(--focus-ring);
-}
-
-.submitButton {
-  width: 100%;
-  padding: 0.8125rem;
-  background: var(--green);
-  border: none;
-  border-radius: var(--radius-base);
-  color: var(--bg);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.18s, transform 0.18s, box-shadow 0.18s;
-}
-
-.submitButton:hover {
-  background: var(--green-bright);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
 }
 
 .success {

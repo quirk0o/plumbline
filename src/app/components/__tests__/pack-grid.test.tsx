@@ -1,96 +1,92 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { PackType } from '@prisma/client'
+import { describe, it, expect, vi } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
+import { server } from '@/test/msw-server'
+import { renderWithTRPC } from '@/test/render'
 import { PackGrid } from '../pack-grid'
-
-const mockMutate = vi.fn()
-const mockSetData = vi.fn()
-const mockInvalidate = vi.fn()
 
 vi.mock('next/image', () => ({
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }))
 
-vi.mock('@/trpc/client', () => ({
-  trpc: {
-    packs: {
-      getAll: {
-        useQuery: vi.fn((_input: unknown, opts: { initialData: unknown }) => ({
-          data: opts?.initialData,
-        })),
-      },
-      toggle: {
-        useMutation: vi.fn(() => ({ mutate: mockMutate })),
-      },
-    },
-    useUtils: vi.fn(() => ({
-      packs: {
-        getAll: {
-          cancel: vi.fn(),
-          getData: vi.fn(),
-          setData: mockSetData,
-          invalidate: mockInvalidate,
-        },
-      },
-    })),
-  },
-}))
-
 const expansionGroup = {
-  type: PackType.EXPANSION,
+  type: 'EXPANSION',
   packs: [
-    { id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: '🏙️', imageUrl: null, isOwned: false },
-    { id: 'p2', name: 'Seasons', type: PackType.EXPANSION, icon: '🍂', imageUrl: null, isOwned: true },
+    { id: 'p1', name: 'City Living', type: 'EXPANSION', icon: '🏙️', imageUrl: null, isOwned: false },
+    { id: 'p2', name: 'Seasons', type: 'EXPANSION', icon: '🍂', imageUrl: null, isOwned: true },
   ],
 }
 
-beforeEach(() => vi.clearAllMocks())
+function mockPacksGetAll(groups = [expansionGroup]) {
+  server.use(
+    http.get('http://localhost/api/trpc/packs.getAll', () =>
+      HttpResponse.json([{ result: { data: { json: groups } } }])
+    )
+  )
+}
+
+function mockPacksToggle(response = { isOwned: true }) {
+  server.use(
+    http.post('http://localhost/api/trpc/packs.toggle', () =>
+      HttpResponse.json([{ result: { data: { json: response } } }])
+    )
+  )
+}
 
 describe('PackGrid', () => {
-  it('renders section label and all pack cards', () => {
-    render(<PackGrid initialGroups={[expansionGroup]} />)
+  it('renders section label and all pack cards', async () => {
+    mockPacksGetAll()
+    renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
     expect(screen.getByText('Expansion Packs')).toBeInTheDocument()
     expect(screen.getByText('City Living')).toBeInTheDocument()
     expect(screen.getByText('Seasons')).toBeInTheDocument()
   })
 
-  it('shows correct owned-pack count', () => {
-    render(<PackGrid initialGroups={[expansionGroup]} />)
+  it('shows correct owned-pack count from initialGroups', async () => {
+    mockPacksGetAll()
+    renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
     expect(screen.getByText(/1 pack selected/)).toBeInTheDocument()
   })
 
-  it('uses plural "packs" when count is 0 or > 1', () => {
+  it('uses plural "packs" when count > 1', async () => {
     const groups = [{
-      type: PackType.EXPANSION,
+      type: 'EXPANSION',
       packs: [
-        { id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: null, imageUrl: null, isOwned: true },
-        { id: 'p2', name: 'Seasons', type: PackType.EXPANSION, icon: null, imageUrl: null, isOwned: true },
+        { id: 'p1', name: 'City Living', type: 'EXPANSION', icon: null, imageUrl: null, isOwned: true },
+        { id: 'p2', name: 'Seasons', type: 'EXPANSION', icon: null, imageUrl: null, isOwned: true },
       ],
     }]
-    render(<PackGrid initialGroups={groups} />)
+    mockPacksGetAll(groups)
+    renderWithTRPC(<PackGrid initialGroups={groups} />)
     expect(screen.getByText(/2 packs selected/)).toBeInTheDocument()
   })
 
-  it('sets aria-pressed correctly for owned and unowned packs', () => {
-    render(<PackGrid initialGroups={[expansionGroup]} />)
+  it('sets aria-pressed correctly for owned and unowned packs', async () => {
+    mockPacksGetAll()
+    renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
     expect(screen.getByRole('button', { name: /City Living/ })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: /Seasons/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('calls the toggle mutation with packId when a card is clicked', () => {
-    render(<PackGrid initialGroups={[expansionGroup]} />)
+  it('calls the toggle mutation when a card is clicked', async () => {
+    mockPacksGetAll()
+    mockPacksToggle()
+    renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
     fireEvent.click(screen.getByRole('button', { name: /City Living/ }))
-    expect(mockMutate).toHaveBeenCalledOnce()
-    expect(mockMutate).toHaveBeenCalledWith({ packId: 'p1' })
+    // Optimistic update should flip the state immediately
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /City Living/ })).toHaveAttribute('aria-pressed', 'true')
+    )
   })
 
-  it('renders multiple sections when multiple groups are provided', () => {
+  it('renders multiple sections when multiple groups are provided', async () => {
     const groups = [
-      { type: PackType.EXPANSION, packs: [{ id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: null, imageUrl: null, isOwned: false }] },
-      { type: PackType.KIT, packs: [{ id: 'p2', name: 'Nifty Knitting', type: PackType.KIT, icon: null, imageUrl: null, isOwned: false }] },
+      { type: 'EXPANSION', packs: [{ id: 'p1', name: 'City Living', type: 'EXPANSION', icon: null, imageUrl: null, isOwned: false }] },
+      { type: 'KIT', packs: [{ id: 'p2', name: 'Nifty Knitting', type: 'KIT', icon: null, imageUrl: null, isOwned: false }] },
     ]
-    render(<PackGrid initialGroups={groups} />)
+    mockPacksGetAll(groups)
+    renderWithTRPC(<PackGrid initialGroups={groups} />)
     expect(screen.getByText('Expansion Packs')).toBeInTheDocument()
     expect(screen.getByText('Kits')).toBeInTheDocument()
   })

@@ -74,8 +74,8 @@ End-to-end tests using Playwright that exercise the full stack — Next.js serve
 **Location:** `e2e/`
 
 **What's tested:**
-- `e2e/auth.spec.ts` — unauthenticated redirects, sign-in page rendering, email form submission, error states
-- `e2e/packs.spec.ts` — authenticated pack grid (toggle packs, count updates, aria state)
+- `e2e/auth.spec.ts` — full sign-in user flow: unauthenticated redirect → sign-in page → email submission → inbox confirmation
+- `e2e/packs.spec.ts` — authenticated pack management flow: onboarding page → pack grid → toggle ownership
 
 **Authentication setup:** The `setup/auth.setup.ts` project creates a test user and saves session cookies to `e2e/.auth/user.json`. The `packs.spec.ts` tests reuse this session. Teardown deletes the test user.
 

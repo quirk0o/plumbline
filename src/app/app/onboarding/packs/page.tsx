@@ -1,9 +1,9 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
 import { PackGrid } from '@/app/components/pack-grid'
 import { fetchPacksForUser } from '@/lib/packs'
+import { ButtonLink } from '@/components/ui'
 import styles from './page.module.css'
 
 export default async function OnboardingPacksPage() {
@@ -26,12 +26,8 @@ export default async function OnboardingPacksPage() {
       <PackGrid initialGroups={grouped} />
 
       <div className={styles.ctaRow}>
-        <Link href="/app" className={styles.btnContinue}>
-          Continue →
-        </Link>
-        <Link href="/app" className={styles.btnSkip}>
-          Skip for now
-        </Link>
+        <ButtonLink href="/app" variant="primary" size="sm">Continue →</ButtonLink>
+        <ButtonLink href="/app" variant="link" size="sm">Skip for now</ButtonLink>
       </div>
     </div>
   )

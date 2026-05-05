@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from 'next/font/google'
+import Script from 'next/script'
 import { SessionProvider } from 'next-auth/react'
 import { TRPCProvider } from '@/trpc/provider'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -34,10 +35,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${cormorant.variable} ${jakarta.variable}`} data-theme="light" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: flashPreventionScript }} />
-      </head>
       <body>
+        <Script id="theme-flash-prevention" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: flashPreventionScript }} />
         <SessionProvider>
           <TRPCProvider>
             <ThemeProvider>

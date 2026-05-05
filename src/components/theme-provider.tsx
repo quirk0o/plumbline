@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import styles from './theme-provider.module.css'
 
 type Theme = 'light' | 'dark'
@@ -46,13 +46,19 @@ export function useTheme() {
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   return (
     <button
       onClick={toggle}
-      aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+      aria-label={mounted ? (theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode') : 'Toggle theme'}
       className={styles.toggle}
     >
-      {theme === 'light' ? (
+      {mounted && (theme === 'light' ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
@@ -68,7 +74,7 @@ export function ThemeToggle() {
           <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
         </svg>
-      )}
+      ))}
     </button>
   )
 }

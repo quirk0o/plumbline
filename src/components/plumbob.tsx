@@ -1,4 +1,4 @@
-import styles from './Plumbob.module.css'
+import styles from './plumbob.module.css'
 
 interface PlumbobProps {
   size?: number

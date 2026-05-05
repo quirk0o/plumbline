@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { PackType } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import type { RouterOutputs } from '@/trpc/client'
-import styles from './PackGrid.module.css'
+import styles from './pack-grid.module.css'
 
 type PackGroups = RouterOutputs['packs']['getAll']
 

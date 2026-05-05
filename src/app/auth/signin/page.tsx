@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import SignInForm from './SignInForm'
-import { Plumbob } from '@/components/Plumbob'
+import SignInForm from './sign-in-form'
+import { Plumbob } from '@/components/plumbob'
 import styles from './signin.module.css'
 
 export default function SignInPage() {

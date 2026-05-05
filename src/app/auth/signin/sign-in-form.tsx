@@ -3,7 +3,7 @@
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Plumbob } from '@/components/Plumbob'
+import { Plumbob } from '@/components/plumbob'
 import styles from './signin.module.css'
 
 function GoogleIcon() {

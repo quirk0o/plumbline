@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { Plumbob } from '@/components/Plumbob'
-import { ThemeToggle } from '@/components/ThemeProvider'
+import { Plumbob } from '@/components/plumbob'
+import { ThemeToggle } from '@/components/theme-provider'
 import styles from './page.module.css'
 
 const features = [

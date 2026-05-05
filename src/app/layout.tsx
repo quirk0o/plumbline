@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from 'next/font/google'
 import { SessionProvider } from 'next-auth/react'
-import { TRPCProvider } from '@/trpc/Provider'
-import { ThemeProvider } from '@/components/ThemeProvider'
+import { TRPCProvider } from '@/trpc/provider'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const cormorant = Cormorant_Garamond({

@@ -4,9 +4,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { Plumbob } from '@/components/Plumbob'
-import { ThemeToggle } from '@/components/ThemeProvider'
-import styles from './AppNav.module.css'
+import { Plumbob } from '@/components/plumbob'
+import { ThemeToggle } from '@/components/theme-provider'
+import styles from './app-nav.module.css'
 
 interface AppNavProps {
   name: string | null

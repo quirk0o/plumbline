@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
-import { PackGrid } from '@/app/components/PackGrid'
+import { PackGrid } from '@/app/components/pack-grid'
 import { fetchPacksForUser } from '@/lib/packs'
 import styles from './page.module.css'
 

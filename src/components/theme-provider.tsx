@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import styles from './theme-provider.module.css'
 
 type Theme = 'light' | 'dark'
 
@@ -49,17 +50,7 @@ export function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-      style={{
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        color: 'var(--text-muted)',
-        borderRadius: 'var(--radius-sm)',
-        transition: 'color 0.15s',
-      }}
+      className={styles.toggle}
     >
       {theme === 'light' ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

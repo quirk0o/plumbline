@@ -1,0 +1,20 @@
+.toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: color var(--transition-fast);
+}
+
+.toggle:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.toggle:hover {
+  color: var(--text);
+}

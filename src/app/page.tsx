@@ -35,7 +35,7 @@ export default function Home() {
     <div className={styles.page}>
       <nav className={styles.nav}>
         <div className={styles.navLogo}>
-          <Plumbob size={16} />
+          <Plumbob size={12} />
           <span>SimTrack</span>
         </div>
         <div className={styles.navRight}>
@@ -49,7 +49,7 @@ export default function Home() {
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <p className={styles.eyebrow}>
-            <Plumbob size={16} />
+            <Plumbob size={12} />
             Legacy Challenge Companion
           </p>
           <h1 className={styles.headline}>
@@ -78,7 +78,7 @@ export default function Home() {
 
       <div className={styles.sectionDivider}>
         <span className={styles.dividerLine} />
-        <span className={styles.dividerGem}><Plumbob size={16} /></span>
+        <span className={styles.dividerGem}><Plumbob size={12} /></span>
         <span className={styles.dividerLine} />
       </div>
 
@@ -90,7 +90,7 @@ export default function Home() {
         <div className={styles.featuresGrid}>
           {features.map((feature) => (
             <article key={feature.title} className={styles.featureCard}>
-              <div className={styles.featureGem}><Plumbob size={16} /></div>
+              <div className={styles.featureGem}><Plumbob size={12} /></div>
               <h3 className={styles.featureName}>{feature.title}</h3>
               <p className={styles.featureDesc}>{feature.description}</p>
             </article>
@@ -113,7 +113,7 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <div className={styles.footerLogo}>
-          <Plumbob size={16} />
+          <Plumbob size={12} />
           <span>SimTrack</span>
         </div>
         <p className={styles.footerCopy}>© 2026</p>

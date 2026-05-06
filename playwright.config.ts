@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
+import { config } from 'dotenv'
+
+// Load dev env first, then overlay test DB URL so E2E uses the seeded test database
+config()
+config({ path: '.env.test', override: true })
 
 export default defineConfig({
   testDir: './e2e',
@@ -15,17 +20,24 @@ export default defineConfig({
     { name: 'teardown', testMatch: '**/teardown/*.ts' },
     {
       name: 'chromium',
+      testMatch: '**/packs.spec.ts',
       use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
       dependencies: ['setup'],
     },
     {
       name: 'chromium-unauthed',
+      testMatch: '**/auth.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
   ],
   webServer: {
+    // Always start a fresh server so AUTH_TEST_MODE and DATABASE_URL are guaranteed
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
+    env: {
+      DATABASE_URL: process.env.DATABASE_URL!,
+      AUTH_TEST_MODE: 'true',
+    },
   },
 })

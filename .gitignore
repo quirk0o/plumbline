@@ -45,3 +45,4 @@ next-env.d.ts
 .worktrees/
 .superpowers/
 .playwright-cli/
+e2e/.auth/

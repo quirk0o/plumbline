@@ -46,6 +46,22 @@ pronounPossessive String?   // was required — made nullable
 
 `householdId` is made nullable so a Sim can exist independently of a Household. Pronouns are made nullable so they can be left unset in the UI.
 
+**New `PersonalityTraitConflict` model:**
+```prisma
+model PersonalityTraitConflict {
+  traitAId String
+  traitBId String
+
+  traitA PersonalityTrait @relation("ConflictA", fields: [traitAId], references: [id])
+  traitB PersonalityTrait @relation("ConflictB", fields: [traitBId], references: [id])
+
+  @@id([traitAId, traitBId])
+  @@map("personality_trait_conflicts")
+}
+```
+
+Conflicts are stored once per pair (traitAId < traitBId enforced in the application layer, same pattern as `SocialRelationship`). The seed file is updated with known Sims 4 trait conflicts (e.g. Neat ↔ Slob, Good ↔ Mean, Hot-Headed ↔ Good, etc.).
+
 Slug is auto-derived from the legacy name (e.g. "The Caliente Legacy" → `caliente-legacy`). Collisions within a user's legacies append a numeric suffix (`caliente-legacy-2`).
 
 ---
@@ -89,7 +105,7 @@ Props: `defaultValues`, `onSubmit(data: SimFormData)`, `onSkip?()`, `isSubmittin
 
 When **Custom** is selected for pronouns, three inline text inputs appear (subject / object / possessive).
 
-**Personality section** — up to 5 personality traits via `TraitPicker`
+**Personality section** — up to 6 personality traits via `TraitPicker`
 
 **Goals & Career section**
 - Aspiration — select (24 options, grouped by category)
@@ -106,9 +122,11 @@ When **Custom** is selected for pronouns, three inline text inputs appear (subje
 
 - Shows all ~40 personality traits from the DB
 - Filterable by category tab: All / Emotional / Hobby / Lifestyle / Social
-- Max 5 selected; additional selections disabled when cap is reached
+- Max 6 selected; additional selections disabled when cap is reached
 - Selected traits render as dismissible chips above the picker
 - Backed by a `trpc.traits.getAll` query (cached, no user-specific data)
+
+**Conflict checking:** when a trait is selected, all traits that conflict with it are disabled in the picker and shown with a muted style + tooltip ("Conflicts with Neat"). Conflicts are symmetric — disabling cascades across all currently selected traits. The `traits.getAll` response includes each trait's conflict list so the check runs client-side with no extra round-trips.
 
 ---
 
@@ -144,7 +162,7 @@ input: {
     pronounObject?: string
     pronounPossessive?: string
     imageUrl?: string
-    personalityTraitIds?: string[]  // max 5
+    personalityTraitIds?: string[]  // max 6, validated conflict-free server-side
     aspirationId?: string
     careerId?: string
     occultType?: OccultType
@@ -173,7 +191,7 @@ Same shape as `founder` above, plus `legacyId: string`. Used when adding sims to
 
 ### `traits.getAll`
 
-Returns all personality traits grouped by category. Cached (reference data, never changes per user).
+Returns all personality traits grouped by category, each with a `conflictsWith: string[]` (IDs of conflicting traits). Cached — reference data, never user-specific. The client uses this list to compute which traits to disable as selections change.
 
 ---
 

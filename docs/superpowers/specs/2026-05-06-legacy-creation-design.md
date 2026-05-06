@@ -35,15 +35,16 @@ imageUrl    String?
 @@unique([userId, slug])
 ```
 
-**`Sim` model — new field + nullable pronouns:**
+**`Sim` model — new field, nullable pronouns, nullable household:**
 ```prisma
 imageUrl          String?
+householdId       String?   // was required — made nullable
 pronounSubject    String?   // was required — made nullable
 pronounObject     String?   // was required — made nullable
 pronounPossessive String?   // was required — made nullable
 ```
 
-Pronouns were required in the original schema but must be optional in the UI. Making them nullable is the correct fix.
+`householdId` is made nullable so a Sim can exist independently of a Household. Pronouns are made nullable so they can be left unset in the UI.
 
 Slug is auto-derived from the legacy name (e.g. "The Caliente Legacy" → `caliente-legacy`). Collisions within a user's legacies append a numeric suffix (`caliente-legacy-2`).
 
@@ -92,7 +93,7 @@ When **Custom** is selected for pronouns, three inline text inputs appear (subje
 
 **Goals & Career section**
 - Aspiration — select (24 options, grouped by category)
-- Career — select (~21 options, grouped by type)
+- Career — select: Unemployed (default) + ~21 careers grouped by type
 
 **Special section**
 - Occult type — select: None + 9 occult types
@@ -151,14 +152,14 @@ input: {
 }
 ```
 
-Creates Legacy + Household + optional Sim in a single Prisma transaction:
+Creates Legacy + optional Sim in a single Prisma transaction:
 1. Slugify name, check for conflicts, append suffix if needed
 2. Create `Legacy` (with slug, description, imageUrl)
-3. If founder provided: create `Household` (named `"[Legacy name] Household"`) → create `Sim` inside it → set `Legacy.founderSimId`
+3. If founder provided: create `Sim` (householdId null) → set `Legacy.founderSimId`
 
-`Sim.householdId` is required in the schema, so a Household must be created before the Sim. The household name is auto-set and can be renamed later.
+No Household is created during legacy creation. `Sim.householdId` is nullable so the founder can exist without one.
 
-For career creation: `SimCareer.employmentType` defaults to `EMPLOYED`, `SimCareer.startedAt` defaults to `now()`.
+Career: if a career is selected, create a `SimCareer` with `employmentType: EMPLOYED` and `startedAt: now()`. If "Unemployed" is selected (default), no `SimCareer` record is created.
 
 Returns: `{ legacy: { id, slug, name } }`
 
@@ -168,7 +169,7 @@ Returns all legacies for the current user, ordered by `createdAt` desc. Used on 
 
 ### `sims.create`
 
-Same shape as `founder` above, plus `legacyId: string`. Used when adding sims to an existing legacy later.
+Same shape as `founder` above, plus `legacyId: string`. Used when adding sims to an existing legacy later. Career and household follow the same rules as above.
 
 ### `traits.getAll`
 

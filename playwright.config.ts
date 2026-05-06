@@ -11,7 +11,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -31,13 +31,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Always start a fresh server so AUTH_TEST_MODE and DATABASE_URL are guaranteed
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: false,
+    command: 'npm run dev:test',
+    url: 'http://localhost:3001',
+    reuseExistingServer: !process.env.CI,
     env: {
       DATABASE_URL: process.env.DATABASE_URL!,
-      AUTH_TEST_MODE: 'true',
     },
   },
 })

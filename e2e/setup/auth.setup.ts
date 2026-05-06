@@ -1,4 +1,4 @@
-import { test as setup } from '@playwright/test'
+import { test as setup, expect } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -11,7 +11,8 @@ setup('authenticate', async ({ request }) => {
   const csrfRes = await request.get('/api/auth/csrf')
   const { csrfToken } = await csrfRes.json() as { csrfToken: string }
 
-  await request.post('/api/auth/callback/credentials', {
+  // Auth.js v5 credentials endpoint uses the provider id in the path
+  const res = await request.post('/api/auth/callback/test', {
     form: {
       email: TEST_EMAIL,
       csrfToken,
@@ -20,5 +21,21 @@ setup('authenticate', async ({ request }) => {
     },
   })
 
+  console.log('credentials POST status:', res.status())
+  console.log('credentials POST url:', res.url())
+  const body = await res.text()
+  console.log('credentials POST body:', body.slice(0, 200))
+
   await request.storageState({ path: AUTH_FILE })
+
+  const state = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf-8'))
+  const hasSession = state.cookies.some((c: { name: string }) =>
+    c.name.includes('session-token')
+  )
+  if (!hasSession) {
+    throw new Error(
+      'Auth setup failed: no session cookie found. ' +
+      'Ensure the dev server started with AUTH_TEST_MODE=true.'
+    )
+  }
 })

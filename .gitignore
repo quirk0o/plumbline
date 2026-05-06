@@ -47,3 +47,5 @@ next-env.d.ts
 .superpowers/
 .playwright-cli/
 e2e/.auth/
+.playwright-mcp/
+test-results/

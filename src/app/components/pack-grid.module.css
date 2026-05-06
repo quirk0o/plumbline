@@ -41,12 +41,16 @@
 .card {
   border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid #f5f0e6;
   background: var(--bg-card);
   cursor: pointer;
   transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
   position: relative;
   user-select: none;
+}
+
+[data-theme="dark"] .card {
+  border-color: var(--border);
 }
 
 .card:hover {
@@ -85,16 +89,35 @@
   z-index: 1;
 }
 
+.coverSvg {
+  width: 60%;
+  height: 60%;
+  display: block;
+}
+
 .coverDimmed {
+  opacity: 0.5;
+}
+
+[data-theme="dark"] .coverDimmed {
   opacity: 0.32;
 }
 
 /* ── Cover gradients (per pack type) ── */
-.coverBaseGame  { background: linear-gradient(135deg, #0e2018, #162e22); }
-.coverExpansion { background: linear-gradient(135deg, #0e2018, #162e22); }
-.coverGamePack  { background: linear-gradient(135deg, #1e120a, #221508); }
-.coverStuffPack { background: linear-gradient(135deg, #14101e, #180e22); }
-.coverKit       { background: linear-gradient(135deg, #1e100e, #221210); }
+/* Light: flat warm stone — no gradient movement on small cards */
+.coverBaseGame,
+.coverExpansion,
+.coverGamePack,
+.coverStuffPack,
+.coverKit {
+  background: #f8f3ec;
+}
+
+[data-theme="dark"] .coverBaseGame  { background: linear-gradient(135deg, #0e2018, #162e22); }
+[data-theme="dark"] .coverExpansion { background: linear-gradient(135deg, #0e2018, #162e22); }
+[data-theme="dark"] .coverGamePack  { background: linear-gradient(135deg, #1e120a, #221508); }
+[data-theme="dark"] .coverStuffPack { background: linear-gradient(135deg, #14101e, #180e22); }
+[data-theme="dark"] .coverKit       { background: linear-gradient(135deg, #1e100e, #221210); }
 
 /* ── Badge ── */
 .badge {

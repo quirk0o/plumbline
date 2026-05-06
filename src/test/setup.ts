@@ -1,12 +1,8 @@
-import { config } from 'dotenv'
-import { existsSync } from 'fs'
-import { resolve } from 'path'
 import '@testing-library/jest-dom'
 import { server } from './msw-server'
+
+process.env.DATABASE_URL ??= 'postgresql://postgres:password@localhost:5432/simstrack_test?schema=public'
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
-
-const testEnv = resolve(process.cwd(), '.env.test')
-config({ path: existsSync(testEnv) ? testEnv : resolve(process.cwd(), '.env') })

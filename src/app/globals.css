@@ -50,10 +50,10 @@
   --info:    #0284c7;
 
   /* Pack type badge colours */
-  --pack-expansion:   var(--color-green-400);
-  --pack-game:        var(--color-amber-400);
-  --pack-stuff:       #c4b5fd;
-  --pack-kit:         #fda4af;
+  --pack-expansion:   #26bcbd;
+  --pack-game:        #136afd;
+  --pack-stuff:       #2cbd1b;
+  --pack-kit:         #9133aa;
   --pack-badge-text:  var(--bg);
   --pack-card-footer: rgba(0, 0, 0, 0.04);
 
@@ -156,10 +156,10 @@
   --warning: #fcd34d;
   --info:    #38bdf8;
 
-  --pack-expansion:   #4aaf72;
-  --pack-game:        #fbbf24;
-  --pack-stuff:       #a78bfa;
-  --pack-kit:         #fb7185;
+  --pack-expansion:   #26bcbd;
+  --pack-game:        #136afd;
+  --pack-stuff:       #2cbd1b;
+  --pack-kit:         #9133aa;
   --pack-badge-text:  var(--bg);
   --pack-card-footer: rgba(0, 0, 0, 0.22);
 

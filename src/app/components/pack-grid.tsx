@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
 import { PackType } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import type { RouterOutputs } from '@/trpc/client'
@@ -122,15 +121,14 @@ export function PackGrid({ initialGroups }: PackGridProps) {
                   className={`${styles.cover} ${coverClass(pack.type)} ${!pack.isOwned ? styles.coverDimmed : ''}`}
                 >
                   {pack.imageUrl ? (
-                    <Image
-                      src={pack.imageUrl}
-                      alt=""
-                      fill
-                      sizes="(max-width: 600px) 80px, 120px"
-                      className={styles.coverImage}
-                    />
-                  ) : null}
-                  <span className={styles.coverEmoji} aria-hidden>{pack.icon ?? '📦'}</span>
+                    <div className={styles.coverIcon}>
+                      <svg className={styles.coverSvg} aria-hidden focusable="false">
+                        <use href={pack.imageUrl} />
+                      </svg>
+                    </div>
+                  ) : (
+                    <span className={styles.coverEmoji} aria-hidden>{pack.icon ?? '📦'}</span>
+                  )}
                 </div>
                 <div className={styles.footer}>
                   <div className={`${styles.name} ${!pack.isOwned ? styles.nameDimmed : ''}`}>

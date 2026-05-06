@@ -89,11 +89,28 @@
   z-index: 1;
 }
 
-.coverSvg {
-  width: 60%;
-  height: 60%;
-  display: block;
+.coverIcon {
+  width: 65%;
+  height: 65%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5%;
+  box-sizing: border-box;
 }
+
+.coverSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: contrast(0) brightness(2);
+}
+
+.coverExpansion .coverIcon { background-color: rgb(38, 188, 189); }
+.coverGamePack .coverIcon  { background-color: rgb(19, 106, 253); }
+.coverStuffPack .coverIcon { background-color: rgb(44, 189, 27); }
+.coverKit .coverIcon       { background-color: rgb(145, 51, 170); }
 
 .coverDimmed {
   opacity: 0.5;
@@ -113,11 +130,11 @@
   background: #f8f3ec;
 }
 
-[data-theme="dark"] .coverBaseGame  { background: linear-gradient(135deg, #0e2018, #162e22); }
-[data-theme="dark"] .coverExpansion { background: linear-gradient(135deg, #0e2018, #162e22); }
-[data-theme="dark"] .coverGamePack  { background: linear-gradient(135deg, #1e120a, #221508); }
-[data-theme="dark"] .coverStuffPack { background: linear-gradient(135deg, #14101e, #180e22); }
-[data-theme="dark"] .coverKit       { background: linear-gradient(135deg, #1e100e, #221210); }
+[data-theme="dark"] .coverBaseGame  { background: linear-gradient(135deg, #0a1a1a, #0d2222); }
+[data-theme="dark"] .coverExpansion { background: linear-gradient(135deg, #0a1a1a, #0d2222); }
+[data-theme="dark"] .coverGamePack  { background: linear-gradient(135deg, #07102a, #0a1635); }
+[data-theme="dark"] .coverStuffPack { background: linear-gradient(135deg, #081808, #0c200b); }
+[data-theme="dark"] .coverKit       { background: linear-gradient(135deg, #160a1a, #1c0d22); }
 
 /* ── Badge ── */
 .badge {

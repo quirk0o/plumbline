@@ -18,7 +18,8 @@ export default defineConfig({
       ['src/components/**/*.test.tsx', 'jsdom'],
     ],
     environment: 'node',
-    exclude: ['node_modules', 'e2e/**', '.next/**'],
+    include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['node_modules'],
     server: {
       deps: {
         inline: ['next-auth', '@auth/core'],

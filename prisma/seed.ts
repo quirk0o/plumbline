@@ -157,6 +157,26 @@ async function main() {
     await prisma.personalityTrait.upsert({ where: { name: t.name }, update: {}, create: t })
   }
 
+  // ── Personality Trait Conflicts ───────────────────────────────────────────
+  const conflictPairs: [string, string][] = [
+    ['Neat',     'Slob'],
+    ['Good',     'Evil'],
+    ['Active',   'Lazy'],
+    ['Outgoing', 'Loner'],
+  ]
+
+  for (const [nameA, nameB] of conflictPairs) {
+    const a = await prisma.personalityTrait.findUnique({ where: { name: nameA } })
+    const b = await prisma.personalityTrait.findUnique({ where: { name: nameB } })
+    if (!a || !b) { console.warn(`Skipping conflict ${nameA} <-> ${nameB}: trait not found`); continue }
+    const [traitAId, traitBId] = [a.id, b.id].sort()
+    await prisma.personalityTraitConflict.upsert({
+      where: { traitAId_traitBId: { traitAId, traitBId } },
+      create: { traitAId, traitBId },
+      update: {},
+    })
+  }
+
   // ── Non-personality Traits ────────────────────────────────────────────────
   const traitSeed: Array<{ name: string; type: TraitType; packId?: string }> = [
     // Bonus traits

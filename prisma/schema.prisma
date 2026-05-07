@@ -158,6 +158,7 @@ model PersonalityTraitConflict {
   traitA PersonalityTrait @relation("ConflictA", fields: [traitAId], references: [id])
   traitB PersonalityTrait @relation("ConflictB", fields: [traitBId], references: [id])
 
+  // Enforce traitAId < traitBId at the application layer to prevent duplicate inverse pairs
   @@id([traitAId, traitBId])
   @@map("personality_trait_conflicts")
 }

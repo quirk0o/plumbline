@@ -3,6 +3,9 @@ ALTER TABLE "legacies" ADD COLUMN "slug" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "legacies" ADD COLUMN "description" TEXT;
 ALTER TABLE "legacies" ADD COLUMN "imageUrl" TEXT;
 
+-- Backfill slug with id (cuid, globally unique) so existing rows don't collide on the unique index
+UPDATE "legacies" SET "slug" = "id" WHERE "slug" = '';
+
 -- Remove temporary default from slug (it's a required field going forward)
 ALTER TABLE "legacies" ALTER COLUMN "slug" DROP DEFAULT;
 

@@ -15,6 +15,9 @@ export async function uniqueSlug(
   name: string,
 ): Promise<string> {
   const base = slugify(name)
+  if (!base) {
+    return `legacy-${Math.random().toString(36).slice(2, 9)}`
+  }
   const existing = await db.legacy.findMany({
     where: { userId, slug: { startsWith: base } },
     select: { slug: true },

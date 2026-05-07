@@ -128,7 +128,7 @@ export function LegacyWizard() {
                 <h1 className={styles.cardTitle}>Founder Sim</h1>
                 <p className={styles.cardSubtitle}>Who starts the legacy? Only name and gender are required.</p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => submit()}>
+              <Button type="button" variant="outline" size="sm" onClick={() => submit()} disabled={createLegacy.isPending}>
                 Skip →
               </Button>
             </div>

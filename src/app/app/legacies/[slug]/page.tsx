@@ -1,6 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
 import styles from './page.module.css'
@@ -71,12 +70,7 @@ export default async function LegacyDetailPage({ params }: Props) {
       </section>
 
       <section className={styles.section}>
-        <div className={styles.sectionTitleRow}>
-          <h2 className={styles.sectionTitle}>Sims</h2>
-          <Link href={`/app/legacies/${slug}/sims/new`} className={styles.addSimLink}>
-            + Add sim
-          </Link>
-        </div>
+        <h2 className={styles.sectionTitle}>Sims</h2>
         <p className={styles.empty}>Sim tracking coming soon.</p>
       </section>
     </div>

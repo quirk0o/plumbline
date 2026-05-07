@@ -143,10 +143,23 @@ model PersonalityTrait {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  pack                 Pack?                 @relation(fields: [packId], references: [id])
+  pack                 Pack?                      @relation(fields: [packId], references: [id])
   simPersonalityTraits SimPersonalityTrait[]
+  conflictsA           PersonalityTraitConflict[] @relation("ConflictA")
+  conflictsB           PersonalityTraitConflict[] @relation("ConflictB")
 
   @@map("personality_traits")
+}
+
+model PersonalityTraitConflict {
+  traitAId String
+  traitBId String
+
+  traitA PersonalityTrait @relation("ConflictA", fields: [traitAId], references: [id])
+  traitB PersonalityTrait @relation("ConflictB", fields: [traitBId], references: [id])
+
+  @@id([traitAId, traitBId])
+  @@map("personality_trait_conflicts")
 }
 
 model Trait {
@@ -286,6 +299,9 @@ model UserPack {
 model Legacy {
   id           String   @id @default(cuid())
   name         String
+  slug         String
+  description  String?
+  imageUrl     String?
   userId       String
   founderSimId String?  @unique
   createdAt    DateTime @default(now())
@@ -295,6 +311,7 @@ model Legacy {
   founderSim Sim?        @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
   households Household[]
 
+  @@unique([userId, slug])
   @@map("legacies")
 }
 
@@ -315,18 +332,19 @@ model Sim {
   id                String        @id @default(cuid())
   firstName         String
   lastName          String
-  householdId       String
+  householdId       String?
   lifeStage         LifeStage
   gender            Gender
-  pronounSubject    String
-  pronounObject     String
-  pronounPossessive String
+  pronounSubject    String?
+  pronounObject     String?
+  pronounPossessive String?
+  imageUrl          String?
   occultType        OccultType?
   causeOfDeath      CauseOfDeath?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  household            Household             @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household            Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)
   personalityTraits    SimPersonalityTrait[]
   traits               SimTrait[]
   skills               SimSkill[]

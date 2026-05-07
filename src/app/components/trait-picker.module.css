@@ -1,0 +1,127 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: 2rem;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 20px;
+  border: 1px solid var(--green);
+  background: var(--color-green-50);
+  color: var(--green);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity var(--transition-fast);
+}
+
+.chip:hover {
+  opacity: 0.8;
+}
+
+.emptyChips {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-base);
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.tabActive {
+  border-color: var(--green);
+  background: var(--color-green-50);
+  color: var(--green);
+  font-weight: 500;
+}
+
+.search {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--green);
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.traitBtn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.traitBtn:hover:not(:disabled) {
+  border-color: var(--green);
+  background: var(--color-green-50);
+  color: var(--green);
+}
+
+.traitSelected {
+  background: var(--color-green-100);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 500;
+}
+
+.traitDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.noResults {
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+  margin: 0;
+}
+
+.counter {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}

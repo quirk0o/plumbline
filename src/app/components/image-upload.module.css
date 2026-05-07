@@ -1,0 +1,61 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.trigger {
+  position: relative;
+  background: var(--bg);
+  border: 2px dashed var(--border-bright);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trigger:hover {
+  border-color: var(--green);
+  background: var(--color-green-50);
+}
+
+.trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.square {
+  width: 104px;
+  height: 104px;
+  border-radius: var(--radius-md);
+}
+
+.circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+
+.placeholder {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-2);
+  line-height: 1.4;
+}
+
+.preview {
+  object-fit: cover;
+}
+
+.error {
+  font-size: 0.75rem;
+  color: var(--error);
+  margin: 0;
+}

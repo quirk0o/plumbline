@@ -10,12 +10,12 @@
 
 .trigger {
   position: relative;
-  background: var(--bg);
+  background-color: var(--bg);
   background-size: cover;
   background-position: center;
   border: 2px dashed var(--border-bright);
   cursor: pointer;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -25,7 +25,7 @@
 
 .trigger:hover {
   border-color: var(--green);
-  background: var(--color-green-50);
+  background-color: var(--color-green-50);
 }
 
 .trigger:disabled {

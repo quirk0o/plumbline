@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import Image from 'next/image'
 import styles from './image-upload.module.css'
 
 interface ImageUploadProps {
@@ -59,15 +58,14 @@ export function ImageUpload({
       <button
         type="button"
         className={`${styles.trigger} ${styles[shape]}`}
+        style={value ? { backgroundImage: `url("${value}")` } : undefined}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         disabled={uploading}
-        aria-label={label}
+        aria-label={value ? 'Change image' : label}
       >
-        {value ? (
-          <Image src={value} alt="Uploaded image" fill unoptimized className={styles.preview} />
-        ) : (
+        {!value && (
           <span className={styles.placeholder}>
             {uploading ? 'Uploading…' : label}
           </span>

@@ -11,13 +11,16 @@
 .trigger {
   position: relative;
   background: var(--bg);
+  background-size: cover;
+  background-position: center;
   border: 2px dashed var(--border-bright);
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition: border-color var(--transition-fast);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .trigger:hover {
@@ -50,9 +53,6 @@
   line-height: 1.4;
 }
 
-.preview {
-  object-fit: cover;
-}
 
 .error {
   font-size: 0.75rem;

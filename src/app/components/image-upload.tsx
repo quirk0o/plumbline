@@ -66,7 +66,7 @@ export function ImageUpload({
         aria-label={label}
       >
         {value ? (
-          <Image src={value} alt="Uploaded image" fill className={styles.preview} sizes="200px" />
+          <Image src={value} alt="Uploaded image" fill unoptimized className={styles.preview} />
         ) : (
           <span className={styles.placeholder}>
             {uploading ? 'Uploading…' : label}

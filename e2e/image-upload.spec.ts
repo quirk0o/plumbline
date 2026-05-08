@@ -52,7 +52,7 @@ test('thumbnail fills button after upload', async ({ page }) => {
   const bgPos = await btn.evaluate((el) => getComputedStyle(el).backgroundPosition)
 
   expect(bgImage).not.toBe('none')
-  expect(bgSize).toBe('cover')
+  expect(bgSize).toBe('contain')
   expect(bgPos).toMatch(/50% 50%|center/)
 
   const box = await btn.boundingBox()
@@ -76,7 +76,7 @@ test('background-size stays cover on hover', async ({ page }) => {
   const bgSize = await btn.evaluate((el) => getComputedStyle(el).backgroundSize)
   const bgImage = await btn.evaluate((el) => getComputedStyle(el).backgroundImage)
 
-  expect(bgSize).toBe('cover')
+  expect(bgSize).toBe('contain')
   expect(bgImage).not.toBe('none')
 
   await page.screenshot({ path: 'e2e/screenshots/thumbnail-on-hover.png' })

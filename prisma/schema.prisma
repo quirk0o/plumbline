@@ -136,6 +136,7 @@ model Pack {
 model PersonalityTrait {
   id           String         @id @default(cuid())
   name         String         @unique
+  description  String?
   category     TraitCategory?
   minLifeStage LifeStage?
   maxLifeStage LifeStage?

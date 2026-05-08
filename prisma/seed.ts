@@ -26,6 +26,8 @@ async function main() {
     { name: 'City Living',          type: PackType.EXPANSION,  icon: '🏙️', code: 'EP03',  imageUrl: SPRITE('EP03') },
     { name: 'Cats & Dogs',          type: PackType.EXPANSION,  icon: '🐾', code: 'EP04',  imageUrl: SPRITE('EP04') },
     { name: 'Seasons',              type: PackType.EXPANSION,  icon: '🍂', code: 'EP05',  imageUrl: SPRITE('EP05') },
+    { name: 'Get Famous',           type: PackType.EXPANSION,  icon: '🎬', code: 'EP06',  imageUrl: SPRITE('EP06') },
+    { name: 'Island Living',        type: PackType.EXPANSION,  icon: '🏝️', code: 'EP07',  imageUrl: SPRITE('EP07') },
     { name: 'Discover University',  type: PackType.EXPANSION,  icon: '🎓', code: 'EP08',  imageUrl: SPRITE('EP08') },
     { name: 'Eco Lifestyle',        type: PackType.EXPANSION,  icon: '♻️', code: 'EP09',  imageUrl: SPRITE('EP09') },
     { name: 'Snowy Escape',         type: PackType.EXPANSION,  icon: '⛷️', code: 'EP10',  imageUrl: SPRITE('EP10-solid') },
@@ -97,72 +99,193 @@ async function main() {
   // ── Personality Traits ────────────────────────────────────────────────────
   const personalityTraitSeed: Array<{
     name: string
+    description?: string
     category: TraitCategory
     minLifeStage?: LifeStage
     maxLifeStage?: LifeStage
     packId?: string
   }> = [
+    // ── Base game — Child+ ──────────────────────────────────────────────────
     // Emotional
-    { name: 'Cheerful',      category: TraitCategory.EMOTIONAL },
-    { name: 'Gloomy',        category: TraitCategory.EMOTIONAL },
-    { name: 'Hot-Headed',    category: TraitCategory.EMOTIONAL },
-    { name: 'Good',          category: TraitCategory.EMOTIONAL },
-    { name: 'Evil',          category: TraitCategory.EMOTIONAL },
-    { name: 'Erratic',       category: TraitCategory.EMOTIONAL },
-    { name: 'Self-Assured',  category: TraitCategory.EMOTIONAL },
+    { name: 'Cheerful',     category: TraitCategory.EMOTIONAL, description: 'These Sims tend to be Happier than other Sims.' },
+    { name: 'Creative',     category: TraitCategory.HOBBY,     description: 'These Sims tend to be Inspired, can Share Creative Ideas with other Sims, and may become upset if they\'re not creative for a period of time.' },
+    { name: 'Erratic',      category: TraitCategory.EMOTIONAL, description: 'These Sims can Talk to themselves and have unpredictable Emotions.' },
+    { name: 'Genius',       category: TraitCategory.LIFESTYLE, description: 'These Sims tend to be Focused, can Share Ideas with other Sims, and may become upset if they haven\'t improved their Mental Skills for some time.' },
+    { name: 'Gloomy',       category: TraitCategory.EMOTIONAL, description: 'These Sims tend to be Sad, can Share Melancholy Thoughts to other Sims, and while sad, gain a boost to their Creative Skill.' },
+    { name: 'Goofball',     category: TraitCategory.EMOTIONAL, description: 'These Sims tend to be Playful.' },
+    { name: 'Hot-Headed',   category: TraitCategory.EMOTIONAL, description: 'These Sims tend to be Angry, can Rile up other Sims, and become Angry when targeted with Mischief.' },
+    { name: 'Self-Assured', category: TraitCategory.EMOTIONAL, description: 'These Sims tend to be Confident.' },
     // Hobby
-    { name: 'Art Lover',     category: TraitCategory.HOBBY },
-    { name: 'Bookworm',      category: TraitCategory.HOBBY },
-    { name: 'Creative',      category: TraitCategory.HOBBY },
-    { name: 'Foodie',        category: TraitCategory.HOBBY },
-    { name: 'Geek',          category: TraitCategory.HOBBY },
-    { name: 'Loves Outdoors',category: TraitCategory.HOBBY },
-    { name: 'Music Lover',   category: TraitCategory.HOBBY },
+    { name: 'Art Lover',      category: TraitCategory.HOBBY, description: 'These Sims gain powerful Moodlets from Viewing works of art and can Admire Art and Discuss Art in unique ways.' },
+    { name: 'Bookworm',       category: TraitCategory.HOBBY, description: 'These Sims gain powerful Moodlets from reading Books and can Analyze Books and Discuss Books in unique ways.' },
+    { name: 'Geek',           category: TraitCategory.HOBBY, description: 'These Sims become Happy when Reading Sci-Fi or Playing Video Games, may become Tense if they haven\'t played much, are better at finding Collectibles, and can Discuss Geek Things with other Geek Sims.' },
+    { name: 'Loves Outdoors', category: TraitCategory.HOBBY, description: 'These Sims can Enthuse about Nature to other Sims and become Happy when Outdoors.' },
+    { name: 'Music Lover',    category: TraitCategory.HOBBY, description: 'These Sims gain powerful Moodlets and boost their Fun Need when Listening to Music and become Happy when playing instruments.' },
     // Lifestyle
-    { name: 'Active',        category: TraitCategory.LIFESTYLE },
-    { name: 'Ambitious',     category: TraitCategory.LIFESTYLE },
-    { name: 'Clumsy',        category: TraitCategory.LIFESTYLE },
-    { name: 'Genius',        category: TraitCategory.LIFESTYLE },
-    { name: 'Glutton',       category: TraitCategory.LIFESTYLE },
-    { name: 'Kleptomaniac',  category: TraitCategory.LIFESTYLE },
-    { name: 'Lazy',          category: TraitCategory.LIFESTYLE },
-    { name: 'Neat',          category: TraitCategory.LIFESTYLE },
-    { name: 'Slob',          category: TraitCategory.LIFESTYLE },
-    { name: 'Vegetarian',    category: TraitCategory.LIFESTYLE },
+    { name: 'Active',        category: TraitCategory.LIFESTYLE, description: 'These Sims tend to be Energized, can Pump Up other Sims, and may become upset if they don\'t exercise for a period of time.' },
+    { name: 'Glutton',       category: TraitCategory.LIFESTYLE, description: 'These Sims have a greater negative reaction to Hunger, always enjoy eating, no matter the quality of the food, and will eat Spoiled Food.' },
+    { name: 'Kleptomaniac',  category: TraitCategory.LIFESTYLE, description: 'These Sims don\'t mind "borrowing" things from others with a simple swipe, but will get Tense when they have not swiped anything in a while.' },
+    { name: 'Lazy',          category: TraitCategory.LIFESTYLE, description: 'These Sims gain powerful Moodlets from Watching TV or Napping as well as from Comfortable furniture, become Fatigued more quickly from exercise, and grow Tense when performing household chores.' },
+    { name: 'Neat',          category: TraitCategory.LIFESTYLE, description: 'These Sims become Happy and have Fun when performing household chores, can have a Cleaning Frenzy, and become really Uncomfortable in dirty surroundings.' },
+    { name: 'Perfectionist', category: TraitCategory.LIFESTYLE, description: 'These Sims take longer to craft items but tend to make them higher quality, gain powerful Moodlets after crafting a high quality item, and gain negative Moodlets after crafting a low quality item.' },
+    { name: 'Slob',          category: TraitCategory.LIFESTYLE, description: 'These Sims are not affected by dirty surroundings, make household items dirtier faster, and can Rummage for Food in garbage.' },
     // Social
-    { name: 'Bro',           category: TraitCategory.SOCIAL },
-    { name: 'Family-Oriented', category: TraitCategory.SOCIAL },
-    { name: 'Jealous',       category: TraitCategory.SOCIAL },
-    { name: 'Loner',         category: TraitCategory.SOCIAL },
-    { name: 'Outgoing',      category: TraitCategory.SOCIAL },
-    { name: 'Romantic',      category: TraitCategory.SOCIAL },
-    // Infant traits — Growing Together
-    { name: 'Calm (Infant)',    category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, packId: await pack('Growing Together') },
-    { name: 'Clingy (Infant)',  category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, packId: await pack('Growing Together') },
-    { name: 'Intense (Infant)', category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, packId: await pack('Growing Together') },
-    { name: 'Wiggly',           category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, packId: await pack('Growing Together') },
-    { name: 'Cautious (Infant)',category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, packId: await pack('Growing Together') },
-    // Toddler traits — base game
-    { name: 'Angelic',          category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
-    { name: 'Charmer',          category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
-    { name: 'Clingy (Toddler)', category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
-    { name: 'Fussy',            category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
-    { name: 'Independent',      category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
-    { name: 'Inquisitive',      category: TraitCategory.HOBBY,     minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
-    { name: 'Silly',            category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
-    { name: 'Wild',             category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER },
+    { name: 'Evil',  category: TraitCategory.EMOTIONAL, description: 'These Sims become Happy around Sims with negative Moodlets, can Laugh Maniacally and Discuss Evil Plans, and become Angry when interacting with Good Sims.' },
+    { name: 'Good',  category: TraitCategory.EMOTIONAL, description: 'These Sims become Happy around Sims with positive Moodlets, can Donate to Charity, become Sad with interacting with Evil Sims, and can Discuss World Peace.' },
+    { name: 'Loner', category: TraitCategory.SOCIAL,    description: 'These Sims become Happy when alone, do not receive negative Moodlets when their Social Need is low, become Tense around strangers, and become Embarrassed more often by social rejection.' },
+    { name: 'Mean',  category: TraitCategory.SOCIAL,    description: 'These Sims become Happy when being Mean or Mischievous to other Sims and become Confident after winning a fight.' },
+    { name: 'Outgoing', category: TraitCategory.SOCIAL, description: 'These Sims gain powerful Moodlets from Friendly socialization, have their Social need decay quickly, and gain more negative Moodlets when their Social need is low.' },
+
+    // ── Base game — Teen+ ───────────────────────────────────────────────────
+    { name: 'Childish',       category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TEEN, description: 'These Sims gain powerful Moodlets from watching the Kids Network, become Playful when playing with Children, and become Happy when playing with Children\'s toys.' },
+    { name: 'Clumsy',         category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TEEN, description: 'These Sims tend to fail more often at physical activities and tend to laugh at failure instead of becoming upset.' },
+    { name: 'Hates Children', category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TEEN, description: 'These Sims become Angry around Children, become Tense after Try for a Baby, and can be Mean to Children.' },
+    { name: 'Loyal',          category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TEEN, description: 'Loyal sims value their relationships and fully commit to them. whether they are friendship, romance or even work! They avoid lying and cheating because their loved ones\' trust is very important to them.' },
+    { name: 'Materialistic',  category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TEEN, description: 'These Sims can Admire and Brag about Possessions and become Sad when they haven\'t purchased a new item for a period of time.' },
+    { name: 'Snob',           category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TEEN, description: 'These Sims can Critique Work on low quality items, are bored by "low brow" television, and gain Confidence around other Snob Sims.' },
+    { name: 'Bro',            category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TEEN, description: 'These Sims can Bro Hug other Bros, gain Confidence around other Bros, and become Energized from Watching Sports.' },
+    { name: 'Jealous',        category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TEEN, description: 'These Sims get Jealous more easily than other Sims. They gain a boost of Confidence from being around their significant other, but get Tense if they haven\'t seen them recently.' },
+
+    // ── Base game — Young Adult+ ────────────────────────────────────────────
+    { name: 'Ambitious',     category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.YOUNG_ADULT, description: 'These Sims gain powerful Moodlets from career success, gain negative Moodlets from career failure, and may become Tense if not promoted.' },
+    { name: 'Family-Oriented', category: TraitCategory.SOCIAL,  minLifeStage: LifeStage.YOUNG_ADULT, description: 'These Sims become Happy around family members, become Sad if they don\'t interact with family for a period of time, and can Boast about Family.' },
+    { name: 'Foodie',        category: TraitCategory.HOBBY,     minLifeStage: LifeStage.YOUNG_ADULT, description: 'These Sims become Happy and have Fun when eating good food, become Uncomfortable when eating bad food, and can Watch Cooking Shows for ideas.' },
+    { name: 'Noncommittal',  category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.YOUNG_ADULT, description: 'These Sims become Tense after a while in the same job or relationship, become Happy when they Quit a Job or Break Off a relationship, take longer to Propose, and can Discuss their Fear of Commitment.' },
+    { name: 'Romantic',      category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.YOUNG_ADULT, description: 'These Sims tend to be Flirty and may become Sad if they don\'t have any Romantic social interactions for a period of time.' },
+
+    // ── Cats & Dogs ─────────────────────────────────────────────────────────
+    { name: 'Cat Lover', category: TraitCategory.SOCIAL, description: 'These Sims tend to make cats their companions, preferring the company of cats to other Sims.',                                     packId: await pack('Cats & Dogs') },
+    { name: 'Dog Lover', category: TraitCategory.SOCIAL, description: 'These Sims love to be near dogs. They will gain relationships faster with dogs and socialize with dogs more than the average Sim.', packId: await pack('Cats & Dogs') },
+
+    // ── City Living ──────────────────────────────────────────────────────────
+    { name: 'Unflirty', category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TEEN, description: 'These Sims get Tense around Flirty Sims and seldom get Flirty themselves. It\'s difficult for them to be Romantic in public.', packId: await pack('City Living') },
+
+    // ── Cottage Living ───────────────────────────────────────────────────────
+    { name: 'Animal Enthusiast',  category: TraitCategory.SOCIAL,    description: 'These Sims are obsessed with animals, and will seek their company often. They will have an easier time caring for animals and getting closer to them.', packId: await pack('Cottage Living') },
+    { name: 'Lactose Intolerant', category: TraitCategory.LIFESTYLE, description: 'These Sims will become sick if they eat dairy, but will feel great if they have avoided it for a while.',                                            packId: await pack('Cottage Living') },
+
+    // ── Eco Lifestyle ────────────────────────────────────────────────────────
+    { name: 'Green Fiend',      category: TraitCategory.LIFESTYLE, description: 'These Sims are happiest when living on a green street and will continuously work towards making their environment more eco-friendly.',                                                                                         packId: await pack('Eco Lifestyle') },
+    { name: 'Recycle Disciple', category: TraitCategory.HOBBY,     description: 'These Sims are rabid recyclers that benefit from recycling and rummaging for bits and pieces, but should they go too long without indulging in their hobby...',                                                               packId: await pack('Eco Lifestyle') },
+    { name: 'Freegan',          category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TEEN, description: 'These Sims reject consumerism and prefer to reduce wasteful spending by any means. They enjoy finding re-used or thrown away goods and foods. In fact, they have the best luck at finding the highest-quality treasures in Dumpsters! They may become tense or uncomfortable if they spend too much time earning or spending Simoleons.', packId: await pack('Eco Lifestyle') },
+    { name: 'Maker',            category: TraitCategory.HOBBY,     minLifeStage: LifeStage.TEEN, description: 'These Sims become happy when making things. They become sad when it\'s been too long since completing a project on a Fabricator, Candlemaking Station, Juice Fizzer, or Woodworking Table. They do not receive negative effects from crafting or repair failures.',                                packId: await pack('Eco Lifestyle') },
+
+    // ── For Rent ─────────────────────────────────────────────────────────────
+    { name: 'Generous', category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TEEN, description: 'Caring, empathetic, and patient. These Sims are happiest when offering their time and money to help others. Everyone loves Generous Sims, but they can be a little too brazen with their donations.', packId: await pack('For Rent') },
+    { name: 'Nosy',     category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TEEN, description: 'Sims who thrive on gossip, snooping, and spying. They have incredibly poor boundaries and don\'t quite understand what personal space is, but they will discover secrets by any means necessary.',    packId: await pack('For Rent') },
+
+    // ── Get Famous ───────────────────────────────────────────────────────────
+    { name: 'Self-Absorbed', category: TraitCategory.SOCIAL, minLifeStage: LifeStage.TEEN, description: 'These Sims are all about themselves! They can Fish for Compliments, are more excited when receiving a present, and may become tense when they haven\'t gotten enough attention. The celebrity spotlight is something they generally relish. After all, everyone else should love them as much as they do themselves, right?', packId: await pack('Get Famous') },
+
+    // ── Get Together ─────────────────────────────────────────────────────────
+    { name: 'Dance Machine', category: TraitCategory.HOBBY,   minLifeStage: LifeStage.TEEN, description: 'These Sims can\'t wait to get down, boogie, and party all night! When at venues like Bars, Nightclubs, and Lounges, these Sims can get a burst of energy with the Party Time interaction.', packId: await pack('Get Together') },
+    { name: 'Insider',       category: TraitCategory.SOCIAL,  description: 'These Sims love being in Clubs, and tend to be happiest when surrounded by their friends.',                                                                                                                                  packId: await pack('Get Together') },
+
+    // ── High School Years ────────────────────────────────────────────────────
+    { name: 'Overachiever',   category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TEEN, description: 'These Sims tend to raise their skills faster and are happy when they finish work tasks, but are a little harder to get along with as friends.',                                                                                                                  packId: await pack('High School Years') },
+    { name: 'Party Animal',   category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TEEN, description: 'These Sims tend to enjoy parties and letting every other Sim know by hyping up a crowd and performing party tricks.',                                                                                                                                          packId: await pack('High School Years') },
+    { name: 'Socially Awkward', category: TraitCategory.SOCIAL,  minLifeStage: LifeStage.TEEN, description: 'These Sims tend to struggle in social situations and build charisma more slowly, but gain powerful Moodlets and Sentiments when they are able to overcome their awkwardness and accompanying nervousness to form close relationships.',                         packId: await pack('High School Years') },
+
+    // ── Horse Ranch ──────────────────────────────────────────────────────────
+    { name: 'Horse Lover', category: TraitCategory.SOCIAL,    packId: await pack('Horse Ranch') },
+    { name: 'Rancher',     category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.YOUNG_ADULT, packId: await pack('Horse Ranch') },
+
+    // ── Island Living ────────────────────────────────────────────────────────
+    { name: 'Child of the Islands', category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TEEN, description: 'These Sims experience a spiritual connection to islands of Sulani. Honor the islands by partaking in their culture, summon powerful elementals and reap the rewards of their blessings—or the consequences of their disfavor.', packId: await pack('Island Living') },
+    { name: 'Child of the Ocean',   category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TEEN, description: 'Answer the call of the ocean! Sims with this trait will prefer water related activities and feel closer to denizens of the sea.',                                                                                                packId: await pack('Island Living') },
+
+    // ── Outdoor Retreat ──────────────────────────────────────────────────────
+    { name: 'Squeamish', category: TraitCategory.EMOTIONAL, description: 'Squeamish Sims are nauseated by the sight of creepy crawlies, vomiting, violence and death. These Sims become Uncomfortable near anything dirty.', packId: await pack('Outdoor Retreat') },
+
+    // ── Snowy Escape ─────────────────────────────────────────────────────────
+    { name: 'Adventurous', category: TraitCategory.LIFESTYLE, description: 'These Sims seek out new and unique experiences.',                                                                                                                                                                                     packId: await pack('Snowy Escape') },
+    { name: 'Proper',      category: TraitCategory.SOCIAL,    description: 'These Sims tend to disapprove of other Sims\' improper behavior such as Mean or Mischievous socials, but find themselves happier in Formal Outfits and have a much easier time with Friendly and Romantic socials.',                   packId: await pack('Snowy Escape') },
+
+    // ── Spa Day ──────────────────────────────────────────────────────────────
+    { name: 'High Maintenance', category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TEEN, description: 'These Sims require extra work to keep in good condition. Their problems sometimes appear trivial, and may even appear out of the blue. These struggles can be remedied through mindful habits, which puts them in a state of catharsis.', packId: await pack('Spa Day') },
+
+    // ── StrangerVille ────────────────────────────────────────────────────────
+    { name: 'Paranoid', category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TEEN, description: 'Paranoid Sims feel that danger is around every corner, and that people are always talking about them. Paranoid Sims feel a sense of security while hanging out in basements.', packId: await pack('StrangerVille') },
+
+    // ── Vegetarian (City Living) ─────────────────────────────────────────────
+    { name: 'Vegetarian', category: TraitCategory.LIFESTYLE, description: 'These Sims will actively avoid eating foods that contain meat products and can become sick if they eat such foods.', packId: await pack('City Living') },
+
+    // ── Infant traits — Growing Together ────────────────────────────────────
+    { name: 'Calm (Infant)',     category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims like to watch the world, are less likely to cry or become angry, and don\'t grow tired of activities as easily as other infants; however, they are less likely to explore the world on their own.',                                                 packId: await pack('Growing Together') },
+    { name: 'Cautious (Infant)', category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims appreciate the familiar but are slow to warm up to new experiences, locations, and Sims.',                                                                                                                                                       packId: await pack('Growing Together') },
+    { name: 'Clingy (Infant)',   category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT,                                                                                                                                                                                                                                                                          packId: await pack('Growing Together') },
+    { name: 'Intense (Infant)',  category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims have big emotions and are easily entertained, but they are also more difficult to calm when in a bad mood.',                                                                                                                                      packId: await pack('Growing Together') },
+    { name: 'Sensitive',         category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are prone to diaper rash, are often picky with food, and can more easily become overstimulated by too much play and social interaction; however, they also rest more peacefully through the night when soothed.',                                 packId: await pack('Growing Together') },
+    { name: 'Sunny',             category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are bursting with smiles and giggles and enjoy engaging with other Sims, but they do require more social attention.',                                                                                                                            packId: await pack('Growing Together') },
+    { name: 'Wiggly',            category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are always on the go and want to play and move about; however they often struggle to fall asleep or pay attention for extended periods of time.',                                                                                                 packId: await pack('Growing Together') },
+
+    // ── Toddler traits — base game ───────────────────────────────────────────
+    { name: 'Angelic',          category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Idyllic, easygoing Toddlers. They are never defiant and they don\'t throw a tantrum. They can easily talk to strangers.' },
+    { name: 'Charmer',          category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'These Toddlers love to socialize. They earn Communication skill faster, and don\'t suffer Stranger Danger from strangers. They can Share the Love with other Sims.' },
+    { name: 'Clingy (Toddler)', category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'These shy Toddlers avoid Sims outside the household and get sad if left behind. They gain extra skill when taught. And they recover faster from bad moods when Comforted.' },
+    { name: 'Fussy',            category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Tiny trouble-makers who love to Cry, cause trouble, and Throw Fits. But being noticed makes them Happy and helps them overcome negative Moodlets.' },
+    { name: 'Independent',      category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'These Toddlers love their freedom, and don\'t like to take orders from caregivers. They gain extra skill when they are left alone, and need less Attention than other Toddlers.' },
+    { name: 'Inquisitive',      category: TraitCategory.HOBBY,     minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Curious explorers. These Toddlers gain Thinking skill slightly faster. They are happiest when learning something, and sad if they haven\'t learned anything lately.' },
+    { name: 'Silly',            category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Goofy and curious. These Toddlers love to tell jokes and get Playful. They earn Imagination skill slightly faster.' },
+    { name: 'Wild',             category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Spirited and full of Energy. These Toddlers love to explore and get Energized. They earn Movement skill slightly faster. They get sad if they haven\'t been outside in a while.' },
   ]
 
   for (const t of personalityTraitSeed) {
-    await prisma.personalityTrait.upsert({ where: { name: t.name }, update: {}, create: t })
+    await prisma.personalityTrait.upsert({
+      where:  { name: t.name },
+      update: { description: t.description ?? null },
+      create: t,
+    })
   }
 
   // ── Personality Trait Conflicts ───────────────────────────────────────────
   const conflictPairs: [string, string][] = [
-    ['Neat',     'Slob'],
-    ['Good',     'Evil'],
-    ['Active',   'Lazy'],
-    ['Outgoing', 'Loner'],
+    ['Active',          'Lazy'],
+    ['Adventurous',     'Lazy'],
+    ['Ambitious',       'Freegan'],
+    ['Ambitious',       'Lazy'],
+    ['Cheerful',        'Gloomy'],
+    ['Cheerful',        'Hot-Headed'],
+    ['Childish',        'Evil'],
+    ['Childish',        'Hates Children'],
+    ['Childish',        'Snob'],
+    ['Clumsy',          'Maker'],
+    ['Evil',            'Generous'],
+    ['Evil',            'Good'],
+    ['Family-Oriented', 'Hates Children'],
+    ['Family-Oriented', 'Noncommittal'],
+    ['Foodie',          'Freegan'],
+    ['Foodie',          'Glutton'],
+    ['Freegan',         'Materialistic'],
+    ['Freegan',         'Snob'],
+    ['Freegan',         'Squeamish'],
+    ['Generous',        'Glutton'],
+    ['Generous',        'Materialistic'],
+    ['Generous',        'Mean'],
+    ['Gloomy',          'Hot-Headed'],
+    ['Gloomy',          'Party Animal'],
+    ['Good',            'Kleptomaniac'],
+    ['Good',            'Mean'],
+    ['Goofball',        'Snob'],
+    ['Glutton',         'Squeamish'],
+    ['Horse Lover',     'Lazy'],
+    ['Insider',         'Loner'],
+    ['Lazy',            'Maker'],
+    ['Lazy',            'Neat'],
+    ['Lazy',            'Overachiever'],
+    ['Lazy',            'Rancher'],
+    ['Loner',           'Outgoing'],
+    ['Loner',           'Party Animal'],
+    ['Loves Outdoors',  'Squeamish'],
+    ['Loyal',           'Noncommittal'],
+    ['Mean',            'Proper'],
+    ['Neat',            'Slob'],
+    ['Outgoing',        'Paranoid'],
+    ['Outgoing',        'Socially Awkward'],
+    ['Party Animal',    'Socially Awkward'],
+    ['Proper',          'Slob'],
+    ['Romantic',        'Unflirty'],
+    ['Slob',            'Squeamish'],
   ]
 
   for (const [nameA, nameB] of conflictPairs) {
@@ -171,7 +294,7 @@ async function main() {
     if (!a || !b) { console.warn(`Skipping conflict ${nameA} <-> ${nameB}: trait not found`); continue }
     const [traitAId, traitBId] = [a.id, b.id].sort()
     await prisma.personalityTraitConflict.upsert({
-      where: { traitAId_traitBId: { traitAId, traitBId } },
+      where:  { traitAId_traitBId: { traitAId, traitBId } },
       create: { traitAId, traitBId },
       update: {},
     })

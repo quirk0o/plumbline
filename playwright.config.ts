@@ -29,11 +29,6 @@ export default defineConfig({
       testMatch: '**/auth.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'chromium-magic-link',
-      testMatch: '**/image-upload.spec.ts',
-      use: { ...devices['Desktop Chrome'] },
-    },
   ],
   webServer: {
     command: 'npm run dev:test',

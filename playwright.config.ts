@@ -11,7 +11,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL: 'http://localhost:3737',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -20,7 +20,7 @@ export default defineConfig({
     { name: 'teardown', testMatch: '**/teardown/*.ts' },
     {
       name: 'chromium',
-      testMatch: '**/packs.spec.ts',
+      testMatch: ['**/packs.spec.ts', '**/legacy-wizard.spec.ts'],
       use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
       dependencies: ['setup'],
     },
@@ -32,7 +32,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev:test',
-    url: 'http://localhost:3001',
+    url: 'http://localhost:3737',
     reuseExistingServer: !process.env.CI,
     env: {
       DATABASE_URL: process.env.DATABASE_URL!,

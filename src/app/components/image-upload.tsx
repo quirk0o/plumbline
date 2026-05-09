@@ -58,7 +58,7 @@ export function ImageUpload({
       <button
         type="button"
         className={`${styles.trigger} ${styles[shape]}`}
-        style={value ? { backgroundImage: `url("${value}")` } : undefined}
+        style={value ? { backgroundImage: `url(${JSON.stringify(value)})` } : undefined}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}

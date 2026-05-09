@@ -1,119 +1,130 @@
-import { describe, it, expect, vi } from 'vitest'
-import { createCallerFactory } from '../trpc'
-import { legaciesRouter } from './legacies'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { Gender } from '@prisma/client'
-import type { Session } from 'next-auth'
-import type { db as dbType } from '@/server/db'
-
-const createCaller = createCallerFactory(legaciesRouter)
-
-function makeDb(overrides: Record<string, unknown> = {}) {
-  const tx = {
-    legacy: {
-      create: vi.fn().mockImplementation((args) => ({
-        id: 'legacy-1',
-        slug: args.data.slug,
-        name: args.data.name,
-        ...args.data,
-      })),
-      update: vi.fn().mockResolvedValue({}),
-    },
-    sim: {
-      create: vi.fn().mockResolvedValue({ id: 'sim-1' }),
-    },
-    personalityTraitConflict: {
-      findFirst: vi.fn().mockResolvedValue(null),
-    },
-  }
-  return {
-    legacy: {
-      findMany: vi.fn().mockResolvedValue([]),
-      findFirst: vi.fn().mockResolvedValue(null),
-    },
-    personalityTraitConflict: {
-      findFirst: vi.fn().mockResolvedValue(null),
-    },
-    $transaction: vi.fn().mockImplementation(async (fn) => fn(tx)),
-    _tx: tx,
-    ...overrides,
-  }
-}
-
-function makeCtx(dbOverrides = {}) {
-  return {
-    session: {
-      user: { id: 'user-1', email: 'test@example.com', name: null, image: null },
-      expires: new Date().toISOString(),
-    } as Session & { user: { id: string } },
-    db: makeDb(dbOverrides) as unknown as typeof dbType,
-  }
-}
+import { authedCaller, unauthCaller } from '@/test/caller'
+import {
+  createTestUser,
+  cleanupUser,
+  createTestLegacy,
+  getConflictingTraits,
+} from '@/test/helpers'
+import { db } from '@/server/db'
 
 describe('legacies.create', () => {
-  it('creates a legacy with a derived slug', async () => {
-    const ctx = makeCtx()
-    const caller = createCaller(ctx)
-    const result = await caller.create({ name: 'The Caliente Legacy' })
+  let userId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('creates a legacy and persists it to the database', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.create({ name: 'The Goth Legacy' })
+    expect(result.legacy.name).toBe('The Goth Legacy')
+    const record = await db.legacy.findUnique({ where: { id: result.legacy.id } })
+    expect(record).not.toBeNull()
+    expect(record?.name).toBe('The Goth Legacy')
+  })
+
+  it('derives the slug from the legacy name', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.create({ name: 'The Caliente Legacy' })
     expect(result.legacy.slug).toBe('the-caliente-legacy')
   })
 
-  it('appends -2 suffix when slug is taken', async () => {
-    const db = makeDb()
-    ;(db.legacy.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { slug: 'my-legacy' },
-    ])
-    const caller = createCaller({ ...makeCtx(), db: db as unknown as typeof dbType })
-    const result = await caller.create({ name: 'My Legacy' })
+  it('appends -2 suffix when the base slug already exists for this user', async () => {
+    await createTestLegacy(userId, { slug: 'my-legacy' })
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.create({ name: 'My Legacy' })
     expect(result.legacy.slug).toBe('my-legacy-2')
   })
 
-  it('creates a sim when founder is provided', async () => {
-    const ctx = makeCtx()
-    const caller = createCaller(ctx)
-    await caller.create({
-      name: 'Test Legacy',
+  it('creates a founder Sim and sets founderSimId on the legacy', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.create({
+      name: 'Caliente Legacy',
       founder: { firstName: 'Nina', lastName: 'Caliente', gender: Gender.FEMALE },
     })
-    expect((ctx.db as unknown as ReturnType<typeof makeDb>)._tx.sim.create).toHaveBeenCalled()
+    const legacy = await db.legacy.findUnique({ where: { id: result.legacy.id } })
+    expect(legacy?.founderSimId).not.toBeNull()
+    const sim = await db.sim.findUnique({ where: { id: legacy!.founderSimId! } })
+    expect(sim?.firstName).toBe('Nina')
+    expect(sim?.lastName).toBe('Caliente')
   })
 
-  it('does not create a sim when founder is omitted', async () => {
-    const ctx = makeCtx()
-    const caller = createCaller(ctx)
-    await caller.create({ name: 'No Founder Legacy' })
-    expect((ctx.db as unknown as ReturnType<typeof makeDb>)._tx.sim.create).not.toHaveBeenCalled()
-  })
-
-  it('throws BAD_REQUEST when selected traits conflict', async () => {
-    const db = makeDb()
-    ;(db.personalityTraitConflict.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
-      traitAId: 'trait-neat',
-      traitBId: 'trait-slob',
-    })
-    const caller = createCaller({ ...makeCtx(), db: db as unknown as typeof dbType })
+  it('throws BAD_REQUEST when the founder has conflicting personality traits', async () => {
+    const { traitA, traitB } = await getConflictingTraits()
+    const caller = authedCaller(userId)
     await expect(
-      caller.create({
+      caller.legacies.create({
         name: 'Bad Legacy',
         founder: {
           firstName: 'A',
           lastName: 'B',
-          gender: Gender.FEMALE,
-          personalityTraitIds: ['trait-neat', 'trait-slob'],
+          gender: Gender.MALE,
+          personalityTraitIds: [traitA.id, traitB.id],
         },
       })
-    ).rejects.toThrow('Selected traits conflict')
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('throws UNAUTHORIZED without a session', async () => {
+    const caller = unauthCaller()
+    await expect(caller.legacies.create({ name: 'Should Fail' })).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+    })
   })
 })
 
 describe('legacies.getAll', () => {
-  it('returns legacies for the current user', async () => {
-    const db = makeDb()
-    ;(db.legacy.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { id: 'l1', name: 'My Legacy', slug: 'my-legacy', founderSim: null, _count: { households: 0 } },
-    ])
-    const caller = createCaller({ ...makeCtx(), db: db as unknown as typeof dbType })
-    const result = await caller.getAll()
+  let userId: string
+  let otherUserId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    const otherUser = await createTestUser()
+    userId = user.id
+    otherUserId = otherUser.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+    await cleanupUser(otherUserId)
+  })
+
+  it('returns only the current user\'s legacies', async () => {
+    await createTestLegacy(userId, { name: 'My Legacy', slug: 'my-legacy' })
+    await createTestLegacy(otherUserId, { name: 'Other Legacy', slug: 'other-legacy' })
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.getAll()
     expect(result).toHaveLength(1)
-    expect(result[0].slug).toBe('my-legacy')
+    expect(result[0].name).toBe('My Legacy')
+  })
+
+  it('includes founderSim fields when a founder is set', async () => {
+    const caller = authedCaller(userId)
+    await caller.legacies.create({
+      name: 'Goth Legacy',
+      founder: { firstName: 'Mortimer', lastName: 'Goth', gender: Gender.MALE },
+    })
+    const result = await caller.legacies.getAll()
+    expect(result[0].founderSim).not.toBeNull()
+    expect(result[0].founderSim?.firstName).toBe('Mortimer')
+    expect(result[0].founderSim?.lastName).toBe('Goth')
+  })
+
+  it('returns an empty array when the user has no legacies', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.getAll()
+    expect(result).toEqual([])
+  })
+
+  it('throws UNAUTHORIZED without a session', async () => {
+    const caller = unauthCaller()
+    await expect(caller.legacies.getAll()).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
   })
 })

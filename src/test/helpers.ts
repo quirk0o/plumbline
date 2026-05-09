@@ -21,3 +21,36 @@ export async function getAnyPack(type?: PackType) {
   if (!pack) throw new Error(`No pack found${type ? ` of type ${type}` : ''}. Is the DB seeded?`)
   return pack
 }
+
+export async function getAnyTrait() {
+  const trait = await db.personalityTrait.findFirst()
+  if (!trait) throw new Error('No personality traits found. Is the DB seeded?')
+  return trait
+}
+
+export async function getConflictingTraits() {
+  const conflict = await db.personalityTraitConflict.findFirst({
+    include: { traitA: true, traitB: true },
+  })
+  if (!conflict) throw new Error('No trait conflicts found. Is the DB seeded?')
+  return { traitA: conflict.traitA, traitB: conflict.traitB }
+}
+
+export async function createTestLegacy(
+  userId: string,
+  overrides: { name?: string; slug?: string } = {},
+) {
+  return db.legacy.create({
+    data: {
+      userId,
+      name: overrides.name ?? 'Test Legacy',
+      slug: overrides.slug ?? `test-legacy-${randomUUID()}`,
+    },
+  })
+}
+
+export async function getAnyCareer() {
+  const career = await db.career.findFirst()
+  if (!career) throw new Error('No careers found. Is the DB seeded?')
+  return career
+}

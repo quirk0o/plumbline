@@ -6,7 +6,7 @@
 
 .label {
   font-family: var(--font-body);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   color: var(--text-muted);
 }

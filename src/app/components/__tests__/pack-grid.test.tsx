@@ -2,23 +2,25 @@
 import { describe, it, expect, vi } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
+import { PackType } from '@prisma/client'
 import { server } from '@/test/msw-server'
 import { renderWithTRPC } from '@/test/render'
+import { type PackGroup } from '@/lib/packs'
 import { PackGrid } from '../pack-grid'
 
 vi.mock('next/image', () => ({
-  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+  default: (props: { src: string; alt: string }) => <span>{props.alt}</span>,
 }))
 
-const expansionGroup = {
-  type: 'EXPANSION',
+const expansionGroup: PackGroup = {
+  type: PackType.EXPANSION,
   packs: [
-    { id: 'p1', name: 'City Living', type: 'EXPANSION', icon: '🏙️', imageUrl: null, isOwned: false },
-    { id: 'p2', name: 'Seasons', type: 'EXPANSION', icon: '🍂', imageUrl: null, isOwned: true },
+    { id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: '🏙️', imageUrl: null, isOwned: false },
+    { id: 'p2', name: 'Seasons', type: PackType.EXPANSION, icon: '🍂', imageUrl: null, isOwned: true },
   ],
 }
 
-function mockPacksGetAll(groups = [expansionGroup]) {
+function mockPacksGetAll(groups: PackGroup[] = [expansionGroup]) {
   server.use(
     http.get('http://localhost/api/trpc/packs.getAll', () =>
       HttpResponse.json([{ result: { data: { json: groups } } }])
@@ -50,11 +52,11 @@ describe('PackGrid', () => {
   })
 
   it('uses plural "packs" when count > 1', async () => {
-    const groups = [{
-      type: 'EXPANSION',
+    const groups: PackGroup[] = [{
+      type: PackType.EXPANSION,
       packs: [
-        { id: 'p1', name: 'City Living', type: 'EXPANSION', icon: null, imageUrl: null, isOwned: true },
-        { id: 'p2', name: 'Seasons', type: 'EXPANSION', icon: null, imageUrl: null, isOwned: true },
+        { id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: null, imageUrl: null, isOwned: true },
+        { id: 'p2', name: 'Seasons', type: PackType.EXPANSION, icon: null, imageUrl: null, isOwned: true },
       ],
     }]
     mockPacksGetAll(groups)
@@ -81,9 +83,9 @@ describe('PackGrid', () => {
   })
 
   it('renders multiple sections when multiple groups are provided', async () => {
-    const groups = [
-      { type: 'EXPANSION', packs: [{ id: 'p1', name: 'City Living', type: 'EXPANSION', icon: null, imageUrl: null, isOwned: false }] },
-      { type: 'KIT', packs: [{ id: 'p2', name: 'Nifty Knitting', type: 'KIT', icon: null, imageUrl: null, isOwned: false }] },
+    const groups: PackGroup[] = [
+      { type: PackType.EXPANSION, packs: [{ id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: null, imageUrl: null, isOwned: false }] },
+      { type: PackType.KIT, packs: [{ id: 'p2', name: 'Nifty Knitting', type: PackType.KIT, icon: null, imageUrl: null, isOwned: false }] },
     ]
     mockPacksGetAll(groups)
     renderWithTRPC(<PackGrid initialGroups={groups} />)

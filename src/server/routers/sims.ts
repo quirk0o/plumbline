@@ -54,7 +54,7 @@ export const simsRouter = router({
         })
       }
 
-      const { legacyId, personalityTraitIds, aspirationId, careerId, ...simFields } = input
+      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, ...simFields } = input
 
       return ctx.db.sim.create({
         data: {

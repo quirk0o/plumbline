@@ -1,9 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 import { config } from 'dotenv'
 
-// Load dev env first, then overlay test DB URL so E2E uses the seeded test database
-config()
-config({ path: '.env.test', override: true })
+config({ path: '.env.test' })
 
 export default defineConfig({
   testDir: './e2e',

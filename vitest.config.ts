@@ -1,9 +1,9 @@
 import { defineConfig } from 'vitest/config'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { resolve } from 'path'
-import { loadEnvConfig } from '@next/env'
+import { config } from 'dotenv'
 
-loadEnvConfig(process.cwd())
+config({ path: '.env.test' })
 
 export default defineConfig({
   plugins: [tsconfigPaths()],

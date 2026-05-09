@@ -18,8 +18,12 @@ export function AddSimClient({ legacyId, slug, traits, aspirations, careers }: A
   const createSim = trpc.sims.create.useMutation()
 
   async function handleSubmit(data: SimFormData) {
-    await createSim.mutateAsync({ legacyId, ...data })
-    router.push(`/app/legacies/${slug}`)
+    try {
+      await createSim.mutateAsync({ legacyId, ...data })
+      router.push(`/app/legacies/${slug}`)
+    } catch {
+      // error surfaced via createSim.error
+    }
   }
 
   return (

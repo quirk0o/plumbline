@@ -1,4 +1,7 @@
-import type { PrismaClient } from '@prisma/client'
+import { randomUUID } from 'crypto'
+import type { PrismaClient, Prisma } from '@prisma/client'
+
+type Db = PrismaClient | Prisma.TransactionClient
 
 export function slugify(text: string): string {
   return text
@@ -10,13 +13,13 @@ export function slugify(text: string): string {
 }
 
 export async function uniqueSlug(
-  db: Pick<PrismaClient, 'legacy'>,
+  db: Pick<Db, 'legacy'>,
   userId: string,
   name: string,
 ): Promise<string> {
   const base = slugify(name)
   if (!base) {
-    return `legacy-${Math.random().toString(36).slice(2, 9)}`
+    return `legacy-${randomUUID().slice(0, 8)}`
   }
   const existing = await db.legacy.findMany({
     where: { userId, slug: { startsWith: base } },

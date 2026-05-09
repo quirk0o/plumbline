@@ -22,11 +22,18 @@ export function LegacyWizard() {
   const [legacyData, setLegacyData] = useState<LegacyData>({ name: '', description: '' })
   const [nameError, setNameError] = useState('')
 
-  const { data: traits = [] } = trpc.traits.getAll.useQuery()
-  const { data: aspirations = [] } = trpc.aspirations.getAll.useQuery()
-  const { data: careers = [] } = trpc.careers.getAll.useQuery()
+  const { data: traits = [] } = trpc.traits.getAll.useQuery(undefined, { enabled: step === 2 })
+  const { data: aspirations = [] } = trpc.aspirations.getAll.useQuery(undefined, { enabled: step === 2 })
+  const { data: careers = [] } = trpc.careers.getAll.useQuery(undefined, { enabled: step === 2 })
 
   const createLegacy = trpc.legacies.create.useMutation()
+
+  function getErrorMessage(error: typeof createLegacy.error): string {
+    if (!error) return ''
+    if (error.data?.code === 'BAD_REQUEST') return 'Please check your inputs and try again.'
+    if (error.data?.code === 'CONFLICT') return 'A legacy with this name already exists.'
+    return 'Something went wrong. Please try again.'
+  }
 
   function handleStep1Submit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,12 +51,7 @@ export function LegacyWizard() {
         name: legacyData.name.trim(),
         description: legacyData.description.trim() || undefined,
         imageUrl: legacyData.imageUrl,
-        founder: founder
-          ? {
-              ...founder,
-              personalityTraitIds: founder.personalityTraitIds,
-            }
-          : undefined,
+        founder: founder ? { ...founder } : undefined,
       })
       router.push(`/app/legacies/${result.legacy.slug}`)
     } catch {
@@ -60,7 +62,6 @@ export function LegacyWizard() {
   return (
     <div className={styles.page}>
       <div className={styles.container}>
-        {/* Step indicator */}
         <div className={styles.stepper}>
           <div className={`${styles.step} ${step === 1 ? styles.stepActive : styles.stepDone}`}>
             <div className={styles.stepDot}>{step > 1 ? '✓' : '1'}</div>
@@ -73,7 +74,6 @@ export function LegacyWizard() {
           </div>
         </div>
 
-        {/* Step 1 */}
         {step === 1 && (
           <div className={styles.card}>
             <h1 className={styles.cardTitle}>Your Legacy</h1>
@@ -120,7 +120,6 @@ export function LegacyWizard() {
           </div>
         )}
 
-        {/* Step 2 */}
         {step === 2 && (
           <div className={styles.card}>
             <div className={styles.step2Header}>
@@ -133,20 +132,15 @@ export function LegacyWizard() {
               </Button>
             </div>
 
-            {createLegacy.error && (
-              <p className={styles.mutationError}>{createLegacy.error.message}</p>
-            )}
-
             <SimForm
               traits={traits}
               aspirations={aspirations}
               careers={careers}
               onSubmit={submit}
               onBack={() => setStep(1)}
-              onSkip={() => submit()}
               isSubmitting={createLegacy.isPending}
               submitLabel="Create legacy →"
-              errors={createLegacy.error ? { root: createLegacy.error.message } : undefined}
+              errors={createLegacy.error ? { root: getErrorMessage(createLegacy.error) } : undefined}
             />
           </div>
         )}

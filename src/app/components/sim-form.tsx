@@ -42,7 +42,6 @@ interface SimFormProps {
   careers: Career[]
   defaultValues?: Partial<SimFormData>
   onSubmit: (data: SimFormData) => void
-  onSkip?: () => void
   onBack?: () => void
   isSubmitting?: boolean
   submitLabel?: string
@@ -57,9 +56,20 @@ const PRONOUN_PRESETS = [
   { label: 'Custom',               subject: '',     object: '',     possessive: '' },
 ]
 
+const LIFE_STAGE_LABELS: Record<LifeStage, string> = {
+  NEWBORN: 'Newborn',
+  INFANT: 'Infant',
+  TODDLER: 'Toddler',
+  CHILD: 'Child',
+  TEEN: 'Teen',
+  YOUNG_ADULT: 'Young Adult',
+  ADULT: 'Adult',
+  ELDER: 'Elder',
+}
+
 const LIFE_STAGES = Object.values(LifeStage).map((v) => ({
   value: v,
-  label: v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+  label: LIFE_STAGE_LABELS[v],
 }))
 
 const OCCULT_TYPES = Object.values(OccultType).map((v) => ({
@@ -86,7 +96,6 @@ export function SimForm({
   careers,
   defaultValues,
   onSubmit,
-  onSkip,
   onBack,
   isSubmitting,
   submitLabel = 'Save',
@@ -104,7 +113,7 @@ export function SimForm({
   const [selectedTraits, setSelectedTraits] = useState<string[]>(defaultValues?.personalityTraitIds ?? [])
   const [aspirationId, setAspirationId] = useState(defaultValues?.aspirationId ?? '')
   const [careerId, setCareerId] = useState(defaultValues?.careerId ?? '')
-  const [occultType, setOccultType] = useState(defaultValues?.occultType ?? '')
+  const [occultType, setOccultType] = useState<OccultType | ''>(defaultValues?.occultType ?? '')
   const [localErrors, setLocalErrors] = useState<Partial<Record<string, string>>>({})
 
   function handlePronounPreset(value: string) {
@@ -151,7 +160,6 @@ export function SimForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className={styles.form}>
-      {/* ── Identity ── */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionLabel}>Identity</span>
@@ -242,7 +250,6 @@ export function SimForm({
         </div>
       </div>
 
-      {/* ── Personality ── */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionLabel}>Personality</span>
@@ -252,7 +259,6 @@ export function SimForm({
         <TraitPicker traits={traits} selected={selectedTraits} onChange={setSelectedTraits} max={6} />
       </div>
 
-      {/* ── Goals & Career ── */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionLabel}>Goals &amp; Career</span>
@@ -283,7 +289,6 @@ export function SimForm({
         </div>
       </div>
 
-      {/* ── Special ── */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionLabel}>Special</span>
@@ -291,7 +296,7 @@ export function SimForm({
         </div>
         <div className={styles.halfCol}>
           <FormField label="Occult type" htmlFor="occultType">
-            <select id="occultType" value={occultType} onChange={(e) => setOccultType(e.target.value)} className={styles.select}>
+            <select id="occultType" value={occultType} onChange={(e) => setOccultType(e.target.value as OccultType | '')} className={styles.select}>
               <option value="">None</option>
               {OCCULT_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -299,7 +304,6 @@ export function SimForm({
         </div>
       </div>
 
-      {/* ── Actions ── */}
       {allErrors.root && <p className={styles.rootError}>{allErrors.root}</p>}
 
       <div className={styles.actions}>
@@ -309,11 +313,6 @@ export function SimForm({
           </Button>
         )}
         <div className={styles.rightActions}>
-          {onSkip && (
-            <Button type="button" variant="outline" onClick={onSkip}>
-              Skip this step
-            </Button>
-          )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving…' : submitLabel}
           </Button>

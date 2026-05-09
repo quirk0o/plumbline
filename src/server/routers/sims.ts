@@ -2,20 +2,37 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { Gender, LifeStage, OccultType, EmploymentType } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
+import { assertNoTraitConflicts } from './validate-traits'
+
+const imageUrlSchema = z
+  .string()
+  .refine(
+    (url) => {
+      if (url.startsWith('/uploads/')) return true
+      try {
+        const { hostname } = new URL(url)
+        return hostname.endsWith('.vercel-storage.com') || hostname === 'localhost'
+      } catch {
+        return false
+      }
+    },
+    { message: 'Image must be hosted on an allowed domain' },
+  )
+  .optional()
 
 export const simsRouter = router({
   create: protectedProcedure
     .input(
       z.object({
         legacyId: z.string(),
-        firstName: z.string().min(1),
-        lastName: z.string().min(1),
+        firstName: z.string().min(1).max(50),
+        lastName: z.string().min(1).max(50),
         gender: z.nativeEnum(Gender),
         lifeStage: z.nativeEnum(LifeStage).default('YOUNG_ADULT'),
-        pronounSubject: z.string().optional(),
-        pronounObject: z.string().optional(),
-        pronounPossessive: z.string().optional(),
-        imageUrl: z.string().url().optional(),
+        pronounSubject: z.string().max(20).optional(),
+        pronounObject: z.string().max(20).optional(),
+        pronounPossessive: z.string().max(20).optional(),
+        imageUrl: imageUrlSchema,
         personalityTraitIds: z.array(z.string()).max(6).optional(),
         aspirationId: z.string().optional(),
         careerId: z.string().optional(),
@@ -28,11 +45,13 @@ export const simsRouter = router({
       if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
 
       const traitIds = input.personalityTraitIds ?? []
-      if (traitIds.length >= 2) {
-        const conflict = await ctx.db.personalityTraitConflict.findFirst({
-          where: { traitAId: { in: traitIds }, traitBId: { in: traitIds } },
+      await assertNoTraitConflicts(ctx.db, traitIds)
+
+      let household = await ctx.db.household.findFirst({ where: { legacyId: input.legacyId } })
+      if (!household) {
+        household = await ctx.db.household.create({
+          data: { name: 'Household 1', legacyId: input.legacyId },
         })
-        if (conflict) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Selected traits conflict' })
       }
 
       const { legacyId, personalityTraitIds, aspirationId, careerId, ...simFields } = input
@@ -48,6 +67,7 @@ export const simsRouter = router({
           pronounPossessive: simFields.pronounPossessive ?? null,
           imageUrl: simFields.imageUrl ?? null,
           occultType: simFields.occultType ?? null,
+          householdId: household.id,
           ...(personalityTraitIds?.length
             ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
             : {}),

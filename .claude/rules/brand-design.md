@@ -1,3 +1,10 @@
+---
+paths:
+  - "src/**/*.css"
+  - "src/components/**"
+  - "src/app/**/*.tsx"
+---
+
 # SimTrack Brand Direction
 
 **A living reference for designers and developers.**

@@ -1,3 +1,11 @@
+---
+paths:
+  - "src/**/*.test.{ts,tsx}"
+  - "e2e/**"
+  - "vitest.config.ts"
+  - "playwright.config.ts"
+---
+
 # Testing Guide
 
 This project follows [Kent C. Dodds' Testing Trophy](https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications): mostly integration tests, a few E2E tests at the top, static analysis at the base, and minimal unit tests only for genuinely complex isolated logic.
@@ -76,6 +84,7 @@ End-to-end tests using Playwright that exercise the full stack — Next.js serve
 **What's tested:**
 - `e2e/auth.spec.ts` — full sign-in user flow: unauthenticated redirect → sign-in page → email submission → inbox confirmation
 - `e2e/packs.spec.ts` — authenticated pack management flow: onboarding page → pack grid → toggle ownership
+- `e2e/legacy-wizard.spec.ts` — legacy creation wizard: name + description → founder sim (with and without) → validation → back navigation
 
 **Authentication setup:** The `setup/auth.setup.ts` project creates a test user and saves session cookies to `e2e/.auth/user.json`. The `packs.spec.ts` tests reuse this session. Teardown deletes the test user.
 
@@ -83,7 +92,7 @@ End-to-end tests using Playwright that exercise the full stack — Next.js serve
 - PostgreSQL running with seeded data
 - `DATABASE_URL` set
 - `AUTH_SECRET` and any other auth env vars from `.env`
-- Dev server started (Playwright starts it automatically via `webServer`)
+- Dev server started (Playwright starts it automatically via `webServer` on port **3737**, separate from the standard dev server on 3000)
 
 ---
 
@@ -110,6 +119,32 @@ Runs before every test file. Loads `.env`/`.env.test` via dotenv (for DB credent
 Two browser projects:
 - `chromium` — authenticated (depends on `setup/auth.setup.ts` to run first)
 - `chromium-unauthed` — no session (used by `auth.spec.ts`)
+
+---
+
+## Query Priority
+
+Always query by what the user sees and interacts with — never by implementation details like element IDs, CSS classes, or DOM structure. Use this priority order in both RTL and Playwright:
+
+1. **`getByRole`** — matches by ARIA role + accessible name. Prefer this for buttons, links, headings, inputs.
+   ```ts
+   getByRole('button', { name: 'Continue →' })
+   getByRole('heading', { name: 'Your Legacy' })
+   getByRole('link', { name: '+ Start a legacy' })
+   ```
+2. **`getByLabel`** — matches form controls by their associated `<label>` text. Use for all labelled inputs, selects, and textareas.
+   ```ts
+   getByLabel('Legacy name')       // finds the input via its label
+   getByLabel('Gender')            // finds the select; the aria-hidden * is excluded
+   ```
+3. **`getByPlaceholderText`** — only when no label is present.
+   ```ts
+   getByPlaceholderText('your@email.com')
+   ```
+4. **`getByText`** — for non-interactive text content.
+5. **`getByTestId`** — last resort. Requires adding `data-testid` to the element first.
+
+**Never use:** `locator('#id')`, `locator('.class')`, `locator('div > form > input')`, or any selector that would break if the implementation changed without the user-visible behavior changing.
 
 ---
 

@@ -1,3 +1,11 @@
+---
+paths:
+  - "prisma/**"
+  - "src/server/**"
+  - "src/trpc/**"
+  - "src/types/**"
+---
+
 # SimTrack Domain Model
 
 Research findings and domain concepts for the SimTrack application. Describes what exists in The Sims 4 and how the application models it — not how it is stored.
@@ -74,7 +82,7 @@ A **career** is a Sim's employment track. Most careers have two branches that di
 
 A Sim holds at most one career at a time, at a specific level and branch.
 
-A Sim could also be Unemployed or Self-Emplyed. When they are Self-Employed, the user can define a custom career name and track progress toward a self-defined goal, but there are no game mechanics associated with this status.
+A Sim could also be Unemployed or Self-Employed. When they are Self-Employed, the user can define a custom career name and track progress toward a self-defined goal, but there are no game mechanics associated with this status.
 
 ---
 

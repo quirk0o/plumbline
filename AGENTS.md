@@ -8,6 +8,23 @@ This version has breaking changes — APIs, conventions, and file structure may 
 In Next.js 16, `middleware.ts` was renamed to `proxy.ts`. The request-interception file in this project is **`src/proxy.ts`** and it exports a named `proxy` function (not `middleware`). Never suggest renaming it or creating a `middleware.ts`. See `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`.
 <!-- END:nextjs-agent-rules -->
 
+# Merge Conflicts
+
+Always resolve merge conflicts carefully using proper 3-way merge tooling. Never use `git checkout --ours` or `git checkout --theirs` — these silently discard the other side's changes entirely.
+
+Use `git merge-file` with the merge base:
+
+```bash
+BASE=$(git merge-base <ours-ref> <theirs-ref>)
+git show $BASE:path/to/file > /tmp/file-base
+git show <ours-ref>:path/to/file > /tmp/file-ours
+git show <theirs-ref>:path/to/file > /tmp/file-theirs
+cp /tmp/file-ours /tmp/file-merged
+git merge-file /tmp/file-merged /tmp/file-base /tmp/file-theirs
+```
+
+Then resolve each conflict hunk individually, choosing the better data from each side. Never blindly take one side.
+
 # Code Quality Rules
 
 **No lint or TypeScript suppressions — ever.** The following are illegal in this codebase:

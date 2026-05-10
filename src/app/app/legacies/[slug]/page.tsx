@@ -23,7 +23,7 @@ export default async function LegacyDetailPage({ params }: Props) {
         },
       },
       sims: {
-        select: { id: true, firstName: true, lastName: true },
+        select: { id: true, firstName: true, lastName: true, imageUrl: true },
         orderBy: { createdAt: 'asc' },
       },
     },
@@ -33,8 +33,8 @@ export default async function LegacyDetailPage({ params }: Props) {
 
   return (
     <div className={styles.page}>
-      <div className={`${styles.hero} ${!legacy.imageUrl ? styles.heroNoImage : ''}`}>
-        {legacy.imageUrl && (
+      {legacy.imageUrl ? (
+        <div className={styles.hero}>
           <Image
             src={legacy.imageUrl}
             alt={legacy.name}
@@ -42,14 +42,20 @@ export default async function LegacyDetailPage({ params }: Props) {
             className={styles.heroImage}
             sizes="(max-width: 800px) 100vw, 800px"
           />
-        )}
-        {legacy.imageUrl && <div className={styles.heroOverlay} />}
-        <div className={styles.heroText}>
+          <div className={styles.heroOverlay} />
+          <div className={styles.heroText}>
+            <p className={styles.eyebrow}>Legacy</p>
+            <h1 className={styles.title}>{legacy.name}</h1>
+            {legacy.description && <p className={styles.description}>{legacy.description}</p>}
+          </div>
+        </div>
+      ) : (
+        <header className={styles.heroPlain}>
           <p className={styles.eyebrow}>Legacy</p>
           <h1 className={styles.title}>{legacy.name}</h1>
           {legacy.description && <p className={styles.description}>{legacy.description}</p>}
-        </div>
-      </div>
+        </header>
+      )}
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
@@ -110,6 +116,21 @@ export default async function LegacyDetailPage({ params }: Props) {
           <ul className={styles.simList} role="list">
             {legacy.sims.map((sim) => (
               <li key={sim.id} className={styles.simCard}>
+                <div className={styles.simPortraitWrap}>
+                  {sim.imageUrl ? (
+                    <Image
+                      src={sim.imageUrl}
+                      alt={sim.firstName}
+                      fill
+                      className={styles.simPortrait}
+                      sizes="200px"
+                    />
+                  ) : (
+                    <span className={styles.simInitials} aria-hidden="true">
+                      {sim.firstName[0]}{sim.lastName[0]}
+                    </span>
+                  )}
+                </div>
                 <span className={styles.simName}>
                   {sim.firstName} {sim.lastName}
                 </span>

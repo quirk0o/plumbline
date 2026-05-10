@@ -10,9 +10,18 @@ export default async function DashboardPage() {
   const userId = session?.user?.id
   if (!userId) redirect('/auth/signin')
 
-  const ownedCount = await db.userPack.count({
-    where: { userId, pack: { type: { not: PackType.BASE_GAME } } },
-  })
+  const [ownedCount, legacies] = await Promise.all([
+    db.userPack.count({
+      where: { userId, pack: { type: { not: PackType.BASE_GAME } } },
+    }),
+    db.legacy.findMany({
+      where: { userId },
+      include: {
+        founderSim: { select: { firstName: true, lastName: true, imageUrl: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ])
 
   const firstName = session.user.name?.split(' ')[0] ?? null
   const greeting = firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'
@@ -29,7 +38,51 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <p className={styles.placeholder}>Your legacies will appear here.</p>
+      <section className={styles.legaciesSection}>
+        <div className={styles.legaciesHeader}>
+          <h2 className={styles.legaciesTitle}>Your Legacies</h2>
+          <Link href="/app/legacies/new" className={styles.startLegacyLink}>
+            + Start a legacy
+          </Link>
+        </div>
+
+        {legacies.length === 0 ? (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyText}>No legacies yet.</p>
+            <Link href="/app/legacies/new" className={styles.emptyLink}>
+              Start your first legacy →
+            </Link>
+          </div>
+        ) : (
+          <ul className={styles.legacyList}>
+            {legacies.map((legacy) => {
+              const founder = legacy.founderSim
+              const founderName =
+                founder
+                  ? [founder.firstName, founder.lastName].filter(Boolean).join(' ')
+                  : null
+              return (
+                <li key={legacy.id}>
+                  <Link
+                    href={`/app/legacies/${legacy.slug}`}
+                    className={styles.legacyCard}
+                  >
+                    <div className={styles.legacyMeta}>
+                      <span className={styles.legacyName}>{legacy.name}</span>
+                      {founderName && (
+                        <span className={styles.founderLine}>
+                          Founded by {founderName}
+                        </span>
+                      )}
+                    </div>
+                    <span className={styles.legacyArrow}>→</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

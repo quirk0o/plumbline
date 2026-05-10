@@ -1,8 +1,18 @@
 import { router } from '../trpc'
 import { packsRouter } from './packs'
+import { traitsRouter } from './traits'
+import { aspirationsRouter } from './aspirations'
+import { careersRouter } from './careers'
+import { legaciesRouter } from './legacies'
+import { simsRouter } from './sims'
 
 export const appRouter = router({
   packs: packsRouter,
+  traits: traitsRouter,
+  aspirations: aspirationsRouter,
+  careers: careersRouter,
+  legacies: legaciesRouter,
+  sims: simsRouter,
 })
 
 export type AppRouter = typeof appRouter

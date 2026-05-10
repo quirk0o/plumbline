@@ -30,7 +30,7 @@
   --border:        #e8dfc8;
   --border-bright: #c8b896;
 
-  /* Text — all meet WCAG AA */
+  /* Text hierarchy */
   --text:        #2a1f0e;
   --text-muted:  #8c7a5e;
   --text-subtle: #b8a88a;
@@ -96,8 +96,8 @@
   --font-body:    var(--font-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
 
   /* Typography scale */
-  --text-xs:   0.65rem;    /* 10.4px — labels, badges */
-  --text-sm:   0.75rem;    /* 12px */
+  --text-xs:   0.75rem;    /* 12px — labels, badges */
+  --text-sm:   0.875rem;   /* 14px */
   --text-base: 0.9375rem;  /* 15px — body text */
   --text-md:   1.0625rem;  /* 17px — slightly larger body */
   --text-lg:   1.25rem;    /* 20px */
@@ -120,6 +120,7 @@
   --leading-none:    1;
   --leading-tight:   1.2;
   --leading-normal:  1.5;
+  --leading-snug:    1.6;
   --leading-relaxed: 1.75;
 
   /* Transitions */

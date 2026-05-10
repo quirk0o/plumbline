@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { TRPCError } from '@trpc/server'
 import { PackType } from '@prisma/client'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, getAnyPack } from '@/test/helpers'

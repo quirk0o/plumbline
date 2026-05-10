@@ -1,0 +1,62 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.trigger {
+  position: relative;
+  background-color: var(--bg);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 2px dashed var(--border-bright);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trigger:hover {
+  border-color: var(--green);
+  background-color: var(--color-green-50);
+}
+
+.trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.square {
+  width: 104px;
+  height: 104px;
+  border-radius: var(--radius-md);
+}
+
+.circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+
+.placeholder {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-2);
+  line-height: var(--leading-tight);
+}
+
+
+.error {
+  font-size: var(--text-xs);
+  color: var(--error);
+  margin: 0;
+}

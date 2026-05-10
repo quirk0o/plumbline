@@ -19,6 +19,26 @@ In Next.js 16, `middleware.ts` was renamed to `proxy.ts`. The request-intercepti
 
 If a suppression seems necessary, the correct fix is to resolve the underlying issue — change the code, fix the type, or update the config. Suppressions mask real problems and are never acceptable.
 
+# Validation After Each Chunk of Work
+
+After completing any meaningful chunk of work (a feature, a fix, a refactor), **always run both checks before moving on**:
+
+```bash
+npx tsc --noEmit   # TypeScript — must produce no errors
+npm run lint      # ESLint — must produce no errors or warnings
+```
+
+Fix all issues before proceeding. Do not leave type errors or lint warnings and continue.
+
+**At the very end, when all work is complete**, run the full test suite and E2E tests:
+
+```bash
+npm test
+npm run test:e2e
+```
+
+All tests must pass before the work is considered done.
+
 # Local Development: Signing In
 
 Use the **magic link** flow:

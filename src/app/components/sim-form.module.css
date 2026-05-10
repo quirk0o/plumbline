@@ -61,32 +61,6 @@
   gap: var(--space-3);
 }
 
-.select {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-base);
-  background: var(--bg-card);
-  color: var(--text);
-  font-size: var(--text-sm);
-  font-family: inherit;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7a5e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  padding-right: 2.25rem;
-}
-
-.select:focus-visible {
-  outline: none;
-  border-color: var(--green);
-  box-shadow: var(--focus-ring);
-}
-
-.selectError {
-  border-color: var(--error);
-}
-
 .twoCol {
   display: grid;
   grid-template-columns: 1fr 1fr;

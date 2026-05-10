@@ -245,7 +245,7 @@
 
 .addSimLink:hover {
   background: var(--green);
-  color: #fff;
+  color: var(--bg);
 }
 
 .simList {
@@ -260,19 +260,21 @@
 .simCard {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
   padding: var(--space-3) var(--space-5);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-base);
-}
-
-.simCard:hover {
-  box-shadow: var(--shadow-md);
 }
 
 .simName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-display);
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);

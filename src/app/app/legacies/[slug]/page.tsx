@@ -107,7 +107,7 @@ export default async function LegacyDetailPage({ params }: Props) {
             </Link>
           </div>
         ) : (
-          <ul className={styles.simList}>
+          <ul className={styles.simList} role="list">
             {legacy.sims.map((sim) => (
               <li key={sim.id} className={styles.simCard}>
                 <span className={styles.simName}>

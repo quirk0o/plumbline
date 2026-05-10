@@ -211,6 +211,68 @@ async function main() {
     await prisma.personalityTrait.upsert({ where: { name: t.name }, update: {}, create: t })
   }
 
+  // ── Personality Trait Conflicts ───────────────────────────────────────────
+  const conflictPairs: [string, string][] = [
+    ['Active',          'Lazy'],
+    ['Adventurous',     'Lazy'],
+    ['Ambitious',       'Freegan'],
+    ['Ambitious',       'Lazy'],
+    ['Cheerful',        'Gloomy'],
+    ['Cheerful',        'Hot-Headed'],
+    ['Childish',        'Evil'],
+    ['Childish',        'Hates Children'],
+    ['Childish',        'Snob'],
+    ['Clumsy',          'Maker'],
+    ['Evil',            'Generous'],
+    ['Evil',            'Good'],
+    ['Family-Oriented', 'Hates Children'],
+    ['Family-Oriented', 'Noncommittal'],
+    ['Foodie',          'Freegan'],
+    ['Foodie',          'Glutton'],
+    ['Freegan',         'Materialistic'],
+    ['Freegan',         'Snob'],
+    ['Freegan',         'Squeamish'],
+    ['Generous',        'Glutton'],
+    ['Generous',        'Materialistic'],
+    ['Generous',        'Mean'],
+    ['Gloomy',          'Hot-Headed'],
+    ['Gloomy',          'Party Animal'],
+    ['Good',            'Kleptomaniac'],
+    ['Good',            'Mean'],
+    ['Goofball',        'Snob'],
+    ['Glutton',         'Squeamish'],
+    ['Horse Lover',     'Lazy'],
+    ['Insider',         'Loner'],
+    ['Lazy',            'Maker'],
+    ['Lazy',            'Neat'],
+    ['Lazy',            'Overachiever'],
+    ['Lazy',            'Rancher'],
+    ['Loner',           'Outgoing'],
+    ['Loner',           'Party Animal'],
+    ['Loves Outdoors',  'Squeamish'],
+    ['Loyal',           'Noncommittal'],
+    ['Mean',            'Proper'],
+    ['Neat',            'Slob'],
+    ['Outgoing',        'Paranoid'],
+    ['Outgoing',        'Socially Awkward'],
+    ['Party Animal',    'Socially Awkward'],
+    ['Proper',          'Slob'],
+    ['Romantic',        'Unflirty'],
+    ['Slob',            'Squeamish'],
+  ]
+
+  for (const [nameA, nameB] of conflictPairs) {
+    const a = await prisma.personalityTrait.findUnique({ where: { name: nameA } })
+    const b = await prisma.personalityTrait.findUnique({ where: { name: nameB } })
+    if (!a || !b) { console.warn(`Skipping conflict ${nameA} <-> ${nameB}: trait not found`); continue }
+    const [traitAId, traitBId] = [a.id, b.id].sort()
+    await prisma.personalityTraitConflict.upsert({
+      where:  { traitAId_traitBId: { traitAId, traitBId } },
+      create: { traitAId, traitBId },
+      update: {},
+    })
+  }
+
   // ── Non-personality Traits ────────────────────────────────────────────────
   const traitSeed: Array<{ name: string; type: TraitType; packId?: string }> = [
     // Bonus traits

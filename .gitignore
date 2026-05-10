@@ -50,4 +50,5 @@ next-env.d.ts
 e2e/.auth/
 .playwright-mcp/
 test-results/
-public/uploads/
+public/uploads/*
+!public/uploads/.gitkeep

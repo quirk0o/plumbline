@@ -122,7 +122,15 @@ export function SimForm({
   submitLabel = 'Save',
   errors,
 }: SimFormProps) {
-  const [pronounPreset, setPronounPreset] = useState('')
+  const [pronounPreset, setPronounPreset] = useState(() => {
+    if (!defaultValues?.pronounSubject) return ''
+    const match = PRONOUN_PRESETS.find(
+      (p) =>
+        p.subject === defaultValues.pronounSubject &&
+        p.object === defaultValues.pronounObject
+    )
+    return match ? match.label : 'Custom'
+  })
 
   const {
     register,

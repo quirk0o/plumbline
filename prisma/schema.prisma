@@ -117,7 +117,7 @@ model Pack {
   id        String   @id @default(cuid())
   name      String   @unique
   type      PackType
-  code      String?
+  code      String   @unique
   imageUrl  String?
   icon      String?
   createdAt DateTime @default(now())

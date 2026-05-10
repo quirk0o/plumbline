@@ -74,7 +74,7 @@ test('back button on step 2 returns to step 1 with legacy name intact', async ({
   await page.getByRole('button', { name: 'Continue →' }).click()
 
   await expect(page.getByRole('heading', { name: 'Founder Sim' })).toBeVisible()
-  await page.getByRole('button', { name: '← Back' }).click()
+  await page.getByRole('button', { name: 'Back' }).click()
 
   await expect(page.getByRole('heading', { name: 'Your Legacy' })).toBeVisible()
   await expect(page.getByPlaceholder('e.g. The Caliente Legacy')).toHaveValue(legacyName)

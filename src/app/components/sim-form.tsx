@@ -331,7 +331,7 @@ export function SimForm({
       <div className={styles.actions}>
         {onBack && (
           <Button type="button" variant="outline" onClick={onBack}>
-            ← Back
+            <span aria-hidden="true">← </span>Back
           </Button>
         )}
         <div className={styles.rightActions}>

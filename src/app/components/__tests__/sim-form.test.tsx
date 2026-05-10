@@ -190,4 +190,10 @@ describe('SimForm', () => {
     expect(screen.getByLabelText(/object/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/possessive/i)).toBeInTheDocument()
   })
+
+  it('back button accessible name is "Back" — arrow character is decorative', () => {
+    renderForm({ onBack: vi.fn() })
+    // Exact name match: fails if the arrow is included in the accessible name
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+  })
 })

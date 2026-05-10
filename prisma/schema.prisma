@@ -312,6 +312,7 @@ model Legacy {
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   founderSim Sim?        @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
   households Household[]
+  sims       Sim[]       @relation("LegacyMember")
 
   @@unique([userId, slug])
   @@map("legacies")
@@ -335,6 +336,7 @@ model Sim {
   firstName         String
   lastName          String
   householdId       String?
+  legacyId          String
   lifeStage         LifeStage
   gender            Gender
   pronounSubject    String?
@@ -347,6 +349,7 @@ model Sim {
   updatedAt         DateTime      @updatedAt
 
   household            Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  legacy               Legacy                @relation("LegacyMember", fields: [legacyId], references: [id], onDelete: Cascade)
   personalityTraits    SimPersonalityTrait[]
   traits               SimTrait[]
   skills               SimSkill[]

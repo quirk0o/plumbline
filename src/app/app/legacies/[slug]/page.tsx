@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
 import styles from './page.module.css'
@@ -21,6 +22,10 @@ export default async function LegacyDetailPage({ params }: Props) {
           personalityTraits: { include: { personalityTrait: { select: { name: true } } } },
         },
       },
+      sims: {
+        select: { id: true, firstName: true, lastName: true, imageUrl: true },
+        orderBy: { createdAt: 'asc' },
+      },
     },
   })
 
@@ -28,8 +33,8 @@ export default async function LegacyDetailPage({ params }: Props) {
 
   return (
     <div className={styles.page}>
-      <div className={`${styles.hero} ${!legacy.imageUrl ? styles.heroNoImage : ''}`}>
-        {legacy.imageUrl && (
+      {legacy.imageUrl ? (
+        <div className={styles.hero}>
           <Image
             src={legacy.imageUrl}
             alt={legacy.name}
@@ -37,14 +42,20 @@ export default async function LegacyDetailPage({ params }: Props) {
             className={styles.heroImage}
             sizes="(max-width: 800px) 100vw, 800px"
           />
-        )}
-        {legacy.imageUrl && <div className={styles.heroOverlay} />}
-        <div className={styles.heroText}>
+          <div className={styles.heroOverlay} />
+          <div className={styles.heroText}>
+            <p className={styles.eyebrow}>Legacy</p>
+            <h1 className={styles.title}>{legacy.name}</h1>
+            {legacy.description && <p className={styles.description}>{legacy.description}</p>}
+          </div>
+        </div>
+      ) : (
+        <header className={styles.heroPlain}>
           <p className={styles.eyebrow}>Legacy</p>
           <h1 className={styles.title}>{legacy.name}</h1>
           {legacy.description && <p className={styles.description}>{legacy.description}</p>}
-        </div>
-      </div>
+        </header>
+      )}
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
@@ -90,10 +101,43 @@ export default async function LegacyDetailPage({ params }: Props) {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Sims</h2>
+          <Link href={`/app/legacies/${slug}/sims/new`} className={styles.addSimLink}>
+            Add sim
+          </Link>
         </div>
-        <div className={styles.emptyState}>
-          <p className={styles.empty}>Sim tracking coming soon.</p>
-        </div>
+        {legacy.sims.length === 0 ? (
+          <div className={styles.emptyState}>
+            <p className={styles.empty}>No sims yet.</p>
+            <Link href={`/app/legacies/${slug}/sims/new`} className={styles.emptyAction}>
+              Add your first sim →
+            </Link>
+          </div>
+        ) : (
+          <ul className={styles.simList} role="list">
+            {legacy.sims.map((sim) => (
+              <li key={sim.id} className={styles.simCard}>
+                <div className={styles.simPortraitWrap}>
+                  {sim.imageUrl ? (
+                    <Image
+                      src={sim.imageUrl}
+                      alt={sim.firstName}
+                      fill
+                      className={styles.simPortrait}
+                      sizes="200px"
+                    />
+                  ) : (
+                    <span className={styles.simInitials} aria-hidden="true">
+                      {sim.firstName[0]}{sim.lastName[0]}
+                    </span>
+                  )}
+                </div>
+                <span className={styles.simName}>
+                  {sim.firstName} {sim.lastName}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   )

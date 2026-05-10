@@ -66,6 +66,7 @@ export const legaciesRouter = router({
 
           const sim = await tx.sim.create({
             data: {
+              legacyId: legacy.id,
               firstName: simFields.firstName,
               lastName: simFields.lastName,
               gender: simFields.gender,

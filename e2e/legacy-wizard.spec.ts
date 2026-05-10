@@ -22,7 +22,7 @@ test('user can create a legacy with a founder sim', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
   await expect(page.getByRole('heading', { name: legacyName })).toBeVisible()
-  await expect(page.getByText('Alice Sim')).toBeVisible()
+  await expect(page.getByRole('listitem').getByText('Alice Sim')).toBeVisible()
 })
 
 test('user can create a legacy and skip the founder sim', async ({ page }) => {

@@ -28,30 +28,48 @@ export default async function LegacyDetailPage({ params }: Props) {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
+      <div className={`${styles.hero} ${!legacy.imageUrl ? styles.heroNoImage : ''}`}>
         {legacy.imageUrl && (
-          <div className={styles.coverWrap}>
-            <Image src={legacy.imageUrl} alt={legacy.name} fill className={styles.cover} sizes="80px" />
-          </div>
+          <Image
+            src={legacy.imageUrl}
+            alt={legacy.name}
+            fill
+            className={styles.heroImage}
+            sizes="(max-width: 800px) 100vw, 800px"
+          />
         )}
-        <div>
+        {legacy.imageUrl && <div className={styles.heroOverlay} />}
+        <div className={styles.heroText}>
+          <p className={styles.eyebrow}>Legacy</p>
           <h1 className={styles.title}>{legacy.name}</h1>
           {legacy.description && <p className={styles.description}>{legacy.description}</p>}
         </div>
       </div>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Founder</h2>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Founder</h2>
+        </div>
         {legacy.founderSim ? (
           <div className={styles.founderCard}>
             {legacy.founderSim.imageUrl && (
               <div className={styles.founderAvatarWrap}>
-                <Image src={legacy.founderSim.imageUrl} alt={legacy.founderSim.firstName} fill className={styles.founderAvatar} sizes="56px" />
+                <Image
+                  src={legacy.founderSim.imageUrl}
+                  alt={legacy.founderSim.firstName}
+                  fill
+                  className={styles.founderAvatar}
+                  sizes="88px"
+                />
               </div>
             )}
-            <div>
-              <div className={styles.founderName}>
-                {legacy.founderSim.firstName} {legacy.founderSim.lastName}
+            <div className={styles.founderInfo}>
+              <p className={styles.founderEyebrow}>Founder</p>
+              <div className={styles.founderMeta}>
+                <span className={styles.founderName}>
+                  {legacy.founderSim.firstName} {legacy.founderSim.lastName}
+                </span>
+                <span className={styles.generationBadge}>Gen I</span>
               </div>
               {legacy.founderSim.personalityTraits.length > 0 && (
                 <div className={styles.traitList}>
@@ -70,8 +88,12 @@ export default async function LegacyDetailPage({ params }: Props) {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Sims</h2>
-        <p className={styles.empty}>Sim tracking coming soon.</p>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Sims</h2>
+        </div>
+        <div className={styles.emptyState}>
+          <p className={styles.empty}>Sim tracking coming soon.</p>
+        </div>
       </section>
     </div>
   )

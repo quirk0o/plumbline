@@ -49,6 +49,27 @@ export async function createTestLegacy(
   })
 }
 
+export async function createTestSim(
+  legacyId: string,
+  overrides: { firstName?: string; lastName?: string; gender?: import('@prisma/client').Gender } = {},
+) {
+  const { Gender, LifeStage } = await import('@prisma/client')
+  let household = await db.household.findFirst({ where: { legacyId } })
+  if (!household) {
+    household = await db.household.create({ data: { name: 'Household 1', legacyId } })
+  }
+  return db.sim.create({
+    data: {
+      legacyId,
+      householdId: household.id,
+      firstName: overrides.firstName ?? 'Test',
+      lastName: overrides.lastName ?? 'Sim',
+      gender: overrides.gender ?? Gender.FEMALE,
+      lifeStage: LifeStage.YOUNG_ADULT,
+    },
+  })
+}
+
 export async function getAnyCareer() {
   const career = await db.career.findFirst()
   if (!career) throw new Error('No careers found. Is the DB seeded?')

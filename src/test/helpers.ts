@@ -1,5 +1,5 @@
 import { db } from '@/server/db'
-import { PackType } from '@prisma/client'
+import { PackType, Gender, LifeStage } from '@prisma/client'
 import { randomUUID } from 'crypto'
 
 export async function createTestUser(overrides: { name?: string; email?: string } = {}) {
@@ -51,9 +51,8 @@ export async function createTestLegacy(
 
 export async function createTestSim(
   legacyId: string,
-  overrides: { firstName?: string; lastName?: string; gender?: import('@prisma/client').Gender } = {},
+  overrides: { firstName?: string; lastName?: string; gender?: Gender } = {},
 ) {
-  const { Gender, LifeStage } = await import('@prisma/client')
   let household = await db.household.findFirst({ where: { legacyId } })
   if (!household) {
     household = await db.household.create({ data: { name: 'Household 1', legacyId } })

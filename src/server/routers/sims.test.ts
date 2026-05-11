@@ -186,3 +186,55 @@ describe('sims.listByLegacy', () => {
     }
   })
 })
+
+describe('sims.update', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('updates scalar fields', async () => {
+    await authedCaller(userId).sims.update({ id: simId, firstName: 'Nova', lifeStage: 'ELDER' })
+    const record = await db.sim.findUnique({ where: { id: simId } })
+    expect(record?.firstName).toBe('Nova')
+    expect(record?.lifeStage).toBe('ELDER')
+  })
+
+  it('sets cause of death', async () => {
+    await authedCaller(userId).sims.update({ id: simId, causeOfDeath: 'OLD_AGE' })
+    const record = await db.sim.findUnique({ where: { id: simId } })
+    expect(record?.causeOfDeath).toBe('OLD_AGE')
+  })
+
+  it('swaps aspiration', async () => {
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    await authedCaller(userId).sims.update({ id: simId, aspirationId: aspiration.id })
+    const rows = await db.simAspiration.findMany({ where: { simId, completedAt: null } })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].aspirationId).toBe(aspiration.id)
+  })
+
+  it("throws NOT_FOUND for another user's sim", async () => {
+    const other = await createTestUser()
+    try {
+      await expect(
+        authedCaller(other.id).sims.update({ id: simId, firstName: 'Hacker' })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+})

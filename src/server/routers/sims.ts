@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { Gender, LifeStage, OccultType, EmploymentType } from '@prisma/client'
+import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 
@@ -120,5 +120,47 @@ export const simsRouter = router({
         select: { id: true, firstName: true, lastName: true, imageUrl: true },
         orderBy: { firstName: 'asc' },
       })
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        firstName: z.string().min(1).max(50).optional(),
+        lastName: z.string().min(1).max(50).optional(),
+        gender: z.nativeEnum(Gender).optional(),
+        lifeStage: z.nativeEnum(LifeStage).optional(),
+        pronounSubject: z.string().max(20).nullable().optional(),
+        pronounObject: z.string().max(20).nullable().optional(),
+        pronounPossessive: z.string().max(20).nullable().optional(),
+        imageUrl: imageUrlSchema.nullable().optional(),
+        occultType: z.nativeEnum(OccultType).nullable().optional(),
+        causeOfDeath: z.nativeEnum(CauseOfDeath).nullable().optional(),
+        aspirationId: z.string().nullable().optional(),
+        careerId: z.string().nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.id, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+
+      const { id, aspirationId, careerId, ...fields } = input
+
+      if (aspirationId !== undefined) {
+        await ctx.db.simAspiration.deleteMany({ where: { simId: id, completedAt: null } })
+        if (aspirationId) await ctx.db.simAspiration.create({ data: { simId: id, aspirationId } })
+      }
+
+      if (careerId !== undefined) {
+        await ctx.db.simCareer.deleteMany({ where: { simId: id, endedAt: null } })
+        if (careerId) {
+          await ctx.db.simCareer.create({
+            data: { simId: id, careerId, employmentType: EmploymentType.EMPLOYED, startedAt: new Date() },
+          })
+        }
+      }
+
+      return ctx.db.sim.update({ where: { id }, data: fields })
     }),
 })

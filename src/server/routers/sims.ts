@@ -79,4 +79,46 @@ export const simsRouter = router({
         },
       })
     }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({
+        where: { id: input.id, legacy: { userId } },
+        include: {
+          personalityTraits: { include: { personalityTrait: true } },
+          aspirations: { include: { aspiration: true } },
+          careers: { include: { career: true } },
+          skills: { include: { skill: true } },
+          parentsOf: {
+            include: { child: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
+          },
+          childOf: {
+            include: { parent: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
+          },
+          socialRelationshipsA: {
+            include: { simB: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
+          },
+          socialRelationshipsB: {
+            include: { simA: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
+          },
+        },
+      })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      return sim
+    }),
+
+  listByLegacy: protectedProcedure
+    .input(z.object({ legacyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const legacy = await ctx.db.legacy.findFirst({ where: { id: input.legacyId, userId } })
+      if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
+      return ctx.db.sim.findMany({
+        where: { legacyId: input.legacyId },
+        select: { id: true, firstName: true, lastName: true, imageUrl: true },
+        orderBy: { firstName: 'asc' },
+      })
+    }),
 })

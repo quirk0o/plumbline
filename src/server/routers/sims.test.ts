@@ -5,6 +5,7 @@ import {
   createTestUser,
   cleanupUser,
   createTestLegacy,
+  createTestSim,
   getAnyTrait,
   getConflictingTraits,
 } from '@/test/helpers'
@@ -110,5 +111,78 @@ describe('sims.create', () => {
         gender: Gender.MALE,
       })
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+  })
+})
+
+describe('sims.getById', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('returns the sim with nested relations for the owner', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.sims.getById({ id: simId })
+    expect(result.id).toBe(simId)
+    expect(result.personalityTraits).toBeDefined()
+    expect(result.skills).toBeDefined()
+  })
+
+  it('throws NOT_FOUND when the sim belongs to a different user', async () => {
+    const other = await createTestUser()
+    try {
+      await expect(
+        authedCaller(other.id).sims.getById({ id: simId })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+})
+
+describe('sims.listByLegacy', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    await createTestSim(legacyId, { firstName: 'Alice' })
+    await createTestSim(legacyId, { firstName: 'Bob' })
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('returns all sims in the legacy', async () => {
+    const result = await authedCaller(userId).sims.listByLegacy({ legacyId })
+    expect(result).toHaveLength(2)
+    expect(result[0]).toMatchObject({ firstName: expect.any(String), imageUrl: null })
+  })
+
+  it('throws NOT_FOUND for a legacy belonging to another user', async () => {
+    const other = await createTestUser()
+    try {
+      await expect(
+        authedCaller(other.id).sims.listByLegacy({ legacyId })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
   })
 })

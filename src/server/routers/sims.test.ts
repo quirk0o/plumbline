@@ -343,4 +343,17 @@ describe('sims.addSkill / sims.setSkillLevel / sims.removeSkill', () => {
     const row = await db.simSkill.findUnique({ where: { simId_skillId: { simId, skillId: skill.id } } })
     expect(row).toBeNull()
   })
+
+  it("throws NOT_FOUND for another user's sim", async () => {
+    const other = await createTestUser()
+    try {
+      const skill = await db.skill.findFirst()
+      if (!skill) return
+      await expect(
+        authedCaller(other.id).sims.addSkill({ simId, skillId: skill.id, level: 1 })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { Gender, FamilyRelationshipType } from '@prisma/client'
+import { Gender, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import {
   createTestUser,
@@ -468,5 +468,102 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
     } finally {
       await cleanupUser(other.id)
     }
+  })
+})
+
+describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.removeSocialRelationship', () => {
+  let userId: string
+  let simAId: string
+  let simBId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    const simA = await createTestSim(legacy.id, { firstName: 'Alpha' })
+    const simB = await createTestSim(legacy.id, { firstName: 'Beta' })
+    ;[simAId, simBId] = [simA.id, simB.id].sort()
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('creates a social relationship with normalised IDs', async () => {
+    await authedCaller(userId).sims.addSocialRelationship({
+      simAId,
+      simBId,
+      romanticStatus: RomanticStatus.NONE,
+    })
+    const row = await db.socialRelationship.findUnique({
+      where: { simAId_simBId: { simAId, simBId } },
+    })
+    expect(row).not.toBeNull()
+    expect(row?.friendshipScore).toBe(0)
+  })
+
+  it('normalises ID order regardless of input order', async () => {
+    await authedCaller(userId).sims.addSocialRelationship({
+      simAId: simBId,
+      simBId: simAId,
+      romanticStatus: RomanticStatus.NONE,
+    })
+    const row = await db.socialRelationship.findUnique({
+      where: { simAId_simBId: { simAId, simBId } },
+    })
+    expect(row).not.toBeNull()
+  })
+
+  it('updates romantic status', async () => {
+    await db.socialRelationship.create({
+      data: { simAId, simBId, romanticStatus: RomanticStatus.NONE, friendshipScore: 0, romanceScore: 0 },
+    })
+    await authedCaller(userId).sims.updateSocialRelationship({
+      simAId,
+      simBId,
+      romanticStatus: RomanticStatus.MARRIED,
+    })
+    const row = await db.socialRelationship.findUnique({
+      where: { simAId_simBId: { simAId, simBId } },
+    })
+    expect(row?.romanticStatus).toBe(RomanticStatus.MARRIED)
+  })
+
+  it('removes the relationship', async () => {
+    await db.socialRelationship.create({
+      data: { simAId, simBId, romanticStatus: RomanticStatus.NONE, friendshipScore: 0, romanceScore: 0 },
+    })
+    await authedCaller(userId).sims.removeSocialRelationship({ simAId, simBId })
+    const row = await db.socialRelationship.findUnique({
+      where: { simAId_simBId: { simAId, simBId } },
+    })
+    expect(row).toBeNull()
+  })
+
+  it("throws NOT_FOUND for another user's sim in addSocialRelationship", async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    try {
+      await expect(
+        authedCaller(userId).sims.addSocialRelationship({
+          simAId,
+          simBId: otherSim.id,
+          romanticStatus: RomanticStatus.NONE,
+        })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+
+  it('throws BAD_REQUEST when both IDs are the same', async () => {
+    await expect(
+      authedCaller(userId).sims.addSocialRelationship({
+        simAId,
+        simBId: simAId,
+        romanticStatus: RomanticStatus.NONE,
+      })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 })

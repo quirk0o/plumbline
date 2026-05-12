@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType } from '@prisma/client'
+import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 
@@ -276,6 +276,67 @@ export const simsRouter = router({
       if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
       return ctx.db.familyRelationship.delete({
         where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
+      })
+    }),
+
+  addSocialRelationship: protectedProcedure
+    .input(
+      z.object({
+        simAId: z.string(),
+        simBId: z.string(),
+        romanticStatus: z.nativeEnum(RomanticStatus).default('NONE'),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.simAId === input.simBId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot have a relationship with themselves' })
+      }
+      const userId = ctx.session.user.id
+      const [simA, simB] = await Promise.all([
+        ctx.db.sim.findFirst({ where: { id: input.simAId, legacy: { userId } } }),
+        ctx.db.sim.findFirst({ where: { id: input.simBId, legacy: { userId } } }),
+      ])
+      if (!simA || !simB) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const [normalA, normalB] = [input.simAId, input.simBId].sort()
+      return ctx.db.socialRelationship.create({
+        data: {
+          simAId: normalA,
+          simBId: normalB,
+          romanticStatus: input.romanticStatus,
+          friendshipScore: 0,
+          romanceScore: 0,
+        },
+      })
+    }),
+
+  updateSocialRelationship: protectedProcedure
+    .input(
+      z.object({
+        simAId: z.string(),
+        simBId: z.string(),
+        romanticStatus: z.nativeEnum(RomanticStatus),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.simAId, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const [normalA, normalB] = [input.simAId, input.simBId].sort()
+      return ctx.db.socialRelationship.update({
+        where: { simAId_simBId: { simAId: normalA, simBId: normalB } },
+        data: { romanticStatus: input.romanticStatus },
+      })
+    }),
+
+  removeSocialRelationship: protectedProcedure
+    .input(z.object({ simAId: z.string(), simBId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.simAId, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const [normalA, normalB] = [input.simAId, input.simBId].sort()
+      return ctx.db.socialRelationship.delete({
+        where: { simAId_simBId: { simAId: normalA, simBId: normalB } },
       })
     }),
 })

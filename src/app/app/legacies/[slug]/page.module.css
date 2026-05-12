@@ -318,3 +318,9 @@
 .emptyAction:hover {
   text-decoration: underline;
 }
+
+.simCardLink {
+  display: contents;
+  text-decoration: none;
+  color: inherit;
+}

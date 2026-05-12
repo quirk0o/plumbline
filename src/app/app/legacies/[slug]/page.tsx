@@ -116,24 +116,26 @@ export default async function LegacyDetailPage({ params }: Props) {
           <ul className={styles.simList} role="list">
             {legacy.sims.map((sim) => (
               <li key={sim.id} className={styles.simCard}>
-                <div className={styles.simPortraitWrap}>
-                  {sim.imageUrl ? (
-                    <Image
-                      src={sim.imageUrl}
-                      alt={sim.firstName}
-                      fill
-                      className={styles.simPortrait}
-                      sizes="200px"
-                    />
-                  ) : (
-                    <span className={styles.simInitials} aria-hidden="true">
-                      {sim.firstName[0]}{sim.lastName[0]}
-                    </span>
-                  )}
-                </div>
-                <span className={styles.simName}>
-                  {sim.firstName} {sim.lastName}
-                </span>
+                <Link href={`/app/legacies/${slug}/sims/${sim.id}`} className={styles.simCardLink}>
+                  <div className={styles.simPortraitWrap}>
+                    {sim.imageUrl ? (
+                      <Image
+                        src={sim.imageUrl}
+                        alt={sim.firstName}
+                        fill
+                        className={styles.simPortrait}
+                        sizes="200px"
+                      />
+                    ) : (
+                      <span className={styles.simInitials} aria-hidden="true">
+                        {sim.firstName[0]}{sim.lastName[0]}
+                      </span>
+                    )}
+                  </div>
+                  <span className={styles.simName}>
+                    {sim.firstName} {sim.lastName}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>

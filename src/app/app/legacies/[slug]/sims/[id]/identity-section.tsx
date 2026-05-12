@@ -51,7 +51,7 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
   const update = trpc.sims.update.useMutation()
 
   function save(fields: Parameters<typeof update.mutate>[0]) {
-    update.mutate(fields)
+    return update.mutateAsync(fields)
   }
 
   return (
@@ -176,18 +176,18 @@ function InlineTextField({
   ariaLabel,
 }: {
   value: string
-  onSave: (v: string) => void
+  onSave: (v: string) => Promise<unknown>
   ariaLabel: string
 }) {
   const [current, setCurrent] = useState(value)
   const [saved, setSaved] = useState(value)
   const [error, setError] = useState('')
 
-  function handleBlur() {
+  async function handleBlur() {
     const trimmed = current.trim()
     if (!trimmed || trimmed === saved) { setCurrent(saved); return }
     try {
-      onSave(trimmed)
+      await onSave(trimmed)
       setSaved(trimmed)
       setError('')
     } catch {

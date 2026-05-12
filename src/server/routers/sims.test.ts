@@ -431,4 +431,42 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
       await cleanupUser(other.id)
     }
   })
+
+  it('throws BAD_REQUEST when parentId equals childId', async () => {
+    await expect(
+      authedCaller(userId).sims.addFamilyRelationship({
+        parentId,
+        childId: parentId,
+        type: FamilyRelationshipType.BIOLOGICAL,
+      })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('throws BAD_REQUEST when sims belong to different legacies', async () => {
+    const secondLegacy = await createTestLegacy(userId)
+    const secondLegacySim = await createTestSim(secondLegacy.id)
+    await expect(
+      authedCaller(userId).sims.addFamilyRelationship({
+        parentId,
+        childId: secondLegacySim.id,
+        type: FamilyRelationshipType.BIOLOGICAL,
+      })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('throws NOT_FOUND when parent belongs to another user in removeFamilyRelationship', async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    try {
+      await expect(
+        authedCaller(userId).sims.removeFamilyRelationship({
+          parentId: otherSim.id,
+          childId,
+        })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
 })

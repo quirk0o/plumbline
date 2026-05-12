@@ -248,6 +248,9 @@ export const simsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.parentId === input.childId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot be their own parent' })
+      }
       const userId = ctx.session.user.id
       const [parent, child] = await Promise.all([
         ctx.db.sim.findFirst({ where: { id: input.parentId, legacy: { userId } } }),
@@ -256,9 +259,6 @@ export const simsRouter = router({
       if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
       if (parent.legacyId !== child.legacyId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
-      }
-      if (input.parentId === input.childId) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot be their own parent' })
       }
       return ctx.db.familyRelationship.create({
         data: { parentId: input.parentId, childId: input.childId, type: input.type },

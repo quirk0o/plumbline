@@ -97,7 +97,7 @@ export function FamilyEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
             <button
               className={styles.simCardRemove}
               aria-label={`Remove ${m.sim.firstName}`}
-              onClick={() => handleRemove(m)}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleRemove(m) }}
             >
               ×
             </button>

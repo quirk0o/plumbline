@@ -76,10 +76,11 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
   }
 
   function handleStatusChange(rel: SocialRel, romanticStatus: RomanticStatus) {
+    const previousStatus = rel.romanticStatus
     setRels((prev) => prev.map((r) => r.sim.id === rel.sim.id ? { ...r, romanticStatus } : r))
     updateRel.mutate(
       { simAId: rel.simAId, simBId: rel.simBId, romanticStatus },
-      { onError: () => setRels((prev) => prev.map((r) => r.sim.id === rel.sim.id ? { ...r, romanticStatus: rel.romanticStatus } : r)) },
+      { onError: () => setRels((prev) => prev.map((r) => r.sim.id === rel.sim.id ? { ...r, romanticStatus: previousStatus } : r)) },
     )
   }
 
@@ -113,6 +114,7 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'center', fontSize: '0.6875rem', color: 'var(--text-muted)' }}
               value={rel.romanticStatus}
               aria-label={`Romantic status with ${rel.sim.firstName}`}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => handleStatusChange(rel, e.target.value as RomanticStatus)}
             >
               {ROMANTIC_STATUS_OPTIONS.map((s) => (
@@ -122,7 +124,7 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
             <button
               className={styles.simCardRemove}
               aria-label={`Remove ${rel.sim.firstName}`}
-              onClick={() => handleRemove(rel)}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleRemove(rel) }}
             >
               ×
             </button>

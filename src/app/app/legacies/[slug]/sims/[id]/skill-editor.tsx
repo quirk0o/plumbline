@@ -25,6 +25,7 @@ export function SkillEditor({
   const available = allSkills.filter((s) => !trackedIds.has(s.id))
 
   function handleSetLevel(skillId: string, level: number) {
+    const previousLevel = localSkills.find((s) => s.skill.id === skillId)?.level ?? level
     setLocalSkills((prev) =>
       prev.map((s) => (s.skill.id === skillId ? { ...s, level } : s)),
     )
@@ -34,9 +35,7 @@ export function SkillEditor({
         onError: () =>
           setLocalSkills((prev) =>
             prev.map((s) =>
-              s.skill.id === skillId
-                ? { ...s, level: sim.skills.find((o) => o.skill.id === skillId)?.level ?? s.level }
-                : s,
+              s.skill.id === skillId ? { ...s, level: previousLevel } : s,
             ),
           ),
       },

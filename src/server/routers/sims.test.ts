@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { Gender } from '@prisma/client'
+import { Gender, FamilyRelationshipType } from '@prisma/client'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import {
   createTestUser,
@@ -351,6 +351,66 @@ describe('sims.addSkill / sims.setSkillLevel / sims.removeSkill', () => {
       if (!skill) return
       await expect(
         authedCaller(other.id).sims.addSkill({ simId, skillId: skill.id, level: 1 })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+})
+
+describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
+  let userId: string
+  let legacyId: string
+  let parentId: string
+  let childId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    const child = await createTestSim(legacyId, { firstName: 'Child' })
+    parentId = parent.id
+    childId = child.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('creates a family relationship', async () => {
+    await authedCaller(userId).sims.addFamilyRelationship({
+      parentId,
+      childId,
+      type: FamilyRelationshipType.BIOLOGICAL,
+    })
+    const row = await db.familyRelationship.findUnique({
+      where: { parentId_childId: { parentId, childId } },
+    })
+    expect(row?.type).toBe('BIOLOGICAL')
+  })
+
+  it('removes a family relationship', async () => {
+    await db.familyRelationship.create({ data: { parentId, childId, type: 'BIOLOGICAL' } })
+    await authedCaller(userId).sims.removeFamilyRelationship({ parentId, childId })
+    const row = await db.familyRelationship.findUnique({
+      where: { parentId_childId: { parentId, childId } },
+    })
+    expect(row).toBeNull()
+  })
+
+  it('throws NOT_FOUND when parent belongs to another user', async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    try {
+      await expect(
+        authedCaller(userId).sims.addFamilyRelationship({
+          parentId: otherSim.id,
+          childId,
+          type: FamilyRelationshipType.BIOLOGICAL,
+        })
       ).rejects.toMatchObject({ code: 'NOT_FOUND' })
     } finally {
       await cleanupUser(other.id)

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath } from '@prisma/client'
+import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 
@@ -236,6 +236,37 @@ export const simsRouter = router({
       if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
       return ctx.db.simSkill.delete({
         where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
+      })
+    }),
+
+  addFamilyRelationship: protectedProcedure
+    .input(
+      z.object({
+        parentId: z.string(),
+        childId: z.string(),
+        type: z.nativeEnum(FamilyRelationshipType),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const [parent, child] = await Promise.all([
+        ctx.db.sim.findFirst({ where: { id: input.parentId, legacy: { userId } } }),
+        ctx.db.sim.findFirst({ where: { id: input.childId, legacy: { userId } } }),
+      ])
+      if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      return ctx.db.familyRelationship.create({
+        data: { parentId: input.parentId, childId: input.childId, type: input.type },
+      })
+    }),
+
+  removeFamilyRelationship: protectedProcedure
+    .input(z.object({ parentId: z.string(), childId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.parentId, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      return ctx.db.familyRelationship.delete({
+        where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
       })
     }),
 })

@@ -194,4 +194,48 @@ export const simsRouter = router({
         },
       })
     }),
+
+  addSkill: protectedProcedure
+    .input(z.object({ simId: z.string(), skillId: z.string(), level: z.number().int().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const skill = await ctx.db.skill.findUnique({ where: { id: input.skillId } })
+      if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
+      if (input.level > skill.maxLevel)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
+      return ctx.db.simSkill.upsert({
+        where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
+        create: { simId: input.simId, skillId: input.skillId, level: input.level },
+        update: { level: input.level },
+      })
+    }),
+
+  setSkillLevel: protectedProcedure
+    .input(z.object({ simId: z.string(), skillId: z.string(), level: z.number().int().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const skill = await ctx.db.skill.findUnique({ where: { id: input.skillId } })
+      if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
+      if (input.level > skill.maxLevel)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
+      return ctx.db.simSkill.update({
+        where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
+        data: { level: input.level },
+      })
+    }),
+
+  removeSkill: protectedProcedure
+    .input(z.object({ simId: z.string(), skillId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      return ctx.db.simSkill.delete({
+        where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
+      })
+    }),
 })

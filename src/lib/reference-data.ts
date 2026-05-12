@@ -33,3 +33,10 @@ export async function fetchCareers() {
     select: { id: true, name: true, type: true },
   })
 }
+
+export async function fetchSkills() {
+  return db.skill.findMany({
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, maxLevel: true },
+  })
+}

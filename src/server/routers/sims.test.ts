@@ -291,3 +291,56 @@ describe('sims.addTrait / sims.removeTrait', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 })
+
+describe('sims.addSkill / sims.setSkillLevel / sims.removeSkill', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('adds a skill at the given level', async () => {
+    const skill = await db.skill.findFirst()
+    if (!skill) return
+    await authedCaller(userId).sims.addSkill({ simId, skillId: skill.id, level: 1 })
+    const row = await db.simSkill.findUnique({ where: { simId_skillId: { simId, skillId: skill.id } } })
+    expect(row?.level).toBe(1)
+  })
+
+  it('throws BAD_REQUEST when level exceeds maxLevel', async () => {
+    const skill = await db.skill.findFirst()
+    if (!skill) return
+    await expect(
+      authedCaller(userId).sims.addSkill({ simId, skillId: skill.id, level: skill.maxLevel + 1 })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('updates skill level', async () => {
+    const skill = await db.skill.findFirst()
+    if (!skill) return
+    await db.simSkill.create({ data: { simId, skillId: skill.id, level: 1 } })
+    await authedCaller(userId).sims.setSkillLevel({ simId, skillId: skill.id, level: 3 })
+    const row = await db.simSkill.findUnique({ where: { simId_skillId: { simId, skillId: skill.id } } })
+    expect(row?.level).toBe(3)
+  })
+
+  it('removes a skill', async () => {
+    const skill = await db.skill.findFirst()
+    if (!skill) return
+    await db.simSkill.create({ data: { simId, skillId: skill.id, level: 2 } })
+    await authedCaller(userId).sims.removeSkill({ simId, skillId: skill.id })
+    const row = await db.simSkill.findUnique({ where: { simId_skillId: { simId, skillId: skill.id } } })
+    expect(row).toBeNull()
+  })
+})

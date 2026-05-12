@@ -254,6 +254,12 @@ export const simsRouter = router({
         ctx.db.sim.findFirst({ where: { id: input.childId, legacy: { userId } } }),
       ])
       if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      if (parent.legacyId !== child.legacyId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
+      }
+      if (input.parentId === input.childId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot be their own parent' })
+      }
       return ctx.db.familyRelationship.create({
         data: { parentId: input.parentId, childId: input.childId, type: input.type },
       })
@@ -263,8 +269,11 @@ export const simsRouter = router({
     .input(z.object({ parentId: z.string(), childId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.parentId, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const [parent, child] = await Promise.all([
+        ctx.db.sim.findFirst({ where: { id: input.parentId, legacy: { userId } } }),
+        ctx.db.sim.findFirst({ where: { id: input.childId, legacy: { userId } } }),
+      ])
+      if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
       return ctx.db.familyRelationship.delete({
         where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
       })

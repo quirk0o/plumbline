@@ -238,3 +238,56 @@ describe('sims.update', () => {
     }
   })
 })
+
+describe('sims.addTrait / sims.removeTrait', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('adds a trait', async () => {
+    const trait = await getAnyTrait()
+    await authedCaller(userId).sims.addTrait({ simId, traitId: trait.id })
+    const rows = await db.simPersonalityTrait.findMany({ where: { simId } })
+    expect(rows).toHaveLength(1)
+  })
+
+  it('removes a trait', async () => {
+    const trait = await getAnyTrait()
+    await db.simPersonalityTrait.create({ data: { simId, personalityTraitId: trait.id } })
+    await authedCaller(userId).sims.removeTrait({ simId, traitId: trait.id })
+    const rows = await db.simPersonalityTrait.findMany({ where: { simId } })
+    expect(rows).toHaveLength(0)
+  })
+
+  it('throws BAD_REQUEST when adding a conflicting trait', async () => {
+    const { traitA, traitB } = await getConflictingTraits()
+    await db.simPersonalityTrait.create({ data: { simId, personalityTraitId: traitA.id } })
+    await expect(
+      authedCaller(userId).sims.addTrait({ simId, traitId: traitB.id })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('throws BAD_REQUEST when already at 6 traits', async () => {
+    const traits = await db.personalityTrait.findMany({ take: 7 })
+    if (traits.length < 7) return // not enough seed data
+    for (const t of traits.slice(0, 6)) {
+      await db.simPersonalityTrait.create({ data: { simId, personalityTraitId: t.id } })
+    }
+    await expect(
+      authedCaller(userId).sims.addTrait({ simId, traitId: traits[6].id })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+})

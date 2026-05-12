@@ -163,4 +163,35 @@ export const simsRouter = router({
 
       return ctx.db.sim.update({ where: { id }, data: fields })
     }),
+
+  addTrait: protectedProcedure
+    .input(z.object({ simId: z.string(), traitId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({
+        where: { id: input.simId, legacy: { userId } },
+        include: { personalityTraits: { select: { personalityTraitId: true } } },
+      })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      if (sim.personalityTraits.length >= 6)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Maximum 6 traits allowed' })
+      const currentIds = sim.personalityTraits.map((t) => t.personalityTraitId)
+      await assertNoTraitConflicts(ctx.db, [...currentIds, input.traitId])
+      return ctx.db.simPersonalityTrait.create({
+        data: { simId: input.simId, personalityTraitId: input.traitId },
+      })
+    }),
+
+  removeTrait: protectedProcedure
+    .input(z.object({ simId: z.string(), traitId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      return ctx.db.simPersonalityTrait.delete({
+        where: {
+          simId_personalityTraitId: { simId: input.simId, personalityTraitId: input.traitId },
+        },
+      })
+    }),
 })

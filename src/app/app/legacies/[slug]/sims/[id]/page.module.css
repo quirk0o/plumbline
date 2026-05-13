@@ -40,7 +40,9 @@
 
 /* Identity hero — centered page header */
 .hero {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding-bottom: var(--space-7);
   border-bottom: 1px solid var(--border);
   margin-bottom: var(--space-7);
@@ -81,6 +83,7 @@
   cursor: pointer;
   min-width: 4ch;
   max-width: 240px;
+  text-align: center;
 }
 
 .editableText:hover {
@@ -262,7 +265,7 @@
   border-radius: 50%;
   overflow: hidden;
   position: relative;
-  background: var(--green);
+  background: var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -277,7 +280,7 @@
 .simInitials {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  color: white;
+  color: var(--text-muted);
 }
 
 .simCardName {

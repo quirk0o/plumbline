@@ -51,11 +51,11 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
 
   return (
     <div className={styles.page}>
-      <p className={styles.breadcrumb}>
+      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href={`/app/legacies/${slug}`}>{legacyName}</Link>
         {' › '}
-        {sim.firstName} {sim.lastName}
-      </p>
+        <span aria-current="page">{sim.firstName} {sim.lastName}</span>
+      </nav>
 
       <IdentitySection sim={sim} />
 

@@ -90,3 +90,11 @@ test('section titles are h2 headings', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Family', level: 2 })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Social Relationships', level: 2 })).toBeVisible()
 })
+
+test('breadcrumb is a navigation landmark', async ({ page }) => {
+  await createLegacyWithSim(page)
+  await page.getByRole('link', { name: 'Bella Goth' }).click()
+  await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
+
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toBeVisible()
+})

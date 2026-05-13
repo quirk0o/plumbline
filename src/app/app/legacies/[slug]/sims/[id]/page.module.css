@@ -92,13 +92,13 @@
   outline: none;
   border-bottom-color: var(--green);
   background: var(--bg-card);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .editableChip {
   font-size: 0.75rem;
   padding: 3px 10px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--border);
   cursor: pointer;
   background: transparent;
@@ -113,7 +113,7 @@
 
 .inlineError {
   font-size: 0.6875rem;
-  color: var(--destructive, #b91c1c);
+  color: var(--error);
   display: block;
   margin-top: 2px;
 }
@@ -129,7 +129,7 @@
 .traitChip {
   font-size: 0.8125rem;
   padding: 4px 10px 4px 12px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   background: var(--bg-card);
   border: 1px solid var(--border);
   display: flex;
@@ -148,13 +148,13 @@
 }
 
 .traitRemove:hover {
-  color: var(--destructive, #b91c1c);
+  color: var(--error);
 }
 
 .addChip {
   font-size: 0.8125rem;
   padding: 4px 12px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   border: 1px dashed var(--text-muted);
   cursor: pointer;
   color: var(--text-muted);
@@ -224,7 +224,7 @@
 }
 
 .pip:hover {
-  background: var(--amber);
+  background: var(--green-bright);
 }
 
 .removeBtn {
@@ -237,7 +237,7 @@
 }
 
 .removeBtn:hover {
-  color: var(--destructive, #b91c1c);
+  color: var(--error);
 }
 
 /* Portrait card grid — same pattern as legacy page */
@@ -315,8 +315,8 @@
 }
 
 .simCardRemove:hover {
-  color: var(--destructive, #b91c1c);
-  border-color: var(--destructive, #b91c1c);
+  color: var(--error);
+  border-color: var(--error);
 }
 
 /* Add card */

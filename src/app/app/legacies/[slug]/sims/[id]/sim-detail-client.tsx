@@ -116,6 +116,7 @@ function DeathSection({ sim }: { sim: Props['sim'] }) {
       <select
         className={styles.editableChip}
         defaultValue={sim.causeOfDeath ?? ''}
+        aria-label="Cause of death"
         onChange={(e) =>
           update.mutate({ id: sim.id, causeOfDeath: e.target.value as CauseOfDeath })
         }

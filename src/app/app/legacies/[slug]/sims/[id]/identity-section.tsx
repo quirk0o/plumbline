@@ -149,7 +149,7 @@ function PortraitUpload({
         overflow: 'hidden',
         position: 'relative',
         flexShrink: 0,
-        background: 'var(--green)',
+        background: 'var(--border)',
         border: 'none',
         cursor: 'pointer',
         display: 'flex',
@@ -162,7 +162,7 @@ function PortraitUpload({
       {sim.imageUrl ? (
         <Image src={sim.imageUrl} alt={sim.firstName} fill sizes="88px" style={{ objectFit: 'cover' }} />
       ) : (
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'white' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--text-muted)' }}>
           {sim.firstName[0]}{sim.lastName[0]}
         </span>
       )}

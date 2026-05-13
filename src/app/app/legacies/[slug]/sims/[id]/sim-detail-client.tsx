@@ -60,27 +60,27 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
       <IdentitySection sim={sim} />
 
       <section className={styles.section}>
-        <p className={styles.sectionTitle}>Personality Traits</p>
+        <h2 className={styles.sectionHeading}>Personality Traits</h2>
         <TraitEditor sim={sim} traits={traits} />
       </section>
 
       <section className={styles.section}>
-        <p className={styles.sectionTitle}>Goals &amp; Career</p>
+        <h2 className={styles.sectionHeading}>Goals &amp; Career</h2>
         <GoalsSection sim={sim} aspirations={aspirations} careers={careers} />
       </section>
 
       <section className={styles.section}>
-        <p className={styles.sectionTitle}>Skills</p>
+        <h2 className={styles.sectionHeading}>Skills</h2>
         <SkillEditor sim={sim} allSkills={skills} />
       </section>
 
       <section className={styles.section}>
-        <p className={styles.sectionTitle}>Family</p>
+        <h2 className={styles.sectionHeading}>Family</h2>
         <FamilyEditor sim={sim} slug={slug} legacySims={legacySims} />
       </section>
 
       <section className={styles.section}>
-        <p className={styles.sectionTitle}>Social Relationships</p>
+        <h2 className={styles.sectionHeading}>Social Relationships</h2>
         <SocialEditor sim={sim} slug={slug} legacySims={legacySims} />
       </section>
 
@@ -112,7 +112,7 @@ function DeathSection({ sim }: { sim: Props['sim'] }) {
   const update = trpc.sims.update.useMutation()
   return (
     <section className={styles.section}>
-      <p className={styles.sectionTitle}>Death</p>
+      <h2 className={styles.sectionHeading}>Death</h2>
       <select
         className={styles.editableChip}
         defaultValue={sim.causeOfDeath ?? ''}

@@ -78,3 +78,15 @@ test('breadcrumb links back to legacy page', async ({ page }) => {
   await page.getByRole('link', { name: /Simdetail Test/ }).click()
   await expect(page).toHaveURL(legacyUrl)
 })
+
+test('section titles are h2 headings', async ({ page }) => {
+  await createLegacyWithSim(page)
+  await page.getByRole('link', { name: 'Bella Goth' }).click()
+  await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
+
+  await expect(page.getByRole('heading', { name: 'Personality Traits', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Goals & Career', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Skills', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Family', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Social Relationships', level: 2 })).toBeVisible()
+})

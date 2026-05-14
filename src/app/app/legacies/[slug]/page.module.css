@@ -292,7 +292,7 @@
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
-  color: var(--green);
+  color: var(--text-muted);
   letter-spacing: 0.02em;
   user-select: none;
 }
@@ -320,7 +320,7 @@
 }
 
 .simCardLink {
-  display: contents;
+  display: block;
   text-decoration: none;
   color: inherit;
 }

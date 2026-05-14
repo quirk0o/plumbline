@@ -113,6 +113,11 @@
   background: var(--bg-card);
 }
 
+.editableChip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .inlineError {
   font-size: 0.6875rem;
   color: var(--error);
@@ -166,6 +171,11 @@
 .addChip:hover {
   border-color: var(--green);
   color: var(--green);
+}
+
+.addChip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 /* Two-column goals */

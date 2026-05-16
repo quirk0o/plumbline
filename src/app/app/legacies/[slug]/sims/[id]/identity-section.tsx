@@ -31,7 +31,7 @@ const OCCULT_OPTIONS: OccultType[] = [
 ]
 
 function formatEnum(s: string) {
-  return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 interface SimProp {
@@ -127,7 +127,7 @@ function PortraitUpload({
 
   if (showUpload) {
     return (
-      <div style={{ width: 88, flexShrink: 0 }}>
+      <div style={{ width: 96, flexShrink: 0 }}>
         <ImageUpload
           shape="circle"
           value={sim.imageUrl ?? undefined}
@@ -142,30 +142,33 @@ function PortraitUpload({
 
   return (
     <button
+      className={styles.portraitBtn}
       style={{
-        width: 88,
-        height: 88,
+        width: 96,
+        height: 96,
         borderRadius: '50%',
         overflow: 'hidden',
         position: 'relative',
         flexShrink: 0,
         background: 'var(--border)',
-        border: 'none',
+        border: '2px solid var(--border)',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        transition: 'border-color 0.18s',
       }}
       aria-label="Change portrait"
       onClick={() => setShowUpload(true)}
     >
       {sim.imageUrl ? (
-        <Image src={sim.imageUrl} alt={sim.firstName} fill sizes="88px" style={{ objectFit: 'cover' }} />
+        <Image src={sim.imageUrl} alt={sim.firstName} fill sizes="96px" style={{ objectFit: 'cover' }} />
       ) : (
         <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--text-muted)' }}>
           {sim.firstName[0]}{sim.lastName[0]}
         </span>
       )}
+      <span className={styles.portraitHint}>Upload</span>
     </button>
   )
 }
@@ -215,6 +218,12 @@ function InlineTextField({
   )
 }
 
+function defaultPronounsForGender(gender: string): { subject: string; object: string; possessive: string } {
+  if (gender === 'FEMALE') return { subject: 'she', object: 'her', possessive: 'her' }
+  if (gender === 'MALE') return { subject: 'he', object: 'him', possessive: 'his' }
+  return { subject: 'they', object: 'them', possessive: 'their' }
+}
+
 function PronounEditor({
   sim,
   onSave,
@@ -222,35 +231,63 @@ function PronounEditor({
   sim: SimProp
   onSave: (fields: { id: string; pronounSubject?: string | null; pronounObject?: string | null; pronounPossessive?: string | null }) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const display = sim.pronounSubject
-    ? `${sim.pronounSubject} / ${sim.pronounObject} / ${sim.pronounPossessive}`
-    : 'Add pronouns'
+  const [editing, setEditing] = useState(false)
+  const isExplicit = sim.pronounSubject !== null
+  const derived = defaultPronounsForGender(sim.gender)
+  const subject = isExplicit ? sim.pronounSubject! : derived.subject
+  const object = isExplicit ? sim.pronounObject! : derived.object
+  const possessive = isExplicit ? sim.pronounPossessive! : derived.possessive
 
-  if (!open) {
+  function handleSave(field: 'pronounSubject' | 'pronounObject' | 'pronounPossessive', value: string) {
+    onSave({ id: sim.id, [field]: value.trim() || null })
+  }
+
+  if (!editing) {
     return (
-      <div className={styles.metaRow}>
-        <button className={styles.editableChip} onClick={() => setOpen(true)}>
-          {display}
-        </button>
-      </div>
+      <button
+        className={styles.pronounLine}
+        data-derived={!isExplicit}
+        onClick={() => setEditing(true)}
+        aria-label="Edit pronouns"
+        title={isExplicit ? 'Click to edit pronouns' : 'Derived from gender — click to set custom pronouns'}
+      >
+        {subject}/{object}
+      </button>
     )
   }
 
   return (
-    <div className={styles.metaRow}>
-      {(['pronounSubject', 'pronounObject', 'pronounPossessive'] as const).map((field, i) => (
-        <input
-          key={field}
-          className={styles.editableChip}
-          style={{ width: '7ch' }}
-          defaultValue={(sim[field] as string | null) ?? ''}
-          placeholder={(['she', 'her', 'her'] as const)[i]}
-          aria-label={(['Subject pronoun', 'Object pronoun', 'Possessive pronoun'] as const)[i]}
-          onBlur={(e) => onSave({ id: sim.id, [field]: e.target.value || null })}
-        />
-      ))}
-      <button className={styles.removeBtn} onClick={() => setOpen(false)}>done</button>
+    <div className={styles.pronounEdit}>
+      <input
+        className={styles.pronounInput}
+        defaultValue={subject}
+        aria-label="Subject pronoun"
+        placeholder="she"
+        onBlur={(e) => handleSave('pronounSubject', e.target.value)}
+        autoFocus
+      />
+      <span className={styles.pronounSep}>/</span>
+      <input
+        className={styles.pronounInput}
+        defaultValue={object}
+        aria-label="Object pronoun"
+        placeholder="her"
+        onBlur={(e) => handleSave('pronounObject', e.target.value)}
+      />
+      <span className={styles.pronounSep}>/</span>
+      <input
+        className={styles.pronounInput}
+        defaultValue={possessive}
+        aria-label="Possessive pronoun"
+        placeholder="her"
+        onBlur={(e) => handleSave('pronounPossessive', e.target.value)}
+      />
+      <button
+        className={styles.pronounDone}
+        onClick={() => setEditing(false)}
+      >
+        done
+      </button>
     </div>
   )
 }

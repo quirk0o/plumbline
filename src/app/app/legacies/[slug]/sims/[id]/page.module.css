@@ -420,3 +420,94 @@
 .deathButton {
   margin-top: var(--space-4);
 }
+
+/* Portrait hover */
+.portraitBtn {
+  /* hover ring */
+}
+.portraitBtn:hover {
+  border-color: var(--green) !important;
+}
+.portraitHint {
+  position: absolute;
+  inset: 0;
+  background: rgba(250, 247, 240, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  transition: opacity 0.18s;
+  pointer-events: none;
+}
+.portraitBtn:hover .portraitHint {
+  opacity: 1;
+}
+
+/* Pronouns */
+.pronounLine {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  margin-bottom: var(--space-3);
+  text-align: center;
+  line-height: 1.4;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+.pronounLine:hover {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+.pronounLine[data-derived='true'] {
+  font-style: italic;
+}
+.pronounEdit {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  justify-content: center;
+  margin-bottom: var(--space-3);
+}
+.pronounInput {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  width: 6ch;
+  text-align: center;
+  font-family: inherit;
+  padding: 0 1px;
+}
+.pronounInput:focus {
+  outline: none;
+  border-bottom-color: var(--green);
+  color: var(--text);
+}
+.pronounSep {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  padding: 0 1px;
+}
+.pronounDone {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  font-family: inherit;
+  margin-left: var(--space-2);
+}
+.pronounDone:hover {
+  color: var(--text);
+}

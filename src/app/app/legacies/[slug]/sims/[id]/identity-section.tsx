@@ -220,9 +220,9 @@ function PronounEditor({
   const [editing, setEditing] = useState(false)
   const isExplicit = sim.pronounSubject !== null
   const derived = defaultPronounsForGender(sim.gender)
-  const subject = isExplicit ? sim.pronounSubject! : derived.subject
-  const object = isExplicit ? sim.pronounObject! : derived.object
-  const possessive = isExplicit ? sim.pronounPossessive! : derived.possessive
+  const subject = sim.pronounSubject ?? derived.subject
+  const object = sim.pronounObject ?? derived.object
+  const possessive = sim.pronounPossessive ?? derived.possessive
 
   const [draft, setDraft] = useState({ subject, object, possessive })
 

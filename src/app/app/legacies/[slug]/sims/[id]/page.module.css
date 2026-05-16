@@ -54,8 +54,8 @@
 
 .nameRow {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
+  align-items: center;
+  gap: 0.25rem;
   flex-wrap: wrap;
   margin-bottom: var(--space-3);
   justify-content: center;
@@ -84,6 +84,7 @@
   min-width: 4ch;
   max-width: 240px;
   text-align: center;
+  line-height: 1.1;
 }
 
 .editableText:hover {
@@ -223,8 +224,8 @@
 
 .pip {
   width: 14px;
-  height: 14px;
-  border-radius: 3px;
+  height: 5px;
+  border-radius: 2px;
   background: var(--border);
   cursor: pointer;
   border: none;
@@ -267,6 +268,9 @@
   text-decoration: none;
   color: var(--text);
   position: relative;
+  border: none;
+  background: none;
+  padding: 0;
 }
 
 .simPortraitWrap {

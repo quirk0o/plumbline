@@ -103,7 +103,7 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
               save({ id: sim.id, occultType: (e.target.value as OccultType) || null })
             }
           >
-            <option value="">None</option>
+            <option value="">Human</option>
             {OCCULT_OPTIONS.map((o) => (
               <option key={o} value={o}>{formatEnum(o)}</option>
             ))}

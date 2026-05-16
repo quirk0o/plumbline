@@ -170,3 +170,50 @@ export async function evaluateSpec(
 
   return matchingSimIds.length
 }
+
+export async function recomputeLegacyTrackers(db: PrismaClient, legacyId: string): Promise<void> {
+  const runs = await db.challengeRun.findMany({
+    where: { legacyId, completedAt: null },
+    include: {
+      phases: {
+        include: {
+          trackers: {
+            include: {
+              trackerType: true,
+              progress: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  for (const run of runs) {
+    for (const phase of run.phases) {
+      for (const tracker of phase.trackers) {
+        if (!tracker.progress || tracker.progress.isManual) continue
+        const spec = tracker.trackerType.computationSpec as ComputationSpec | null
+        if (!spec) continue
+
+        const config = tracker.config as Record<string, unknown>
+        const rawValue = await evaluateSpec(db, legacyId, spec, config, phase.generationNumber)
+        const now = new Date()
+
+        const wasComplete = tracker.progress.completedAt !== null
+        const isNowComplete =
+          tracker.trackerType.valueKind === 'BOOLEAN'
+            ? rawValue === true
+            : typeof rawValue === 'number' && rawValue > 0
+
+        await db.trackerProgress.update({
+          where: { challengeRunTrackerId: tracker.id },
+          data: {
+            value: rawValue as Prisma.InputJsonValue,
+            evaluatedAt: now,
+            completedAt: !wasComplete && isNowComplete ? now : tracker.progress.completedAt,
+          },
+        })
+      }
+    }
+  }
+}

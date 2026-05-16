@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { db } from '@/server/db'
-import { createTestUser, cleanupUser, createTestLegacy } from '@/test/helpers'
-import { evaluateSpec } from './trackerComputation'
+import { createTestUser, cleanupUser, createTestLegacy, createTestChallenge, createTestChallengePhase, createTestChallengeRun } from '@/test/helpers'
+import { evaluateSpec, recomputeLegacyTrackers } from './trackerComputation'
 
 describe('evaluateSpec — skill maxed (single condition)', () => {
   let userId: string
@@ -208,5 +208,49 @@ describe('evaluateSpec — multi-condition (same-sim)', () => {
       valueKind: 'BOOLEAN',
     }, {})
     expect(result).toBe(true)
+  })
+})
+
+describe('recomputeLegacyTrackers', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('stamps completedAt when a built-in tracker becomes satisfied', async () => {
+    const skill = await db.skill.findFirst()
+    if (!skill) return
+
+    const trackerType = await db.trackerType.findFirst({ where: { name: 'Skill Maxed' } })
+    if (!trackerType) return
+
+    const challenge = await createTestChallenge(userId)
+    const phase = await createTestChallengePhase(challenge.id, { generationNumber: 1 })
+    await db.trackerDefinition.create({
+      data: { challengePhaseId: phase.id, trackerTypeId: trackerType.id, name: 'Max Cooking', config: { skillId: skill.id } },
+    })
+    const run = await createTestChallengeRun(legacyId, { sourceChallengeId: challenge.id })
+    const runPhase = await db.challengeRunPhase.create({ data: { challengeRunId: run.id, generationNumber: 1, sortOrder: 0 } })
+    const runTracker = await db.challengeRunTracker.create({
+      data: { challengeRunPhaseId: runPhase.id, trackerTypeId: trackerType.id, name: 'Max Cooking', config: { skillId: skill.id }, sortOrder: 0 },
+    })
+    await db.trackerProgress.create({ data: { challengeRunTrackerId: runTracker.id, isManual: false } })
+
+    const sim = await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'B', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
+    await recomputeLegacyTrackers(db, legacyId)
+    const progressBefore = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: runTracker.id } })
+    expect(progressBefore?.completedAt).toBeNull()
+
+    await db.simSkill.create({ data: { simId: sim.id, skillId: skill.id, level: skill.maxLevel } })
+    await recomputeLegacyTrackers(db, legacyId)
+    const progressAfter = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: runTracker.id } })
+    expect(progressAfter?.completedAt).not.toBeNull()
   })
 })

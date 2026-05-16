@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 
 async function createLegacyWithSim(page: import('@playwright/test').Page) {
   await page.goto('/app/legacies/new')
+  await page.waitForLoadState('networkidle')
   const legacyName = `SimDetail Test ${Date.now()}`
   await page.getByPlaceholder('e.g. The Caliente Legacy').fill(legacyName)
   await page.getByRole('button', { name: 'Continue →' }).click()

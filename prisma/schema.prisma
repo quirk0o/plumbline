@@ -347,6 +347,8 @@ model Sim {
   causeOfDeath      CauseOfDeath?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  generationNumber  Int?
+  isHeir            Boolean       @default(false)
 
   household            Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)
   legacy               Legacy                @relation("LegacyMember", fields: [legacyId], references: [id], onDelete: Cascade)

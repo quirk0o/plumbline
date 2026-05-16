@@ -37,6 +37,8 @@ export const simsRouter = router({
         aspirationId: z.string().optional(),
         careerId: z.string().optional(),
         occultType: z.nativeEnum(OccultType).optional(),
+        generationNumber: z.number().int().min(1).optional(),
+        parentIds: z.array(z.string()).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -54,7 +56,17 @@ export const simsRouter = router({
         })
       }
 
-      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, ...simFields } = input
+      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, parentIds: _parentIds, generationNumber: _gen, ...simFields } = input
+
+      let generationNumber = input.generationNumber ?? null
+      if (!generationNumber && input.parentIds?.length) {
+        const parents = await ctx.db.sim.findMany({
+          where: { id: { in: input.parentIds }, legacyId: input.legacyId },
+          select: { generationNumber: true },
+        })
+        const parentGens = parents.map((p) => p.generationNumber).filter((g): g is number => g !== null)
+        if (parentGens.length > 0) generationNumber = Math.min(...parentGens) + 1
+      }
 
       return ctx.db.sim.create({
         data: {
@@ -68,6 +80,7 @@ export const simsRouter = router({
           pronounPossessive: simFields.pronounPossessive ?? null,
           imageUrl: simFields.imageUrl ?? null,
           occultType: simFields.occultType ?? null,
+          generationNumber,
           householdId: household.id,
           ...(personalityTraitIds?.length
             ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
@@ -138,12 +151,32 @@ export const simsRouter = router({
         causeOfDeath: z.nativeEnum(CauseOfDeath).nullable().optional(),
         aspirationId: z.string().nullable().optional(),
         careerId: z.string().nullable().optional(),
+        generationNumber: z.number().int().min(1).nullable().optional(),
+        isHeir: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const sim = await ctx.db.sim.findFirst({ where: { id: input.id, legacy: { userId } } })
       if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+
+      if (input.isHeir === true) {
+        const simRecord = await ctx.db.sim.findFirst({
+          where: { id: input.id, legacy: { userId } },
+          select: { legacyId: true, generationNumber: true },
+        })
+        if (simRecord?.generationNumber !== null && simRecord?.generationNumber !== undefined) {
+          await ctx.db.sim.updateMany({
+            where: {
+              legacyId: simRecord.legacyId,
+              generationNumber: simRecord.generationNumber,
+              isHeir: true,
+              NOT: { id: input.id },
+            },
+            data: { isHeir: false },
+          })
+        }
+      }
 
       const { id, aspirationId, careerId, ...fields } = input
 

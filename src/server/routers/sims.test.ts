@@ -567,3 +567,96 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 })
+
+describe('sims — generationNumber population', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('sets generationNumber from input when provided', async () => {
+    const result = await authedCaller(userId).sims.create({
+      legacyId,
+      firstName: 'Alice',
+      lastName: 'Smith',
+      gender: Gender.FEMALE,
+      generationNumber: 1,
+    })
+    const record = await db.sim.findUnique({ where: { id: result.id } })
+    expect(record?.generationNumber).toBe(1)
+  })
+
+  it('derives generationNumber from parent when parentIds provided', async () => {
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    await db.sim.update({ where: { id: parent.id }, data: { generationNumber: 1 } })
+    const result = await authedCaller(userId).sims.create({
+      legacyId,
+      firstName: 'Child',
+      lastName: 'Smith',
+      gender: Gender.FEMALE,
+      parentIds: [parent.id],
+    })
+    const record = await db.sim.findUnique({ where: { id: result.id } })
+    expect(record?.generationNumber).toBe(2)
+  })
+
+  it('uses min parent generationNumber when multiple parents', async () => {
+    const parent1 = await createTestSim(legacyId, { firstName: 'P1' })
+    const parent2 = await createTestSim(legacyId, { firstName: 'P2' })
+    await db.sim.update({ where: { id: parent1.id }, data: { generationNumber: 2 } })
+    await db.sim.update({ where: { id: parent2.id }, data: { generationNumber: 3 } })
+    const result = await authedCaller(userId).sims.create({
+      legacyId, firstName: 'Child', lastName: 'Smith', gender: Gender.FEMALE,
+      parentIds: [parent1.id, parent2.id],
+    })
+    const record = await db.sim.findUnique({ where: { id: result.id } })
+    expect(record?.generationNumber).toBe(3)
+  })
+
+  it('sims.update accepts generationNumber override', async () => {
+    const sim = await createTestSim(legacyId)
+    await authedCaller(userId).sims.update({ id: sim.id, generationNumber: 5 })
+    const record = await db.sim.findUnique({ where: { id: sim.id } })
+    expect(record?.generationNumber).toBe(5)
+  })
+
+  it('sims.update accepts isHeir flag', async () => {
+    const sim = await createTestSim(legacyId)
+    await authedCaller(userId).sims.update({ id: sim.id, isHeir: true })
+    const record = await db.sim.findUnique({ where: { id: sim.id } })
+    expect(record?.isHeir).toBe(true)
+  })
+
+  it('setting isHeir clears the previous heir in the same generation', async () => {
+    const simA = await db.sim.create({
+      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
+    })
+    const simB = await db.sim.create({
+      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+    await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
+    const recordA = await db.sim.findUnique({ where: { id: simA.id } })
+    const recordB = await db.sim.findUnique({ where: { id: simB.id } })
+    expect(recordA?.isHeir).toBe(false)
+    expect(recordB?.isHeir).toBe(true)
+  })
+
+  it('setting isHeir does not clear heir in a different generation', async () => {
+    const simA = await db.sim.create({
+      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1, isHeir: true },
+    })
+    const simB = await db.sim.create({
+      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+    await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
+    const recordA = await db.sim.findUnique({ where: { id: simA.id } })
+    expect(recordA?.isHeir).toBe(true)
+  })
+})

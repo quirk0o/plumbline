@@ -48,7 +48,7 @@ export function SimPickerModal({ sims, selected, onSelect, title, children, onCo
         {children}
 
         <div className={styles.modalActions}>
-          <button className={styles.addChip} onClick={onClose}>Cancel</button>
+          <button className={styles.modalCancelBtn} onClick={onClose}>Cancel</button>
           <button
             className={styles.editableChip}
             style={{ background: 'var(--green)', color: 'white', borderColor: 'var(--green)' }}

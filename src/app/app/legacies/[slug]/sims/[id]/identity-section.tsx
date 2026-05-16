@@ -144,21 +144,6 @@ function PortraitUpload({
   return (
     <button
       className={styles.portraitBtn}
-      style={{
-        width: 96,
-        height: 96,
-        borderRadius: '50%',
-        overflow: 'hidden',
-        position: 'relative',
-        flexShrink: 0,
-        background: 'var(--border)',
-        border: '2px solid var(--border)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'border-color 0.18s',
-      }}
       aria-label="Change portrait"
       onClick={() => setShowUpload(true)}
     >
@@ -239,8 +224,21 @@ function PronounEditor({
   const object = isExplicit ? sim.pronounObject! : derived.object
   const possessive = isExplicit ? sim.pronounPossessive! : derived.possessive
 
-  function handleSave(field: 'pronounSubject' | 'pronounObject' | 'pronounPossessive', value: string) {
-    onSave({ id: sim.id, [field]: value.trim() || null })
+  const [draft, setDraft] = useState({ subject, object, possessive })
+
+  function openEditor() {
+    setDraft({ subject, object, possessive })
+    setEditing(true)
+  }
+
+  function handleDone() {
+    const s = draft.subject.trim() || null
+    const o = draft.object.trim() || null
+    const p = draft.possessive.trim() || null
+    if (s !== sim.pronounSubject || o !== sim.pronounObject || p !== sim.pronounPossessive) {
+      onSave({ id: sim.id, pronounSubject: s, pronounObject: o, pronounPossessive: p })
+    }
+    setEditing(false)
   }
 
   if (!editing) {
@@ -248,7 +246,7 @@ function PronounEditor({
       <button
         className={styles.pronounLine}
         data-derived={!isExplicit}
-        onClick={() => setEditing(true)}
+        onClick={openEditor}
         aria-label="Edit pronouns"
         title={isExplicit ? 'Click to edit pronouns' : 'Derived from gender — click to set custom pronouns'}
       >
@@ -261,31 +259,34 @@ function PronounEditor({
     <div className={styles.pronounEdit}>
       <input
         className={styles.pronounInput}
-        defaultValue={subject}
+        value={draft.subject}
         aria-label="Subject pronoun"
         placeholder="she"
-        onBlur={(e) => handleSave('pronounSubject', e.target.value)}
+        onChange={(e) => setDraft(d => ({ ...d, subject: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') handleDone() }}
         autoFocus
       />
       <span className={styles.pronounSep}>/</span>
       <input
         className={styles.pronounInput}
-        defaultValue={object}
+        value={draft.object}
         aria-label="Object pronoun"
         placeholder="her"
-        onBlur={(e) => handleSave('pronounObject', e.target.value)}
+        onChange={(e) => setDraft(d => ({ ...d, object: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') handleDone() }}
       />
       <span className={styles.pronounSep}>/</span>
       <input
         className={styles.pronounInput}
-        defaultValue={possessive}
+        value={draft.possessive}
         aria-label="Possessive pronoun"
         placeholder="her"
-        onBlur={(e) => handleSave('pronounPossessive', e.target.value)}
+        onChange={(e) => setDraft(d => ({ ...d, possessive: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') handleDone() }}
       />
       <button
         className={styles.pronounDone}
-        onClick={() => setEditing(false)}
+        onClick={handleDone}
       >
         done
       </button>

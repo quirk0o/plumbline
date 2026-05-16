@@ -212,7 +212,7 @@ function InlineTextField({
           if (e.key === 'Enter') e.currentTarget.blur()
           if (e.key === 'Escape') { setCurrent(saved); e.currentTarget.blur() }
         }}
-        style={{ width: `${Math.max(current.length, 4)}ch` }}
+        style={{ width: `${Math.max(current.length + 2, 5)}ch` }}
       />
       {error && <span className={styles.inlineError}>{error}</span>}
     </span>

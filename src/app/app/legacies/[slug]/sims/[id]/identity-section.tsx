@@ -72,6 +72,8 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
           />
         </div>
 
+        <PronounEditor sim={sim} onSave={save} />
+
         <div className={styles.metaRow}>
           <select
             className={styles.editableChip}
@@ -110,7 +112,6 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
           </select>
         </div>
 
-        <PronounEditor sim={sim} onSave={save} />
       </div>
     </div>
   )

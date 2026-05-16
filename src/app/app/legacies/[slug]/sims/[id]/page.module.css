@@ -78,13 +78,14 @@
   background: transparent;
   border: none;
   border-bottom: 2px dashed transparent;
-  padding: 0 2px;
+  padding: 0.1em 2px 0.2em;
   color: var(--text);
   cursor: pointer;
   min-width: 4ch;
   max-width: 240px;
   text-align: center;
-  line-height: 1.1;
+  line-height: 1.2;
+  overflow: visible;
 }
 
 .editableText:hover {

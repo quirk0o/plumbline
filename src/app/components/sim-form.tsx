@@ -281,21 +281,6 @@ export function SimForm({
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionLabel}>Personality</span>
-          <div className={styles.sectionLine} />
-          <span className={styles.sectionHint}>up to 6 traits</span>
-        </div>
-        <Controller
-          name="personalityTraitIds"
-          control={control}
-          render={({ field }) => (
-            <TraitPicker traits={traits} selected={field.value} onChange={field.onChange} max={6} />
-          )}
-        />
-      </div>
-
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
           <span className={styles.sectionLabel}>Goals &amp; Career</span>
           <div className={styles.sectionLine} />
         </div>
@@ -322,6 +307,21 @@ export function SimForm({
             </Select>
           </FormField>
         </div>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionLabel}>Personality</span>
+          <div className={styles.sectionLine} />
+          <span className={styles.sectionHint}>up to 6 traits</span>
+        </div>
+        <Controller
+          name="personalityTraitIds"
+          control={control}
+          render={({ field }) => (
+            <TraitPicker traits={traits} selected={field.value} onChange={field.onChange} max={6} />
+          )}
+        />
       </div>
 
       {formErrors.root?.message && <p className={styles.rootError}>{formErrors.root.message}</p>}

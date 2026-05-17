@@ -90,4 +90,22 @@ describe('trackerTypes.delete', () => {
       authedCaller(userId).trackerTypes.delete({ id: builtIn.id })
     ).rejects.toMatchObject({ code: 'FORBIDDEN' })
   })
+
+  it('returns BAD_REQUEST when tracker type is referenced by a TrackerDefinition', async () => {
+    const tt = await db.trackerType.create({
+      data: { name: `InUse-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: userId, isBuiltIn: false, isPublic: false },
+    })
+    const challenge = await db.challenge.create({
+      data: { name: `Challenge-${Date.now()}`, isPublic: false, ownerId: userId },
+    })
+    const phase = await db.challengePhase.create({
+      data: { challengeId: challenge.id, title: 'Phase 1', sortOrder: 0 },
+    })
+    await db.trackerDefinition.create({
+      data: { challengePhaseId: phase.id, trackerTypeId: tt.id, name: 'Ref Tracker', config: {} },
+    })
+    await expect(
+      authedCaller(userId).trackerTypes.delete({ id: tt.id })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
 })

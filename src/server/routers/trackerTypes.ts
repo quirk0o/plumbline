@@ -85,6 +85,16 @@ export const trackerTypesRouter = router({
       if (!tt) throw new TRPCError({ code: 'NOT_FOUND' })
       if (tt.ownerId !== userId || tt.isBuiltIn)
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot delete this tracker type' })
-      return ctx.db.trackerType.delete({ where: { id: input.id } })
+      try {
+        return await ctx.db.trackerType.delete({ where: { id: input.id } })
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Tracker type is in use by one or more challenges and cannot be deleted',
+          })
+        }
+        throw err
+      }
     }),
 })

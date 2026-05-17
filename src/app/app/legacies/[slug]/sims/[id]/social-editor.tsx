@@ -101,14 +101,16 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
         {rels.map((rel) => (
           <div key={rel.sim.id} className={styles.simCard}>
             <Link href={`/app/legacies/${slug}/sims/${rel.sim.id}`} style={{ display: 'contents' }}>
-              <div className={`${styles.simPortraitWrap} ${styles.simPortraitPartner}`}>
-                {rel.sim.imageUrl ? (
-                  <Image src={rel.sim.imageUrl} alt={rel.sim.firstName} fill sizes="72px" style={{ objectFit: 'cover' }} />
-                ) : (
-                  <span className={styles.simInitials} aria-hidden="true">
-                    {rel.sim.firstName[0]}{rel.sim.lastName[0]}
-                  </span>
-                )}
+              <div className={styles.simPortraitOuter}>
+                <div className={`${styles.simPortraitWrap} ${styles.simPortraitPartner}`}>
+                  {rel.sim.imageUrl ? (
+                    <Image src={rel.sim.imageUrl} alt={rel.sim.firstName} fill sizes="72px" style={{ objectFit: 'cover' }} />
+                  ) : (
+                    <span className={styles.simInitials} aria-hidden="true">
+                      {rel.sim.firstName[0]}{rel.sim.lastName[0]}
+                    </span>
+                  )}
+                </div>
                 <span className={styles.partnerBadge} aria-hidden="true">Partner</span>
               </div>
               <span className={styles.simCardName}>{rel.sim.firstName} {rel.sim.lastName}</span>

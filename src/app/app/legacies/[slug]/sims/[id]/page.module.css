@@ -296,6 +296,10 @@
   gap: var(--space-4);
 }
 
+.simCards + .simCards {
+  margin-top: var(--space-5);
+}
+
 .simCard {
   display: flex;
   flex-direction: column;
@@ -577,6 +581,11 @@
   box-shadow: var(--focus-ring);
 }
 
+/* Wrapper for portrait + partner badge (badge must sit outside overflow:hidden) */
+.simPortraitOuter {
+  position: relative;
+}
+
 /* Partner badge on social relationship cards */
 .simPortraitPartner {
   /* overrides hover green on simPortraitWrap */
@@ -588,7 +597,7 @@
   bottom: -8px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-card);
+  background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text-subtle);
   font-size: var(--text-xs);
@@ -609,7 +618,7 @@
   font-size: var(--text-sm);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg-card);
+  background: var(--bg);
   color: var(--text);
   cursor: pointer;
   box-sizing: border-box;
@@ -632,7 +641,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--bg-card);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-base);
   max-width: 280px; /* fits 2 action buttons + gap */
@@ -655,7 +664,7 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: var(--bg-card);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-base);
 }

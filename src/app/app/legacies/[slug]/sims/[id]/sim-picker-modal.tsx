@@ -27,11 +27,11 @@ export function SimPickerModal({ sims, selected, onSelect, title, children, onCo
             <button
               key={sim.id}
               className={styles.simCard}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', outline: selected === sim.id ? '2px solid var(--green)' : 'none', borderRadius: '50%' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
               onClick={() => onSelect(sim.id)}
               aria-pressed={selected === sim.id}
             >
-              <div className={styles.simPortraitWrap}>
+              <div className={styles.simPortraitWrap} style={selected === sim.id ? { borderColor: 'var(--green)' } : undefined}>
                 {sim.imageUrl ? (
                   <Image src={sim.imageUrl} alt={sim.firstName} fill sizes="72px" style={{ objectFit: 'cover' }} />
                 ) : (

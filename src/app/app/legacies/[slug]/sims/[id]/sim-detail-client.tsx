@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { CauseOfDeath } from '@prisma/client'
 import type { Trait } from '@/app/components/trait-picker'
 import { IdentitySection } from './identity-section'
 import { TraitEditor } from './trait-editor'
@@ -23,7 +24,7 @@ interface Props {
     pronounPossessive: string | null
     imageUrl: string | null
     occultType: string | null
-    causeOfDeath: string | null
+    causeOfDeath: CauseOfDeath | null
     legacyId: string
     personalityTraits: { personalityTrait: { id: string; name: string } }[]
     aspirations: { aspiration: { id: string; name: string; category: string } }[]

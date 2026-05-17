@@ -30,12 +30,12 @@ function formatCause(cause: string): string {
 
 interface Props {
   simId: string
-  initialCauseOfDeath: string | null
+  initialCauseOfDeath: CauseOfDeath | null
 }
 
 export function DeathSection({ simId, initialCauseOfDeath }: Props) {
   const update = trpc.sims.update.useMutation()
-  const [causeOfDeath, setCauseOfDeath] = useState<string | null>(initialCauseOfDeath)
+  const [causeOfDeath, setCauseOfDeath] = useState<CauseOfDeath | null>(initialCauseOfDeath)
   const [confirming, setConfirming] = useState(false)
   const [pendingCause, setPendingCause] = useState<CauseOfDeath>(CauseOfDeath.OLD_AGE)
   const [editingCause, setEditingCause] = useState(false)
@@ -43,17 +43,25 @@ export function DeathSection({ simId, initialCauseOfDeath }: Props) {
   function handleConfirmDeath() {
     update.mutate(
       { id: simId, causeOfDeath: pendingCause },
-      { onSuccess: () => setCauseOfDeath(pendingCause) },
+      {
+        onSuccess: () => {
+          setCauseOfDeath(pendingCause)
+          setConfirming(false)
+        },
+      },
     )
-    setConfirming(false)
   }
 
   function handleChangeCause(newCause: CauseOfDeath) {
     update.mutate(
       { id: simId, causeOfDeath: newCause },
-      { onSuccess: () => setCauseOfDeath(newCause) },
+      {
+        onSuccess: () => {
+          setCauseOfDeath(newCause)
+          setEditingCause(false)
+        },
+      },
     )
-    setEditingCause(false)
   }
 
   function handleMarkAlive() {
@@ -119,7 +127,6 @@ export function DeathSection({ simId, initialCauseOfDeath }: Props) {
                 defaultValue={causeOfDeath}
                 autoFocus
                 onChange={(e) => handleChangeCause(e.target.value as CauseOfDeath)}
-                onBlur={() => setEditingCause(false)}
               >
                 {CAUSE_OF_DEATH_OPTIONS.map((c) => (
                   <option key={c} value={c}>{formatCause(c)}</option>

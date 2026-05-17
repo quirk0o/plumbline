@@ -407,4 +407,49 @@ export const simsRouter = router({
         where: { simAId_simBId: { simAId: normalA, simBId: normalB } },
       })
     }),
+
+  completeAspiration: protectedProcedure
+    .input(z.object({ simId: z.string(), aspirationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({
+        where: { id: input.simId, legacy: { userId } },
+        select: { id: true, legacyId: true },
+      })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+
+      const record = await ctx.db.simAspiration.findUnique({
+        where: { simId_aspirationId: { simId: input.simId, aspirationId: input.aspirationId } },
+      })
+      if (!record) throw new TRPCError({ code: 'NOT_FOUND', message: 'Aspiration not found on this sim' })
+      if (record.completedAt) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aspiration already completed' })
+
+      await ctx.db.simAspiration.update({
+        where: { simId_aspirationId: { simId: input.simId, aspirationId: input.aspirationId } },
+        data: { completedAt: new Date() },
+      })
+      void recomputeLegacyTrackers(ctx.db, sim.legacyId)
+    }),
+
+  endCareer: protectedProcedure
+    .input(z.object({ simId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({
+        where: { id: input.simId, legacy: { userId } },
+        select: { id: true, legacyId: true },
+      })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+
+      const activeCareer = await ctx.db.simCareer.findFirst({
+        where: { simId: input.simId, endedAt: null },
+      })
+      if (!activeCareer) throw new TRPCError({ code: 'NOT_FOUND', message: 'No active career to end' })
+
+      await ctx.db.simCareer.update({
+        where: { id: activeCareer.id },
+        data: { endedAt: new Date() },
+      })
+      void recomputeLegacyTrackers(ctx.db, sim.legacyId)
+    }),
 })

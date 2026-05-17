@@ -802,6 +802,125 @@ describe('sims.create — parentIds validation', () => {
   })
 })
 
+describe('sims.completeAspiration', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('sets completedAt on the SimAspiration record', async () => {
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id } })
+
+    await authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
+
+    const record = await db.simAspiration.findUnique({
+      where: { simId_aspirationId: { simId, aspirationId: aspiration.id } },
+    })
+    expect(record?.completedAt).not.toBeNull()
+  })
+
+  it('returns NOT_FOUND when sim does not belong to the user', async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    await db.simAspiration.create({ data: { simId: otherSim.id, aspirationId: aspiration.id } })
+    try {
+      await expect(
+        authedCaller(userId).sims.completeAspiration({ simId: otherSim.id, aspirationId: aspiration.id })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+
+  it('returns NOT_FOUND when aspiration is not on the sim', async () => {
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    // no SimAspiration row created — aspiration not on sim
+    await expect(
+      authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('returns BAD_REQUEST when aspiration is already completed', async () => {
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id, completedAt: new Date() } })
+
+    await expect(
+      authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+})
+
+describe('sims.endCareer', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('sets endedAt on the active SimCareer record', async () => {
+    const career = await db.career.findFirst()
+    if (!career) return
+    await db.simCareer.create({
+      data: { simId, careerId: career.id, employmentType: 'EMPLOYED', startedAt: new Date() },
+    })
+
+    await authedCaller(userId).sims.endCareer({ simId })
+
+    const record = await db.simCareer.findFirst({ where: { simId } })
+    expect(record?.endedAt).not.toBeNull()
+  })
+
+  it('returns NOT_FOUND when sim does not belong to the user', async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    try {
+      await expect(
+        authedCaller(userId).sims.endCareer({ simId: otherSim.id })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+
+  it('returns NOT_FOUND when there is no active career', async () => {
+    // No SimCareer row created — no active career to end
+    await expect(
+      authedCaller(userId).sims.endCareer({ simId })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+})
+
 describe('sims — isHeir with null generationNumber', () => {
   let userId: string
   let legacyId: string

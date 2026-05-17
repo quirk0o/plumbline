@@ -576,3 +576,137 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* Partner badge on social relationship cards */
+.simPortraitPartner {
+  border-color: var(--border-bright) !important;
+}
+
+.partnerBadge {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-subtle);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Honest form select for Goals & Career */
+.goalSelect {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.goalSelect:hover {
+  border-color: var(--border-bright);
+}
+
+.goalSelect:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Death section */
+.deathConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  max-width: 280px;
+}
+
+.deathConfirmTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+}
+
+.deathConfirmActions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.deathCard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+}
+
+.deathCardIcon {
+  font-size: 1rem;
+  color: var(--text-subtle);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.deathCardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.deathCardCause {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  margin: 0;
+}
+
+.deathCardActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.deathCardLink {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-style: dotted;
+  font-family: inherit;
+}
+
+.deathCardLink:hover {
+  color: var(--text);
+}
+
+.deathCardLink:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.deathCardSep {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}

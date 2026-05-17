@@ -262,6 +262,19 @@ export function SimForm({
                 </FormField>
               </div>
             )}
+
+            <div className={styles.pronounRow}>
+              <div className={styles.halfCol}>
+                <FormField label="Occult type" htmlFor="occultType">
+                  <Select id="occultType" {...register('occultType')}>
+                    <option value="">None</option>
+                    {OCCULT_TYPES.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -306,21 +319,6 @@ export function SimForm({
                   {items.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </optgroup>
               ))}
-            </Select>
-          </FormField>
-        </div>
-      </div>
-
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <span className={styles.sectionLabel}>Special</span>
-          <div className={styles.sectionLine} />
-        </div>
-        <div className={styles.halfCol}>
-          <FormField label="Occult type" htmlFor="occultType">
-            <Select id="occultType" {...register('occultType')}>
-              <option value="">None</option>
-              {OCCULT_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </Select>
           </FormField>
         </div>

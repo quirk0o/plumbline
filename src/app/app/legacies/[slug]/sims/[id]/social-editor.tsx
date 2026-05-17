@@ -19,7 +19,7 @@ const ROMANTIC_STATUS_OPTIONS: RomanticStatus[] = [
 ]
 
 function formatStatus(s: string) {
-  return s === 'NONE' ? 'Friends' : s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 interface SocialRel {

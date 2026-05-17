@@ -284,7 +284,7 @@ export const simsRouter = router({
       z.object({
         simAId: z.string(),
         simBId: z.string(),
-        romanticStatus: z.nativeEnum(RomanticStatus).default('NONE'),
+        romanticStatus: z.nativeEnum(RomanticStatus).default('DATING'),
       }),
     )
     .mutation(async ({ ctx, input }) => {

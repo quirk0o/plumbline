@@ -22,15 +22,19 @@ function resolveValue(val: unknown, config: Record<string, unknown>): unknown {
   return val
 }
 
+// Returns null when the filter contains a $phase.generationNumber reference but the
+// phase generation number is null — meaning the filter is unevaluable and should
+// short-circuit the entire evaluateSpec call (no matches).
 function resolveFilter(
   filter: Record<string, unknown>,
   config: Record<string, unknown>,
   phaseGenerationNumber?: number | null,
-): Record<string, unknown> {
+): Record<string, unknown> | null {
   const resolved: Record<string, unknown> = {}
   for (const [key, val] of Object.entries(filter)) {
     if (typeof val === 'string' && val === '$phase.generationNumber') {
-      resolved[key] = phaseGenerationNumber ?? undefined
+      if (phaseGenerationNumber == null) return null
+      resolved[key] = phaseGenerationNumber
     } else {
       resolved[key] = resolveValue(val, config)
     }
@@ -43,6 +47,10 @@ async function getSimIds(
   legacyId: string,
   simFilter: Record<string, unknown>,
 ): Promise<string[]> {
+  const knownKeys = new Set(['generationNumber', 'isHeir'])
+  const unknown = Object.keys(simFilter).filter((k) => !knownKeys.has(k))
+  if (unknown.length) throw new Error(`Unknown simFilter keys: ${unknown.join(', ')}`)
+
   const where: Prisma.SimWhereInput = { legacyId }
   if (simFilter.generationNumber !== undefined) {
     where.generationNumber = simFilter.generationNumber as number
@@ -54,71 +62,82 @@ async function getSimIds(
   return sims.map((s) => s.id)
 }
 
-async function simSatisfiesCondition(
+// Returns the set of simIds (from the provided candidates) that satisfy the condition.
+async function simIdsSatisfyingCondition(
   db: PrismaClient,
-  simId: string,
+  simIds: string[],
   legacyId: string,
   condition: Condition,
   dataFilter: Record<string, unknown>,
-): Promise<boolean> {
+): Promise<Set<string>> {
   if (condition.source === 'sims') {
-    const where: Prisma.SimWhereInput = { id: simId, legacyId }
+    const where: Prisma.SimWhereInput = { id: { in: simIds }, legacyId }
     if (dataFilter.causeOfDeath !== undefined) {
       where.causeOfDeath = dataFilter.causeOfDeath as Prisma.EnumCauseOfDeathNullableFilter
     }
-    return (await db.sim.findFirst({ where })) !== null
+    const matching = await db.sim.findMany({ where, select: { id: true } })
+    return new Set(matching.map((s) => s.id))
   }
 
   if (condition.source === 'skills') {
-    const where: Prisma.SimSkillWhereInput = { simId }
+    const where: Prisma.SimSkillWhereInput = { simId: { in: simIds } }
     if (dataFilter.skillId) {
       where.skillId = dataFilter.skillId as string
     }
     if (dataFilter.maxed === true && dataFilter.skillId) {
       const skill = await db.skill.findUnique({ where: { id: dataFilter.skillId as string } })
-      if (!skill) return false
+      if (!skill) return new Set()
       where.level = { gte: skill.maxLevel }
     } else if (dataFilter.minLevel !== undefined) {
       where.level = { gte: dataFilter.minLevel as number }
     }
-    return (await db.simSkill.findFirst({ where })) !== null
+    const matching = await db.simSkill.findMany({ where, select: { simId: true } })
+    return new Set(matching.map((s) => s.simId))
   }
 
   if (condition.source === 'aspirations') {
-    const where: Prisma.SimAspirationWhereInput = { simId }
+    const where: Prisma.SimAspirationWhereInput = { simId: { in: simIds } }
     if (dataFilter.aspirationId) {
       where.aspirationId = dataFilter.aspirationId as string
     }
     if (dataFilter.completed === true) {
       where.completedAt = { not: null }
     }
-    return (await db.simAspiration.findFirst({ where })) !== null
+    const matching = await db.simAspiration.findMany({ where, select: { simId: true } })
+    return new Set(matching.map((s) => s.simId))
   }
 
   if (condition.source === 'careers') {
-    const where: Prisma.SimCareerWhereInput = { simId }
+    const where: Prisma.SimCareerWhereInput = { simId: { in: simIds } }
     if (dataFilter.careerId) {
       where.careerId = dataFilter.careerId as string
     }
     if (dataFilter.completed === true) {
       where.endedAt = { not: null }
     }
-    return (await db.simCareer.findFirst({ where })) !== null
+    const matching = await db.simCareer.findMany({ where, select: { simId: true } })
+    return new Set(matching.map((s) => s.simId))
   }
 
   if (condition.source === 'personalityTraits') {
-    const where: Prisma.SimPersonalityTraitWhereInput = { simId }
+    const where: Prisma.SimPersonalityTraitWhereInput = { simId: { in: simIds } }
     if (dataFilter.category) {
       where.personalityTrait = { category: dataFilter.category as Prisma.PersonalityTraitWhereInput['category'] }
     }
-    return (await db.simPersonalityTrait.findFirst({ where })) !== null
+    const matching = await db.simPersonalityTrait.findMany({ where, select: { simId: true } })
+    return new Set(matching.map((s) => s.simId))
   }
 
   if (condition.source === 'traits') {
-    return (await db.simTrait.findFirst({ where: { simId } })) !== null
+    const where: Prisma.SimTraitWhereInput = { simId: { in: simIds } }
+    if (dataFilter.traitId) {
+      where.traitId = dataFilter.traitId as string
+    }
+    const matching = await db.simTrait.findMany({ where, select: { simId: true } })
+    return new Set(matching.map((s) => s.simId))
   }
 
-  return false
+  return new Set()
 }
 
 export async function evaluateSpec(
@@ -129,24 +148,36 @@ export async function evaluateSpec(
   phaseGenerationNumber?: number | null,
 ): Promise<boolean | number> {
   const resolvedSimFilter = resolveFilter(spec.simFilter, config, phaseGenerationNumber)
+  if (resolvedSimFilter === null) {
+    return spec.aggregation.op === 'any' || spec.aggregation.op === 'all' ? false : 0
+  }
+
   const allSimIds = await getSimIds(db, legacyId, resolvedSimFilter)
   if (allSimIds.length === 0) {
     return spec.aggregation.op === 'any' || spec.aggregation.op === 'all' ? false : 0
   }
 
-  const matchingSimIds: string[] = []
-  for (const simId of allSimIds) {
-    let allSatisfied = true
-    for (const condition of spec.conditions) {
-      const dataFilter = resolveFilter(condition.dataFilter, config, phaseGenerationNumber)
-      const satisfied = await simSatisfiesCondition(db, simId, legacyId, condition, dataFilter)
-      if (!satisfied) {
-        allSatisfied = false
-        break
-      }
+  // Batch approach: for each condition, get the set of simIds that satisfy it,
+  // then intersect across all conditions — O(conditions) queries instead of
+  // O(sims × conditions).
+  let matchingSet = new Set(allSimIds)
+  for (const condition of spec.conditions) {
+    const dataFilter = resolveFilter(condition.dataFilter, config, phaseGenerationNumber)
+    if (dataFilter === null) {
+      return spec.aggregation.op === 'any' || spec.aggregation.op === 'all' ? false : 0
     }
-    if (allSatisfied) matchingSimIds.push(simId)
+    const satisfying = await simIdsSatisfyingCondition(
+      db,
+      [...matchingSet],
+      legacyId,
+      condition,
+      dataFilter,
+    )
+    matchingSet = new Set([...matchingSet].filter((id) => satisfying.has(id)))
+    if (matchingSet.size === 0) break
   }
+
+  const matchingSimIds = [...matchingSet]
 
   if (spec.aggregation.op === 'any') return matchingSimIds.length > 0
   if (spec.aggregation.op === 'all') return matchingSimIds.length === allSimIds.length && allSimIds.length > 0
@@ -155,6 +186,7 @@ export async function evaluateSpec(
   if (spec.aggregation.op === 'countUnique' && spec.aggregation.field && spec.conditions[0]) {
     const condition = spec.conditions[0]
     const dataFilter = resolveFilter(condition.dataFilter, config, phaseGenerationNumber)
+    if (dataFilter === null) return 0
     if (condition.source === 'personalityTraits') {
       const where: Prisma.SimPersonalityTraitWhereInput = { simId: { in: allSimIds } }
       if (dataFilter.category) {
@@ -166,6 +198,10 @@ export async function evaluateSpec(
       })
       return groups.length
     }
+  }
+
+  if (spec.aggregation.op === 'sum') {
+    throw new Error('sum aggregation not yet implemented')
   }
 
   return matchingSimIds.length
@@ -200,10 +236,15 @@ export async function recomputeLegacyTrackers(db: PrismaClient, legacyId: string
         const now = new Date()
 
         const wasComplete = tracker.progress.completedAt !== null
+        const goalConfig = tracker.goalConfig as { goalValue?: number } | null
         const isNowComplete =
           tracker.trackerType.valueKind === 'BOOLEAN'
             ? rawValue === true
-            : typeof rawValue === 'number' && rawValue > 0
+            : tracker.trackerType.valueKind === 'THRESHOLD'
+              ? typeof rawValue === 'number' &&
+                typeof goalConfig?.goalValue === 'number' &&
+                rawValue >= goalConfig.goalValue
+              : typeof rawValue === 'number' && rawValue > 0
 
         await db.trackerProgress.update({
           where: { challengeRunTrackerId: tracker.id },

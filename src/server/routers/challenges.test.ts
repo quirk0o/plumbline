@@ -53,6 +53,19 @@ describe('challenges.addPhase', () => {
   })
 })
 
+describe('challenges.update', () => {
+  let userId: string
+
+  beforeEach(async () => { ({ id: userId } = await createTestUser()) })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('returns NOT_FOUND when the challenge does not exist', async () => {
+    await expect(
+      authedCaller(userId).challenges.update({ id: 'nonexistent-challenge-id', name: 'New Name' })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+})
+
 describe('challenges.addTracker', () => {
   let userId: string
   let challengePhaseId: string
@@ -77,6 +90,23 @@ describe('challenges.addTracker', () => {
     })
     expect(result.challengePhaseId).toBe(challengePhaseId)
     expect(result.name).toBe('Max Cooking')
+  })
+
+  it('returns NOT_FOUND when trackerTypeId belongs to another user (private)', async () => {
+    const otherUser = await createTestUser()
+    try {
+      const privateTrackerType = await createTestTrackerType({ ownerId: otherUser.id })
+      await expect(
+        authedCaller(userId).challenges.addTracker({
+          challengePhaseId,
+          trackerTypeId: privateTrackerType.id,
+          name: 'Stolen Tracker',
+          config: {},
+        })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(otherUser.id)
+    }
   })
 })
 

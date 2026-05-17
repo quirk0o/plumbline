@@ -39,7 +39,7 @@ export const challengesRouter = router({
         where: { id: input.id, OR: [{ isPublic: true }, { ownerId: userId }] },
         include: {
           phases: {
-            include: { trackers: { include: { trackerType: true } } },
+            include: { trackers: { include: { trackerType: true }, orderBy: { sortOrder: 'asc' } } },
             orderBy: { sortOrder: 'asc' },
           },
         },
@@ -58,7 +58,8 @@ export const challengesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const challenge = await ctx.db.challenge.findUnique({ where: { id: input.id } })
-      if (!challenge || challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!challenge) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       return ctx.db.challenge.update({
         where: { id: input.id },
         data: {
@@ -74,7 +75,8 @@ export const challengesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const challenge = await ctx.db.challenge.findUnique({ where: { id: input.id } })
-      if (!challenge || challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!challenge) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       return ctx.db.challenge.delete({ where: { id: input.id } })
     }),
 
@@ -89,7 +91,8 @@ export const challengesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const challenge = await ctx.db.challenge.findUnique({ where: { id: input.challengeId } })
-      if (!challenge || challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!challenge) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       return ctx.db.challengePhase.create({
         data: {
           challengeId: input.challengeId,
@@ -115,7 +118,8 @@ export const challengesRouter = router({
         where: { id: input.id },
         include: { challenge: true },
       })
-      if (!phase || phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       return ctx.db.challengePhase.update({
         where: { id: input.id },
         data: {
@@ -135,7 +139,8 @@ export const challengesRouter = router({
         where: { id: input.id },
         include: { challenge: true },
       })
-      if (!phase || phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       return ctx.db.challengePhase.delete({ where: { id: input.id } })
     }),
 
@@ -155,7 +160,15 @@ export const challengesRouter = router({
         where: { id: input.challengePhaseId },
         include: { challenge: true },
       })
-      if (!phase || phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      const trackerType = await ctx.db.trackerType.findFirst({
+        where: {
+          id: input.trackerTypeId,
+          OR: [{ isPublic: true }, { isBuiltIn: true }, { ownerId: userId }],
+        },
+      })
+      if (!trackerType) throw new TRPCError({ code: 'NOT_FOUND', message: 'TrackerType not found' })
       return ctx.db.trackerDefinition.create({
         data: {
           challengePhaseId: input.challengePhaseId,
@@ -186,7 +199,8 @@ export const challengesRouter = router({
         where: { id: input.id },
         include: { phase: { include: { challenge: true } } },
       })
-      if (!tracker || tracker.phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!tracker) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (tracker.phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       return ctx.db.trackerDefinition.update({
         where: { id: input.id },
         data: {
@@ -213,7 +227,8 @@ export const challengesRouter = router({
         where: { id: input.id },
         include: { phase: { include: { challenge: true } } },
       })
-      if (!tracker || tracker.phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!tracker) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (tracker.phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       return ctx.db.trackerDefinition.delete({ where: { id: input.id } })
     }),
 })

@@ -80,7 +80,7 @@ export async function createTestTrackerType(
 ) {
   return db.trackerType.create({
     data: {
-      name: overrides.name ?? `Test Tracker ${Date.now()}`,
+      name: overrides.name ?? `Test Tracker ${randomUUID()}`,
       valueKind: overrides.valueKind ?? 'BOOLEAN',
       configSchema: {},
       isBuiltIn: false,
@@ -96,7 +96,7 @@ export async function createTestChallenge(
 ) {
   return db.challenge.create({
     data: {
-      name: overrides.name ?? `Test Challenge ${Date.now()}`,
+      name: overrides.name ?? `Test Challenge ${randomUUID()}`,
       isPublic: overrides.isPublic ?? false,
       ownerId,
     },
@@ -124,7 +124,7 @@ export async function createTestChallengeRun(
   return db.challengeRun.create({
     data: {
       legacyId,
-      name: overrides.name ?? `Test Run ${Date.now()}`,
+      name: overrides.name ?? `Test Run ${randomUUID()}`,
       sourceChallengeId: overrides.sourceChallengeId ?? null,
     },
   })

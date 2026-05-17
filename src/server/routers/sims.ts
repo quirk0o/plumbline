@@ -60,16 +60,22 @@ export const simsRouter = router({
       const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, parentIds: _parentIds, generationNumber: _gen, ...simFields } = input
 
       let generationNumber = input.generationNumber ?? null
-      if (!generationNumber && input.parentIds?.length) {
-        const parents = await ctx.db.sim.findMany({
+      let parents: { id: string; generationNumber: number | null }[] = []
+      if (input.parentIds?.length) {
+        parents = await ctx.db.sim.findMany({
           where: { id: { in: input.parentIds }, legacyId: input.legacyId },
-          select: { generationNumber: true },
+          select: { id: true, generationNumber: true },
         })
-        const parentGens = parents.map((p) => p.generationNumber).filter((g): g is number => g !== null)
-        if (parentGens.length > 0) generationNumber = Math.min(...parentGens) + 1
+        if (parents.length !== input.parentIds.length) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'One or more parentIds do not belong to this legacy' })
+        }
+        if (!generationNumber) {
+          const parentGens = parents.map((p) => p.generationNumber).filter((g): g is number => g !== null)
+          if (parentGens.length > 0) generationNumber = Math.min(...parentGens) + 1
+        }
       }
 
-      return ctx.db.sim.create({
+      const newSim = await ctx.db.sim.create({
         data: {
           legacyId: input.legacyId,
           firstName: simFields.firstName,
@@ -92,6 +98,19 @@ export const simsRouter = router({
             : {}),
         },
       })
+
+      if (parents.length > 0) {
+        await ctx.db.familyRelationship.createMany({
+          data: parents.map((parent) => ({
+            parentId: parent.id,
+            childId: newSim.id,
+            type: FamilyRelationshipType.BIOLOGICAL,
+          })),
+          skipDuplicates: true,
+        })
+      }
+
+      return newSim
     }),
 
   getById: protectedProcedure
@@ -161,24 +180,6 @@ export const simsRouter = router({
       const sim = await ctx.db.sim.findFirst({ where: { id: input.id, legacy: { userId } } })
       if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
 
-      if (input.isHeir === true) {
-        const simRecord = await ctx.db.sim.findFirst({
-          where: { id: input.id, legacy: { userId } },
-          select: { legacyId: true, generationNumber: true },
-        })
-        if (simRecord?.generationNumber !== null && simRecord?.generationNumber !== undefined) {
-          await ctx.db.sim.updateMany({
-            where: {
-              legacyId: simRecord.legacyId,
-              generationNumber: simRecord.generationNumber,
-              isHeir: true,
-              NOT: { id: input.id },
-            },
-            data: { isHeir: false },
-          })
-        }
-      }
-
       const { id, aspirationId, careerId, ...fields } = input
 
       if (aspirationId !== undefined) {
@@ -195,8 +196,35 @@ export const simsRouter = router({
         }
       }
 
-      const result = await ctx.db.sim.update({ where: { id }, data: fields })
-      await recomputeLegacyTrackers(ctx.db, result.legacyId)
+      let result: Awaited<ReturnType<typeof ctx.db.sim.update>>
+      if (input.isHeir === true) {
+        const simRecord = await ctx.db.sim.findFirst({
+          where: { id: input.id, legacy: { userId } },
+          select: { legacyId: true, generationNumber: true },
+        })
+        if (simRecord?.generationNumber !== null && simRecord?.generationNumber !== undefined) {
+          result = await ctx.db.$transaction(async (tx) => {
+            await tx.sim.updateMany({
+              where: {
+                legacyId: simRecord.legacyId,
+                generationNumber: simRecord.generationNumber,
+                isHeir: true,
+                NOT: { id: input.id },
+              },
+              data: { isHeir: false },
+            })
+            return tx.sim.update({ where: { id }, data: fields })
+          })
+        } else {
+          result = await ctx.db.sim.update({ where: { id }, data: fields })
+        }
+      } else {
+        result = await ctx.db.sim.update({ where: { id }, data: fields })
+      }
+
+      const recomputeFields = ['generationNumber', 'lifeStage', 'isHeir', 'causeOfDeath', 'occultType'] as const
+      const needsRecompute = recomputeFields.some((f) => input[f] !== undefined)
+      if (needsRecompute) await recomputeLegacyTrackers(ctx.db, result.legacyId)
       return result
     }),
 

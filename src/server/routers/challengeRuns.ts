@@ -26,46 +26,59 @@ export const challengeRunsRouter = router({
       })
       if (!challenge) throw new TRPCError({ code: 'NOT_FOUND', message: 'Challenge not found' })
 
-      const run = await ctx.db.challengeRun.create({
-        data: {
-          legacyId: input.legacyId,
-          sourceChallengeId: input.challengeId,
-          name: input.name ?? challenge.name,
-        },
-      })
-
-      for (const phase of challenge.phases) {
-        const runPhase = await ctx.db.challengeRunPhase.create({
+      const run = await ctx.db.$transaction(async (tx) => {
+        const newRun = await tx.challengeRun.create({
           data: {
-            challengeRunId: run.id,
-            generationNumber: phase.generationNumber,
-            title: phase.title,
-            description: phase.description,
-            sortOrder: phase.sortOrder,
+            legacyId: input.legacyId,
+            sourceChallengeId: input.challengeId,
+            name: input.name ?? challenge.name,
           },
         })
 
-        for (const tracker of phase.trackers) {
-          const runTracker = await ctx.db.challengeRunTracker.create({
+        for (const phase of challenge.phases) {
+          const runPhase = await tx.challengeRunPhase.create({
             data: {
-              challengeRunPhaseId: runPhase.id,
-              trackerTypeId: tracker.trackerTypeId,
-              name: tracker.name,
-              description: tracker.description,
-              config: tracker.config as Prisma.InputJsonValue,
-              goalConfig: tracker.goalConfig as Prisma.InputJsonValue | undefined,
-              sortOrder: tracker.sortOrder,
+              challengeRunId: newRun.id,
+              generationNumber: phase.generationNumber,
+              title: phase.title,
+              description: phase.description,
+              sortOrder: phase.sortOrder,
             },
           })
 
-          await ctx.db.trackerProgress.create({
-            data: {
-              challengeRunTrackerId: runTracker.id,
-              isManual: tracker.trackerType.computationSpec === null,
-            },
-          })
+          if (phase.trackers.length > 0) {
+            await tx.challengeRunTracker.createMany({
+              data: phase.trackers.map((tracker) => ({
+                challengeRunPhaseId: runPhase.id,
+                trackerTypeId: tracker.trackerTypeId,
+                name: tracker.name,
+                description: tracker.description,
+                config: tracker.config as Prisma.InputJsonValue,
+                goalConfig: tracker.goalConfig as Prisma.InputJsonValue | undefined,
+                sortOrder: tracker.sortOrder,
+              })),
+            })
+
+            const createdTrackers = await tx.challengeRunTracker.findMany({
+              where: { challengeRunPhaseId: runPhase.id },
+            })
+
+            await tx.trackerProgress.createMany({
+              data: createdTrackers.map((runTracker) => {
+                const sourceTracker = phase.trackers.find(
+                  (t) => t.trackerTypeId === runTracker.trackerTypeId && t.name === runTracker.name,
+                )
+                return {
+                  challengeRunTrackerId: runTracker.id,
+                  isManual: sourceTracker?.trackerType.computationSpec === null,
+                }
+              }),
+            })
+          }
         }
-      }
+
+        return newRun
+      })
 
       return run
     }),
@@ -117,7 +130,8 @@ export const challengeRunsRouter = router({
         where: { id: input.id },
         include: { run: { include: { legacy: true } } },
       })
-      if (!phase || phase.run.legacy.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (phase.run.legacy.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       const { id, ...fields } = input
       return ctx.db.challengeRunPhase.update({ where: { id }, data: fields })
     }),
@@ -136,7 +150,8 @@ export const challengeRunsRouter = router({
         where: { id: input.id },
         include: { phase: { include: { run: { include: { legacy: true } } } } },
       })
-      if (!tracker || tracker.phase.run.legacy.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (!tracker) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (tracker.phase.run.legacy.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
       const { id, config, goalConfig, ...rest } = input
       return ctx.db.challengeRunTracker.update({
         where: { id },
@@ -176,7 +191,9 @@ export const challengeRunsRouter = router({
       const isComplete =
         valueKind === 'BOOLEAN'
           ? input.value === true
-          : valueKind === 'NUMERICAL' && typeof input.value === 'number' && goalValue !== undefined
+          : (valueKind === 'NUMERICAL' || valueKind === 'THRESHOLD') &&
+            typeof input.value === 'number' &&
+            goalValue !== undefined
           ? input.value >= goalValue
           : false
 

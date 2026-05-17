@@ -120,6 +120,27 @@ describe('challengeRuns.updateProgress', () => {
   })
 })
 
+describe('challengeRuns.link — transactional rollback', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('leaves no partial ChallengeRun when the challenge does not exist', async () => {
+    const runsBefore = await db.challengeRun.findMany({ where: { legacyId } })
+    await expect(
+      authedCaller(userId).challengeRuns.link({ legacyId, challengeId: 'nonexistent-id' })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    const runsAfter = await db.challengeRun.findMany({ where: { legacyId } })
+    expect(runsAfter).toHaveLength(runsBefore.length)
+  })
+})
+
 describe('challengeRuns.updateProgress — additional scenarios', () => {
   let userId: string
   let legacyId: string
@@ -197,6 +218,30 @@ describe('challengeRuns.updateProgress — additional scenarios', () => {
     await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 5 })
     const done = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(done?.completedAt).not.toBeNull()
+  })
+
+  it('stamps completedAt for THRESHOLD tracker when value meets goalValue', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'THRESHOLD' })
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: tt.id,
+      name: 'Threshold Tracker',
+      config: {},
+      goalConfig: { goalValue: 10 },
+    })
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 7 })
+    const before = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(before?.completedAt).toBeNull()
+
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 10 })
+    const after = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(after?.completedAt).not.toBeNull()
   })
 })
 

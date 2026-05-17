@@ -60,27 +60,42 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
       <IdentitySection sim={sim} />
 
       <section className={styles.section}>
-        <h2 className={styles.sectionHeading}>Personality Traits</h2>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionLabel}>Personality Traits</h2>
+          <div className={styles.sectionLine} />
+        </div>
         <TraitEditor sim={sim} traits={traits} />
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionHeading}>Goals &amp; Career</h2>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionLabel}>Goals &amp; Career</h2>
+          <div className={styles.sectionLine} />
+        </div>
         <GoalsSection sim={sim} aspirations={aspirations} careers={careers} />
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionHeading}>Skills</h2>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionLabel}>Skills</h2>
+          <div className={styles.sectionLine} />
+        </div>
         <SkillEditor sim={sim} allSkills={skills} />
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionHeading}>Family</h2>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionLabel}>Family</h2>
+          <div className={styles.sectionLine} />
+        </div>
         <FamilyEditor sim={sim} slug={slug} legacySims={legacySims} />
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionHeading}>Social Relationships</h2>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionLabel}>Social Relationships</h2>
+          <div className={styles.sectionLine} />
+        </div>
         <SocialEditor sim={sim} slug={slug} legacySims={legacySims} />
       </section>
 
@@ -112,7 +127,10 @@ function DeathSection({ sim }: { sim: Props['sim'] }) {
   const update = trpc.sims.update.useMutation()
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionHeading}>Death</h2>
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionLabel}>Death</h2>
+        <div className={styles.sectionLine} />
+      </div>
       <select
         className={styles.editableChip}
         defaultValue={sim.causeOfDeath ?? ''}

@@ -275,3 +275,95 @@ describe('challengeRuns.listByLegacy', () => {
     }
   })
 })
+
+describe('challengeRuns.link — isManual and initial value correctness', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('assigns correct isManual when two trackers share (trackerTypeId, name)', async () => {
+    // One tracker type with computationSpec (auto-computed) and one without (manual).
+    // Both trackers share the same name so the old find-by-name logic would misassign one.
+    const autoTt = await db.trackerType.create({
+      data: {
+        name: `Auto TT ${Date.now()}`,
+        valueKind: 'NUMERICAL',
+        configSchema: {},
+        isBuiltIn: false,
+        isPublic: false,
+        ownerId: userId,
+        computationSpec: { source: 'simoleons' },
+      },
+    })
+    const manualTt = await db.trackerType.create({
+      data: {
+        name: `Manual TT ${Date.now()}`,
+        valueKind: 'NUMERICAL',
+        configSchema: {},
+        isBuiltIn: false,
+        isPublic: false,
+        ownerId: userId,
+      },
+    })
+
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({ challengeId: challenge.id, generationNumber: 1, title: 'Gen 1' })
+
+    // Add two trackers with the same name but different trackerTypeIds
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: autoTt.id,
+      name: 'Shared Name',
+      config: {},
+    })
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: manualTt.id,
+      name: 'Shared Name',
+      config: {},
+    })
+
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    expect(trackers).toHaveLength(2)
+
+    const progressRecords = await db.trackerProgress.findMany({
+      where: { challengeRunTrackerId: { in: trackers.map((t) => t.id) } },
+      include: { tracker: true },
+    })
+    expect(progressRecords).toHaveLength(2)
+
+    // The tracker that came from autoTt should have isManual = false
+    const autoProgress = progressRecords.find((p) => p.tracker.trackerTypeId === autoTt.id)
+    const manualProgress = progressRecords.find((p) => p.tracker.trackerTypeId === manualTt.id)
+    expect(autoProgress?.isManual).toBe(false)
+    expect(manualProgress?.isManual).toBe(true)
+  })
+
+  it('initializes TrackerProgress.value to 0 for NUMERICAL trackers', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'NUMERICAL' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progress?.value).toBe(0)
+  })
+
+  it('initializes TrackerProgress.value to false for BOOLEAN trackers', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progress?.value).toBe(false)
+  })
+})

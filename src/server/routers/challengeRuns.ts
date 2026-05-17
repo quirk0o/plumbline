@@ -46,9 +46,9 @@ export const challengeRunsRouter = router({
             },
           })
 
-          if (phase.trackers.length > 0) {
-            await tx.challengeRunTracker.createMany({
-              data: phase.trackers.map((tracker) => ({
+          for (const tracker of phase.trackers) {
+            const runTracker = await tx.challengeRunTracker.create({
+              data: {
                 challengeRunPhaseId: runPhase.id,
                 trackerTypeId: tracker.trackerTypeId,
                 name: tracker.name,
@@ -56,23 +56,14 @@ export const challengeRunsRouter = router({
                 config: tracker.config as Prisma.InputJsonValue,
                 goalConfig: tracker.goalConfig as Prisma.InputJsonValue | undefined,
                 sortOrder: tracker.sortOrder,
-              })),
+              },
             })
-
-            const createdTrackers = await tx.challengeRunTracker.findMany({
-              where: { challengeRunPhaseId: runPhase.id },
-            })
-
-            await tx.trackerProgress.createMany({
-              data: createdTrackers.map((runTracker) => {
-                const sourceTracker = phase.trackers.find(
-                  (t) => t.trackerTypeId === runTracker.trackerTypeId && t.name === runTracker.name,
-                )
-                return {
-                  challengeRunTrackerId: runTracker.id,
-                  isManual: sourceTracker?.trackerType.computationSpec === null,
-                }
-              }),
+            await tx.trackerProgress.create({
+              data: {
+                challengeRunTrackerId: runTracker.id,
+                isManual: tracker.trackerType.computationSpec === null,
+                value: tracker.trackerType.valueKind === 'BOOLEAN' ? false : 0,
+              },
             })
           }
         }

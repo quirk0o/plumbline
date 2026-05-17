@@ -11,7 +11,6 @@ import styles from './page.module.css'
 type SimMini = { id: string; firstName: string; lastName: string; imageUrl: string | null }
 
 const ROMANTIC_STATUS_OPTIONS: RomanticStatus[] = [
-  RomanticStatus.NONE,
   RomanticStatus.DATING,
   RomanticStatus.ENGAGED,
   RomanticStatus.MARRIED,
@@ -42,19 +41,23 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
   const removeRel = trpc.sims.removeSocialRelationship.useMutation()
 
   const [rels, setRels] = useState<SocialRel[]>([
-    ...sim.socialRelationshipsA.map((r) => {
-      const [a, b] = [sim.id, r.simB.id].sort()
-      return { sim: r.simB, romanticStatus: r.romanticStatus as RomanticStatus, simAId: a, simBId: b }
-    }),
-    ...sim.socialRelationshipsB.map((r) => {
-      const [a, b] = [sim.id, r.simA.id].sort()
-      return { sim: r.simA, romanticStatus: r.romanticStatus as RomanticStatus, simAId: a, simBId: b }
-    }),
+    ...sim.socialRelationshipsA
+      .filter((r) => r.romanticStatus !== RomanticStatus.NONE)
+      .map((r) => {
+        const [a, b] = [sim.id, r.simB.id].sort()
+        return { sim: r.simB, romanticStatus: r.romanticStatus as RomanticStatus, simAId: a, simBId: b }
+      }),
+    ...sim.socialRelationshipsB
+      .filter((r) => r.romanticStatus !== RomanticStatus.NONE)
+      .map((r) => {
+        const [a, b] = [sim.id, r.simA.id].sort()
+        return { sim: r.simA, romanticStatus: r.romanticStatus as RomanticStatus, simAId: a, simBId: b }
+      }),
   ])
 
   const [adding, setAdding] = useState(false)
   const [pickedId, setPickedId] = useState<string | null>(null)
-  const [newStatus, setNewStatus] = useState<RomanticStatus>(RomanticStatus.NONE)
+  const [newStatus, setNewStatus] = useState<RomanticStatus>(RomanticStatus.DATING)
 
   const linkedIds = new Set([...rels.map((r) => r.sim.id), sim.id])
   const available = legacySims.filter((s) => !linkedIds.has(s.id))
@@ -72,7 +75,7 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
     )
     setAdding(false)
     setPickedId(null)
-    setNewStatus(RomanticStatus.NONE)
+    setNewStatus(RomanticStatus.DATING)
   }
 
   function handleStatusChange(rel: SocialRel, romanticStatus: RomanticStatus) {
@@ -98,7 +101,7 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
         {rels.map((rel) => (
           <div key={rel.sim.id} className={styles.simCard}>
             <Link href={`/app/legacies/${slug}/sims/${rel.sim.id}`} style={{ display: 'contents' }}>
-              <div className={styles.simPortraitWrap}>
+              <div className={`${styles.simPortraitWrap} ${styles.simPortraitPartner}`}>
                 {rel.sim.imageUrl ? (
                   <Image src={rel.sim.imageUrl} alt={rel.sim.firstName} fill sizes="72px" style={{ objectFit: 'cover' }} />
                 ) : (
@@ -106,6 +109,7 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
                     {rel.sim.firstName[0]}{rel.sim.lastName[0]}
                   </span>
                 )}
+                <span className={styles.partnerBadge} aria-hidden="true">Partner</span>
               </div>
               <span className={styles.simCardName}>{rel.sim.firstName} {rel.sim.lastName}</span>
             </Link>
@@ -136,14 +140,14 @@ export function SocialEditor({ sim, slug, legacySims }: { sim: SimProp; slug: st
             <div className={styles.simPortraitWrap}>
               <span className={styles.addCardIcon}>+</span>
             </div>
-            <span className={styles.simCardName}>Add connection</span>
+            <span className={styles.simCardName}>Add partner</span>
           </button>
         )}
       </div>
 
       {adding && (
         <SimPickerModal
-          title="Add social connection"
+          title="Add partner"
           sims={available}
           selected={pickedId}
           onSelect={setPickedId}

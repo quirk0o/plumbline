@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy, createTestTrackerType } from '@/test/helpers'
 import { db } from '@/server/db'
+import { Prisma } from '@prisma/client'
 
 async function buildChallengeWithPhaseAndTracker(userId: string, trackerTypeId: string) {
   const challenge = await authedCaller(userId).challenges.create({ name: `Test Challenge ${Date.now()}` })
@@ -116,5 +117,116 @@ describe('challengeRuns.updateProgress', () => {
     const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progress?.value).toBe(true)
     expect(progress?.completedAt).not.toBeNull()
+  })
+})
+
+describe('challengeRuns.updateProgress — additional scenarios', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('throws BAD_REQUEST for a non-manual tracker', async () => {
+    const builtIn = await db.trackerType.findFirst({ where: { isBuiltIn: true, computationSpec: { not: Prisma.AnyNull } } })
+    if (!builtIn) return
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, builtIn.id)
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    await expect(
+      authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('does not overwrite completedAt once set', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+    const first = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+    const second = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(second?.completedAt).toEqual(first?.completedAt)
+  })
+
+  it('throws FORBIDDEN when updating progress for another user legacy', async () => {
+    const other = await createTestUser()
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    try {
+      await expect(
+        authedCaller(other.id).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+
+  it('does not stamp completedAt when NUMERICAL value is below goalValue', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'NUMERICAL' })
+    // Create a challenge with a tracker that has a goalConfig
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: tt.id,
+      name: 'Count',
+      config: {},
+      goalConfig: { goalValue: 5 },
+    })
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 3 })
+    const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progress?.completedAt).toBeNull()
+
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 5 })
+    const done = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(done?.completedAt).not.toBeNull()
+  })
+})
+
+describe('challengeRuns.listByLegacy', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('returns runs for the legacy', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const result = await authedCaller(userId).challengeRuns.listByLegacy({ legacyId })
+    expect(result.length).toBeGreaterThan(0)
+  })
+
+  it('throws NOT_FOUND for another user legacy', async () => {
+    const other = await createTestUser()
+    try {
+      await expect(
+        authedCaller(other.id).challengeRuns.listByLegacy({ legacyId })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
   })
 })

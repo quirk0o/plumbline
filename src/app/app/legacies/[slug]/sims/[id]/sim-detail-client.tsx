@@ -85,17 +85,10 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionLabel}>Family</h2>
+          <h2 className={styles.sectionLabel}>Relationships</h2>
           <div className={styles.sectionLine} />
         </div>
         <FamilyEditor sim={sim} slug={slug} legacySims={legacySims} />
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionLabel}>Social Relationships</h2>
-          <div className={styles.sectionLine} />
-        </div>
         <SocialEditor sim={sim} slug={slug} legacySims={legacySims} />
       </section>
 

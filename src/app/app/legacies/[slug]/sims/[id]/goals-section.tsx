@@ -37,7 +37,7 @@ export function GoalsSection({
       <div>
         <span className={styles.fieldLabel}>Aspiration</span>
         <select
-          className={styles.editableChip}
+          className={styles.goalSelect}
           defaultValue={currentAspiration?.id ?? ''}
           aria-label="Aspiration"
           onChange={(e) =>
@@ -58,7 +58,7 @@ export function GoalsSection({
       <div>
         <span className={styles.fieldLabel}>Career</span>
         <select
-          className={styles.editableChip}
+          className={styles.goalSelect}
           defaultValue={currentCareer?.id ?? ''}
           aria-label="Career"
           onChange={(e) =>

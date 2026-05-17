@@ -15,11 +15,12 @@ interface TraitPickerProps {
   selected: string[]
   onChange: (ids: string[]) => void
   max?: number
+  scrollableGrid?: boolean
 }
 
 const CATEGORIES = ['All', 'Emotional', 'Hobby', 'Lifestyle', 'Social'] as const
 
-export function TraitPicker({ traits, selected, onChange, max = 6 }: TraitPickerProps) {
+export function TraitPicker({ traits, selected, onChange, max = 6, scrollableGrid = false }: TraitPickerProps) {
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [search, setSearch] = useState('')
 
@@ -51,7 +52,7 @@ export function TraitPicker({ traits, selected, onChange, max = 6 }: TraitPicker
   }
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${scrollableGrid ? styles.containerScrollable : ''}`}>
       <div className={styles.chips} aria-live="polite">
         {selected.map((id) => {
           const trait = traits.find((t) => t.id === id)
@@ -93,28 +94,30 @@ export function TraitPicker({ traits, selected, onChange, max = 6 }: TraitPicker
         className={styles.search}
       />
 
-      <div className={styles.grid}>
-        {visible.map((trait) => {
-          const isSelected = selected.includes(trait.id)
-          const isConflicted = conflictedIds.has(trait.id)
-          const isCapped = !isSelected && selected.length >= max
-          const isDisabled = isConflicted || isCapped
+      <div className={scrollableGrid ? styles.gridScroll : undefined}>
+        <div className={styles.grid}>
+          {visible.map((trait) => {
+            const isSelected = selected.includes(trait.id)
+            const isConflicted = conflictedIds.has(trait.id)
+            const isCapped = !isSelected && selected.length >= max
+            const isDisabled = isConflicted || isCapped
 
-          return (
-            <button
-              key={trait.id}
-              type="button"
-              className={`${styles.traitBtn} ${isSelected ? styles.traitSelected : ''} ${isDisabled ? styles.traitDisabled : ''}`}
-              onClick={() => toggle(trait.id)}
-              disabled={isDisabled}
-              title={isConflicted ? `Conflicts with ${conflictingWithLabel(trait.id)}` : undefined}
-              aria-pressed={isSelected}
-            >
-              {trait.name}
-            </button>
-          )
-        })}
-        {visible.length === 0 && <p className={styles.noResults}>No traits match</p>}
+            return (
+              <button
+                key={trait.id}
+                type="button"
+                className={`${styles.traitBtn} ${isSelected ? styles.traitSelected : ''} ${isDisabled ? styles.traitDisabled : ''}`}
+                onClick={() => toggle(trait.id)}
+                disabled={isDisabled}
+                title={isConflicted ? `Conflicts with ${conflictingWithLabel(trait.id)}` : undefined}
+                aria-pressed={isSelected}
+              >
+                {trait.name}
+              </button>
+            )
+          })}
+          {visible.length === 0 && <p className={styles.noResults}>No traits match</p>}
+        </div>
       </div>
 
       <p className={styles.counter}>

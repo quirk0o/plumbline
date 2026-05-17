@@ -15,6 +15,23 @@ export interface ComputationSpec {
   valueKind: 'BOOLEAN' | 'NUMERICAL' | 'THRESHOLD'
 }
 
+export function resolveThresholds(goalConfig: unknown): number[] | null {
+  if (!goalConfig || typeof goalConfig !== 'object' || Array.isArray(goalConfig)) return null
+  const cfg = goalConfig as Record<string, unknown>
+  if (Array.isArray(cfg.thresholds) && cfg.thresholds.every((t) => typeof t === 'number')) {
+    return cfg.thresholds as number[]
+  }
+  const { start, step, count } = cfg
+  if (typeof start === 'number' && typeof step === 'number' && typeof count === 'number' && count > 0) {
+    return Array.from({ length: count }, (_, i) => start + i * step)
+  }
+  return null
+}
+
+export function countThresholdsCrossed(rawValue: number, thresholds: number[]): number {
+  return thresholds.filter((t) => rawValue >= t).length
+}
+
 function resolveValue(val: unknown, config: Record<string, unknown>): unknown {
   if (typeof val === 'string' && val.startsWith('$config.')) {
     return config[val.slice('$config.'.length)]
@@ -235,23 +252,31 @@ export async function recomputeLegacyTrackers(db: PrismaClient, legacyId: string
         const rawValue = await evaluateSpec(db, legacyId, spec, config, phase.generationNumber)
         const now = new Date()
 
+        const goalConfig = tracker.goalConfig
+
+        let storedValue: unknown = rawValue
+        if (tracker.trackerType.valueKind === 'THRESHOLD' && typeof rawValue === 'number') {
+          const thresholds = resolveThresholds(goalConfig)
+          storedValue = thresholds !== null ? countThresholdsCrossed(rawValue, thresholds) : null
+        }
+
+        const isNowComplete = (() => {
+          if (tracker.trackerType.valueKind === 'BOOLEAN') return storedValue === true
+          if (tracker.trackerType.valueKind === 'THRESHOLD') {
+            const thresholds = resolveThresholds(goalConfig)
+            return thresholds !== null && typeof storedValue === 'number' && storedValue >= thresholds.length
+          }
+          return typeof storedValue === 'number' && storedValue > 0
+        })()
+
         const wasComplete = tracker.progress.completedAt !== null
-        const goalConfig = tracker.goalConfig as { goalValue?: number } | null
-        const isNowComplete =
-          tracker.trackerType.valueKind === 'BOOLEAN'
-            ? rawValue === true
-            : tracker.trackerType.valueKind === 'THRESHOLD'
-              ? typeof rawValue === 'number' &&
-                typeof goalConfig?.goalValue === 'number' &&
-                rawValue >= goalConfig.goalValue
-              : typeof rawValue === 'number' && rawValue > 0
 
         await db.trackerProgress.update({
           where: { challengeRunTrackerId: tracker.id },
           data: {
-            value: rawValue as Prisma.InputJsonValue,
+            value: storedValue as Prisma.InputJsonValue,
             evaluatedAt: now,
-            completedAt: !wasComplete && isNowComplete ? now : tracker.progress.completedAt,
+            ...(!wasComplete && isNowComplete ? { completedAt: now } : {}),
           },
         })
       }

@@ -220,14 +220,44 @@ describe('challengeRuns.updateProgress — additional scenarios', () => {
     expect(done?.completedAt).not.toBeNull()
   })
 
-  it('stamps completedAt for THRESHOLD tracker when value meets goalValue', async () => {
+  it('stores earnedPoints for THRESHOLD tracker and completes when all thresholds crossed', async () => {
     const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'THRESHOLD' })
     const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
     const phase = await authedCaller(userId).challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+    // thresholds: [5, 10, 15] — 3 milestones
     await authedCaller(userId).challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: tt.id,
       name: 'Threshold Tracker',
+      config: {},
+      goalConfig: { thresholds: [5, 10, 15] },
+    })
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+
+    // rawValue 7 crosses threshold 5 only → earnedPoints = 1, not complete
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 7 })
+    const partial = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(partial?.value).toBe(1)
+    expect(partial?.completedAt).toBeNull()
+
+    // rawValue 15 crosses all 3 thresholds → earnedPoints = 3, complete
+    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 15 })
+    const done = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(done?.value).toBe(3)
+    expect(done?.completedAt).not.toBeNull()
+  })
+
+  it('throws BAD_REQUEST for THRESHOLD tracker with no valid goalConfig', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'THRESHOLD' })
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+    // goalConfig has no thresholds or progression — invalid
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: tt.id,
+      name: 'Bad Threshold',
       config: {},
       goalConfig: { goalValue: 10 },
     })
@@ -235,13 +265,29 @@ describe('challengeRuns.updateProgress — additional scenarios', () => {
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
-    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 7 })
-    const before = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
-    expect(before?.completedAt).toBeNull()
+    await expect(
+      authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 10 })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
 
-    await authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 10 })
-    const after = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
-    expect(after?.completedAt).not.toBeNull()
+  it('throws BAD_REQUEST when THRESHOLD tracker receives a boolean value', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'THRESHOLD' })
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: tt.id,
+      name: 'Boolean into Threshold',
+      config: {},
+      goalConfig: { thresholds: [5, 10] },
+    })
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+
+    await expect(
+      authedCaller(userId).challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 })
 

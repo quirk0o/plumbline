@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { Prisma } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
+import { resolveThresholds, countThresholdsCrossed } from '../lib/trackerComputation'
 
 export const challengeRunsRouter = router({
   link: protectedProcedure
@@ -178,21 +179,38 @@ export const challengeRunsRouter = router({
 
       const { valueKind } = progress.tracker.trackerType
       const now = new Date()
-      const goalValue = (progress.tracker.goalConfig as { goalValue?: number } | null)?.goalValue
-      const isComplete =
-        valueKind === 'BOOLEAN'
-          ? input.value === true
-          : (valueKind === 'NUMERICAL' || valueKind === 'THRESHOLD') &&
-            typeof input.value === 'number' &&
-            goalValue !== undefined
-          ? input.value >= goalValue
-          : false
+
+      let value: boolean | number = input.value as boolean | number
+      let isComplete = false
+
+      if (valueKind === 'BOOLEAN') {
+        value = input.value
+        isComplete = input.value === true
+      } else if (valueKind === 'THRESHOLD') {
+        if (typeof input.value !== 'number') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'THRESHOLD tracker requires a numeric value' })
+        }
+        const thresholds = resolveThresholds(progress.tracker.goalConfig)
+        if (!thresholds) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'THRESHOLD tracker has no valid goalConfig' })
+        }
+        value = countThresholdsCrossed(input.value, thresholds)
+        isComplete = value >= thresholds.length
+      } else {
+        // NUMERICAL
+        if (typeof input.value !== 'number') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'NUMERICAL tracker requires a numeric value' })
+        }
+        value = input.value
+        const goalValue = (progress.tracker.goalConfig as { goalValue?: number } | null)?.goalValue
+        isComplete = goalValue !== undefined && input.value >= goalValue
+      }
 
       return ctx.db.trackerProgress.update({
         where: { challengeRunTrackerId: input.challengeRunTrackerId },
         data: {
-          value: input.value as Prisma.InputJsonValue,
-          completedAt: !progress.completedAt && isComplete ? now : progress.completedAt,
+          value: value as Prisma.InputJsonValue,
+          ...(!progress.completedAt && isComplete ? { completedAt: now } : {}),
         },
       })
     }),

@@ -1,8 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { CauseOfDeath } from '@prisma/client'
-import { trpc } from '@/trpc/client'
 import type { Trait } from '@/app/components/trait-picker'
 import { IdentitySection } from './identity-section'
 import { TraitEditor } from './trait-editor'
@@ -10,6 +8,7 @@ import { GoalsSection } from './goals-section'
 import { SkillEditor } from './skill-editor'
 import { FamilyEditor } from './family-editor'
 import { SocialEditor } from './social-editor'
+import { DeathSection } from './death-section'
 import styles from './page.module.css'
 
 interface Props {
@@ -92,66 +91,7 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
         <SocialEditor sim={sim} slug={slug} legacySims={legacySims} />
       </section>
 
-      {sim.causeOfDeath && <DeathSection sim={sim} />}
-      {!sim.causeOfDeath && <MarkDeceasedButton simId={sim.id} />}
-    </div>
-  )
-}
-
-const CAUSE_OF_DEATH_OPTIONS: CauseOfDeath[] = [
-  CauseOfDeath.OLD_AGE,
-  CauseOfDeath.DROWNING,
-  CauseOfDeath.FIRE,
-  CauseOfDeath.ELECTROCUTION,
-  CauseOfDeath.HUNGER,
-  CauseOfDeath.OVEREXERTION,
-  CauseOfDeath.EMBARRASSMENT,
-  CauseOfDeath.ANGER,
-  CauseOfDeath.LAUGHTER,
-  CauseOfDeath.COWPLANT,
-  CauseOfDeath.PUFFERFISH,
-  CauseOfDeath.MURPHY_BED,
-  CauseOfDeath.STEAM,
-  CauseOfDeath.POISON,
-  CauseOfDeath.METEOR,
-]
-
-function DeathSection({ sim }: { sim: Props['sim'] }) {
-  const update = trpc.sims.update.useMutation()
-  return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionLabel}>Death</h2>
-        <div className={styles.sectionLine} />
-      </div>
-      <select
-        className={styles.editableChip}
-        defaultValue={sim.causeOfDeath ?? ''}
-        aria-label="Cause of death"
-        onChange={(e) =>
-          update.mutate({ id: sim.id, causeOfDeath: e.target.value as CauseOfDeath })
-        }
-      >
-        {CAUSE_OF_DEATH_OPTIONS.map((c) => (
-          <option key={c} value={c}>
-            {c.replace(/_/g, ' ')}
-          </option>
-        ))}
-      </select>
-    </section>
-  )
-}
-
-function MarkDeceasedButton({ simId }: { simId: string }) {
-  const update = trpc.sims.update.useMutation()
-  return (
-    <div className={styles.deathButton}>
-      <button
-        className={styles.addChip}
-        onClick={() => update.mutate({ id: simId, causeOfDeath: CauseOfDeath.OLD_AGE })}
-      >
-        + Mark as deceased
-      </button>
+      <DeathSection simId={sim.id} initialCauseOfDeath={sim.causeOfDeath} />
     </div>
   )
 }

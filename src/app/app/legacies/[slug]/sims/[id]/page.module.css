@@ -441,8 +441,10 @@
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   width: min(560px, calc(100vw - var(--space-8)));
-  max-height: 80vh;
-  overflow-y: auto;
+  height: min(600px, 85vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: var(--shadow-lg);
 }
 

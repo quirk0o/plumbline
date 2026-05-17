@@ -81,6 +81,7 @@ export function TraitEditor({ sim, traits }: { sim: SimProp; traits: Trait[] }) 
               selected={localTraitIds}
               onChange={handlePickerChange}
               max={6}
+              scrollableGrid
             />
           </div>
         </div>

@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
+import { recomputeLegacyTrackers } from '../lib/trackerComputation'
 
 const imageUrlSchema = z
   .string()
@@ -194,7 +195,9 @@ export const simsRouter = router({
         }
       }
 
-      return ctx.db.sim.update({ where: { id }, data: fields })
+      const result = await ctx.db.sim.update({ where: { id }, data: fields })
+      await recomputeLegacyTrackers(ctx.db, result.legacyId)
+      return result
     }),
 
   addTrait: protectedProcedure
@@ -238,11 +241,13 @@ export const simsRouter = router({
       if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
       if (input.level > skill.maxLevel)
         throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
-      return ctx.db.simSkill.upsert({
+      const result = await ctx.db.simSkill.upsert({
         where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
         create: { simId: input.simId, skillId: input.skillId, level: input.level },
         update: { level: input.level },
       })
+      await recomputeLegacyTrackers(ctx.db, sim.legacyId)
+      return result
     }),
 
   setSkillLevel: protectedProcedure
@@ -255,10 +260,12 @@ export const simsRouter = router({
       if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
       if (input.level > skill.maxLevel)
         throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
-      return ctx.db.simSkill.update({
+      const result = await ctx.db.simSkill.update({
         where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
         data: { level: input.level },
       })
+      await recomputeLegacyTrackers(ctx.db, sim.legacyId)
+      return result
     }),
 
   removeSkill: protectedProcedure

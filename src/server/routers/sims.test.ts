@@ -8,6 +8,9 @@ import {
   createTestSim,
   getAnyTrait,
   getConflictingTraits,
+  createTestChallenge,
+  createTestChallengePhase,
+  createTestChallengeRun,
 } from '@/test/helpers'
 import { db } from '@/server/db'
 
@@ -658,5 +661,46 @@ describe('sims — generationNumber population', () => {
     await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
     const recordA = await db.sim.findUnique({ where: { id: simA.id } })
     expect(recordA?.isHeir).toBe(true)
+  })
+})
+
+describe('recomputeLegacyTrackers — triggered by sim mutations', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('stamps completedAt on Skill Maxed tracker when skill is maxed via addSkill', async () => {
+    const skill = await db.skill.findFirst()
+    if (!skill) return
+    const trackerType = await db.trackerType.findFirst({ where: { name: 'Skill Maxed' } })
+    if (!trackerType) return
+
+    const challenge = await createTestChallenge(userId)
+    const phase = await createTestChallengePhase(challenge.id, { generationNumber: 1 })
+    await db.trackerDefinition.create({
+      data: { challengePhaseId: phase.id, trackerTypeId: trackerType.id, name: 'Max Skill', config: { skillId: skill.id } },
+    })
+    const run = await createTestChallengeRun(legacyId, { sourceChallengeId: challenge.id })
+    const runPhase = await db.challengeRunPhase.create({ data: { challengeRunId: run.id, generationNumber: 1, sortOrder: 0 } })
+    const runTracker = await db.challengeRunTracker.create({
+      data: { challengeRunPhaseId: runPhase.id, trackerTypeId: trackerType.id, name: 'Max Skill', config: { skillId: skill.id }, sortOrder: 0 },
+    })
+    await db.trackerProgress.create({ data: { challengeRunTrackerId: runTracker.id, isManual: false } })
+
+    const sim = await createTestSim(legacyId)
+    await db.sim.update({ where: { id: sim.id }, data: { generationNumber: 1 } })
+
+    await authedCaller(userId).sims.addSkill({ simId: sim.id, skillId: skill.id, level: skill.maxLevel })
+
+    const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: runTracker.id } })
+    expect(progress?.completedAt).not.toBeNull()
   })
 })

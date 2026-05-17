@@ -5,6 +5,7 @@ import { aspirationsRouter } from './aspirations'
 import { careersRouter } from './careers'
 import { legaciesRouter } from './legacies'
 import { simsRouter } from './sims'
+import { trackerTypesRouter } from './trackerTypes'
 
 export const appRouter = router({
   packs: packsRouter,
@@ -13,6 +14,7 @@ export const appRouter = router({
   careers: careersRouter,
   legacies: legaciesRouter,
   sims: simsRouter,
+  trackerTypes: trackerTypesRouter,
 })
 
 export type AppRouter = typeof appRouter

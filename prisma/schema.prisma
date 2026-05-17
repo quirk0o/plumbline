@@ -372,6 +372,7 @@ model Sim {
   socialRelationshipsA SocialRelationship[]  @relation("SocialA")
   socialRelationshipsB SocialRelationship[]  @relation("SocialB")
 
+  @@index([legacyId, generationNumber])
   @@map("sims")
 }
 
@@ -499,6 +500,7 @@ model TrackerType {
   trackerDefs TrackerDefinition[]
   runTrackers ChallengeRunTracker[]
 
+  @@index([ownerId])
   @@map("tracker_types")
 }
 
@@ -515,6 +517,7 @@ model Challenge {
   phases ChallengePhase[]
   runs   ChallengeRun[]
 
+  @@index([ownerId])
   @@map("challenges")
 }
 
@@ -549,6 +552,8 @@ model TrackerDefinition {
   phase       ChallengePhase @relation(fields: [challengePhaseId], references: [id], onDelete: Cascade)
   trackerType TrackerType    @relation(fields: [trackerTypeId], references: [id])
 
+  @@index([challengePhaseId])
+  @@index([trackerTypeId])
   @@map("tracker_definitions")
 }
 
@@ -567,6 +572,7 @@ model ChallengeRun {
   sourceChallenge Challenge?          @relation(fields: [sourceChallengeId], references: [id], onDelete: SetNull)
   phases          ChallengeRunPhase[]
 
+  @@index([legacyId, completedAt])
   @@map("challenge_runs")
 }
 
@@ -583,6 +589,7 @@ model ChallengeRunPhase {
   run      ChallengeRun          @relation(fields: [challengeRunId], references: [id], onDelete: Cascade)
   trackers ChallengeRunTracker[]
 
+  @@index([challengeRunId])
   @@map("challenge_run_phases")
 }
 
@@ -602,6 +609,8 @@ model ChallengeRunTracker {
   trackerType TrackerType       @relation(fields: [trackerTypeId], references: [id])
   progress    TrackerProgress?
 
+  @@index([challengeRunPhaseId])
+  @@index([trackerTypeId])
   @@map("challenge_run_trackers")
 }
 

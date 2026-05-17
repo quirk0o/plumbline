@@ -457,6 +457,31 @@ describe('recomputeLegacyTrackers — completedAt is one-way', () => {
   })
 })
 
+describe('evaluateSpec — unknown condition source throws', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'B', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('throws when condition source is unknown', async () => {
+    await expect(
+      evaluateSpec(db, legacyId, {
+        simFilter: { generationNumber: 1 },
+        conditions: [{ source: 'skill' as unknown as 'skills', dataFilter: {} }],
+        aggregation: { op: 'any' },
+        valueKind: 'BOOLEAN',
+      }, {}),
+    ).rejects.toThrow(/Unknown condition source/)
+  })
+})
+
 describe('evaluateSpec — unknown simFilter keys throw', () => {
   let userId: string
   let legacyId: string

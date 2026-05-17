@@ -154,7 +154,8 @@ async function simIdsSatisfyingCondition(
     return new Set(matching.map((s) => s.simId))
   }
 
-  return new Set()
+  const _exhaustive: never = condition.source
+  throw new Error(`Unknown condition source: "${_exhaustive}"`)
 }
 
 export async function evaluateSpec(

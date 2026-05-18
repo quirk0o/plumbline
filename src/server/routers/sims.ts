@@ -185,7 +185,10 @@ export const simsRouter = router({
 
       const partnerEdges = await ctx.db.socialRelationship.findMany({
         where: {
-          simA: { legacyId: legacy.id },
+          OR: [
+            { simA: { legacyId: legacy.id } },
+            { simB: { legacyId: legacy.id } },
+          ],
           romanticStatus: { not: RomanticStatus.NONE },
         },
         select: { simAId: true, simBId: true },

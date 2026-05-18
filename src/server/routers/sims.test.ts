@@ -974,16 +974,21 @@ describe('sims.getTreeData', () => {
   it('returns biological and adoptive family edges but not step edges', async () => {
     const caller = authedCaller(userId)
     const parent = await createTestSim(legacyId, { firstName: 'Parent' })
-    const child = await createTestSim(legacyId, { firstName: 'Child' })
+    const bioChild = await createTestSim(legacyId, { firstName: 'BioChild' })
+    const adoptedChild = await createTestSim(legacyId, { firstName: 'AdoptedChild' })
     const stepChild = await createTestSim(legacyId, { firstName: 'StepChild' })
     await db.familyRelationship.create({
-      data: { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL },
+      data: { parentId: parent.id, childId: bioChild.id, type: FamilyRelationshipType.BIOLOGICAL },
+    })
+    await db.familyRelationship.create({
+      data: { parentId: parent.id, childId: adoptedChild.id, type: FamilyRelationshipType.ADOPTIVE },
     })
     await db.familyRelationship.create({
       data: { parentId: parent.id, childId: stepChild.id, type: FamilyRelationshipType.STEP },
     })
     const result = await caller.sims.getTreeData({ legacySlug })
-    expect(result.familyEdges).toContainEqual({ parentId: parent.id, childId: child.id })
+    expect(result.familyEdges).toContainEqual({ parentId: parent.id, childId: bioChild.id })
+    expect(result.familyEdges).toContainEqual({ parentId: parent.id, childId: adoptedChild.id })
     expect(result.familyEdges).not.toContainEqual({ parentId: parent.id, childId: stepChild.id })
   })
 
@@ -991,17 +996,30 @@ describe('sims.getTreeData', () => {
     const caller = authedCaller(userId)
     const simA = await createTestSim(legacyId, { firstName: 'SimA' })
     const simB = await createTestSim(legacyId, { firstName: 'SimB' })
+    const simC = await createTestSim(legacyId, { firstName: 'SimC' })
+    const [idA, idB] = [simA.id, simB.id].sort()
+    const [idA2, idC] = [simA.id, simC.id].sort()
     await db.socialRelationship.create({
       data: {
-        simAId: simA.id,
-        simBId: simB.id,
+        simAId: idA,
+        simBId: idB,
         romanticStatus: RomanticStatus.MARRIED,
         friendshipScore: 0,
         romanceScore: 0,
       },
     })
+    await db.socialRelationship.create({
+      data: {
+        simAId: idA2,
+        simBId: idC,
+        romanticStatus: RomanticStatus.NONE,
+        friendshipScore: 50,
+        romanceScore: 0,
+      },
+    })
     const result = await caller.sims.getTreeData({ legacySlug })
-    expect(result.partnerEdges).toContainEqual({ simAId: simA.id, simBId: simB.id })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB })
+    expect(result.partnerEdges).not.toContainEqual({ simAId: idA2, simBId: idC })
   })
 
   it('throws NOT_FOUND for a legacy that does not belong to the user', async () => {

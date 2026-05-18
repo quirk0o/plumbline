@@ -24,7 +24,7 @@ export function SimNode({ data }: NodeProps<SimNodeType>) {
         onClick={handleClick}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && handleClick()}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleClick()}
         aria-label={`${data.firstName} ${data.lastName}`}
       >
         <div className={styles.portrait}>

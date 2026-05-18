@@ -20,7 +20,7 @@
 .focused {
   border-color: var(--green);
   border-width: 2.5px;
-  box-shadow: 0 0 0 3px rgba(26, 92, 53, 0.15);
+  box-shadow: 0 0 0 3px var(--green-glow);
 }
 
 .portrait {

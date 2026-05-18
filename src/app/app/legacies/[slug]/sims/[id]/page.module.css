@@ -52,7 +52,6 @@
   align-items: center;
   gap: var(--space-3);
   padding-bottom: var(--space-7);
-  border-bottom: 1px solid var(--border);
   margin-bottom: var(--space-7);
 }
 

@@ -198,16 +198,12 @@ export const simsRouter = router({
 
       let result: Awaited<ReturnType<typeof ctx.db.sim.update>>
       if (input.isHeir === true) {
-        const simRecord = await ctx.db.sim.findFirst({
-          where: { id: input.id, legacy: { userId } },
-          select: { legacyId: true, generationNumber: true },
-        })
-        if (simRecord?.generationNumber !== null && simRecord?.generationNumber !== undefined) {
+        if (sim.generationNumber !== null && sim.generationNumber !== undefined) {
           result = await ctx.db.$transaction(async (tx) => {
             await tx.sim.updateMany({
               where: {
-                legacyId: simRecord.legacyId,
-                generationNumber: simRecord.generationNumber,
+                legacyId: sim.legacyId,
+                generationNumber: sim.generationNumber,
                 isHeir: true,
                 NOT: { id: input.id },
               },

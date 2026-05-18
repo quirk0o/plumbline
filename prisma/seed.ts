@@ -707,7 +707,12 @@ async function main() {
   for (const tt of builtInTrackerTypes) {
     await prisma.trackerType.upsert({
       where: { name: tt.name },
-      update: {},
+      update: {
+        description: tt.description,
+        computationSpec: tt.computationSpec ?? undefined,
+        configSchema: tt.configSchema,
+        goalSchema: tt.goalSchema ?? undefined,
+      },
       create: {
         name: tt.name,
         description: tt.description,

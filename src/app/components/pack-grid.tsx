@@ -113,6 +113,7 @@ export function PackGrid({ initialGroups }: PackGridProps) {
                 onClick={() => toggleMutation.mutate({ packId: pack.id })}
                 aria-pressed={pack.isOwned}
                 aria-label={`${pack.name} — ${pack.isOwned ? 'owned' : 'not owned'}`}
+                title={pack.name}
               >
                 {pack.isOwned && (
                   <span className={`${styles.badge} ${badgeClass(pack.type)}`} aria-hidden>✓</span>

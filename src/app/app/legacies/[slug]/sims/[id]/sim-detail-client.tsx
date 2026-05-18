@@ -8,6 +8,7 @@ import { TraitEditor } from './trait-editor'
 import { GoalsSection } from './goals-section'
 import { SkillEditor } from './skill-editor'
 import { RelationshipsEditor } from './relationships-editor'
+import { FamilyTreeMini } from './family-tree-mini'
 import { DeathSection } from './death-section'
 import styles from './page.module.css'
 
@@ -89,6 +90,14 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
             <div className={styles.sectionLine} />
           </div>
           <RelationshipsEditor sim={sim} slug={slug} legacySims={legacySims} />
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionLabel}>Family Tree</h2>
+            <div className={styles.sectionLine} />
+          </div>
+          <FamilyTreeMini simId={sim.id} />
         </section>
 
         <DeathSection simId={sim.id} initialCauseOfDeath={sim.causeOfDeath} />

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
 import styles from './page.module.css'
+import { LegacyTree } from './legacy-tree'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -140,6 +141,13 @@ export default async function LegacyDetailPage({ params }: Props) {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Family Tree</h2>
+        </div>
+        <LegacyTree legacySlug={slug} />
       </section>
     </div>
   )

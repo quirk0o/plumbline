@@ -106,7 +106,18 @@ export const challengeRunsRouter = router({
         },
       })
       if (!run) throw new TRPCError({ code: 'NOT_FOUND' })
-      return run
+
+      const phases = run.phases.map((phase) => ({
+        ...phase,
+        isComplete:
+          phase.trackers.length > 0 && phase.trackers.every((t) => t.progress?.completedAt != null),
+      }))
+
+      return {
+        ...run,
+        phases,
+        isComplete: phases.length > 0 && phases.every((p) => p.isComplete),
+      }
     }),
 
   updatePhase: protectedProcedure

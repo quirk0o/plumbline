@@ -92,6 +92,75 @@ describe('challengeRuns.getById', () => {
   })
 })
 
+describe('challengeRuns.getById — completion derivation', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('sets isComplete true on phase and run when all trackers have completedAt', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    // Mark tracker complete by updating its progress directly
+    await db.trackerProgress.update({
+      where: { challengeRunTrackerId: trackers[0].id },
+      data: { completedAt: new Date() },
+    })
+
+    const result = await authedCaller(userId).challengeRuns.getById({ id: run.id })
+    expect(result.phases[0].isComplete).toBe(true)
+    expect(result.isComplete).toBe(true)
+  })
+
+  it('sets isComplete false on phase and run when any tracker lacks completedAt', async () => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    // Also add a second tracker so one stays incomplete
+    const phases = await db.challengePhase.findMany({ where: { challengeId: challenge.id } })
+    const tt2 = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phases[0].id,
+      trackerTypeId: tt2.id,
+      name: 'Second Tracker',
+      config: {},
+    })
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+
+    // Complete only the first of the two trackers in the run
+    const runPhases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const runTrackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: runPhases[0].id } })
+    await db.trackerProgress.update({
+      where: { challengeRunTrackerId: runTrackers[0].id },
+      data: { completedAt: new Date() },
+    })
+    // Leave runTrackers[1].completedAt as null
+
+    const result = await authedCaller(userId).challengeRuns.getById({ id: run.id })
+    expect(result.phases[0].isComplete).toBe(false)
+    expect(result.isComplete).toBe(false)
+  })
+
+  it('sets isComplete false for a phase with no trackers', async () => {
+    // Create a challenge with a phase that has no trackers
+    const challenge = await authedCaller(userId).challenges.create({ name: `Empty Phase ${Date.now()}` })
+    await authedCaller(userId).challenges.addPhase({ challengeId: challenge.id, generationNumber: 1, title: 'Empty Gen' })
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+
+    const result = await authedCaller(userId).challengeRuns.getById({ id: run.id })
+    expect(result.phases[0].isComplete).toBe(false)
+    expect(result.isComplete).toBe(false)
+  })
+})
+
 describe('challengeRuns.updateProgress', () => {
   let userId: string
   let legacyId: string

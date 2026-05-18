@@ -155,6 +155,49 @@ export const simsRouter = router({
       })
     }),
 
+  getTreeData: protectedProcedure
+    .input(z.object({ legacySlug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const legacy = await ctx.db.legacy.findFirst({
+        where: { slug: input.legacySlug, userId },
+      })
+      if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
+
+      const sims = await ctx.db.sim.findMany({
+        where: { legacyId: legacy.id },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          imageUrl: true,
+          generationNumber: true,
+        },
+      })
+
+      const familyEdges = await ctx.db.familyRelationship.findMany({
+        where: {
+          parent: { legacyId: legacy.id },
+          type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] },
+        },
+        select: { parentId: true, childId: true },
+      })
+
+      const partnerEdges = await ctx.db.socialRelationship.findMany({
+        where: {
+          simA: { legacyId: legacy.id },
+          romanticStatus: { not: RomanticStatus.NONE },
+        },
+        select: { simAId: true, simBId: true },
+      })
+
+      return {
+        sims,
+        familyEdges: familyEdges.map((e) => ({ parentId: e.parentId, childId: e.childId })),
+        partnerEdges: partnerEdges.map((e) => ({ simAId: e.simAId, simBId: e.simBId })),
+      }
+    }),
+
   update: protectedProcedure
     .input(
       z.object({

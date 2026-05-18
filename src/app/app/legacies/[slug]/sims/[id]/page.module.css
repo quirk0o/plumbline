@@ -1,13 +1,23 @@
 .page {
   max-width: 720px;
   margin: 0 auto;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4) var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-sm);
 }
 
 .breadcrumb {
   font-size: var(--text-sm);
   color: var(--text-muted);
-  margin-bottom: var(--space-5);
 }
 
 .breadcrumb a {
@@ -422,6 +432,46 @@
   margin-top: var(--space-2);
 }
 
+/* Relationship type tab toggle (inside add-relationship modal) */
+.relTabRow {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.relTab {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.relTab:hover {
+  border-color: var(--border-bright);
+  color: var(--text);
+}
+
+.relTab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.relTabActive {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+
+.relTabActive:hover {
+  border-color: var(--green);
+  color: #fff;
+}
+
 /* Trait picker overlay */
 .pickerOverlay {
   position: fixed;
@@ -611,7 +661,7 @@
   font-size: var(--text-base);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg);
+  background: var(--bg-card);
   color: var(--text);
   cursor: pointer;
   box-sizing: border-box;

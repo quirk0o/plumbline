@@ -4,13 +4,13 @@
   width: 100%;
   --_padding-y: var(--space-2);
   --_padding-x: var(--space-3);
-  --_font-size: var(--text-sm);
+  --_font-size: var(--text-base);
 }
 
 .sm {
   --_padding-y: var(--space-1);
   --_padding-x: var(--space-2);
-  --_font-size: var(--text-xs);
+  --_font-size: var(--text-sm);
 }
 
 .lg {

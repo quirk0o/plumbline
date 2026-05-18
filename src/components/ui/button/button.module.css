@@ -74,7 +74,7 @@
 
 /* Sizes */
 
-.sm   { padding: 0.3rem 0.625rem; font-size: var(--text-xs); }
+.sm   { padding: 0.3rem 0.625rem; font-size: var(--text-sm); }
 .base { padding: 0.8125rem 1.25rem; font-size: 0.9rem; }
 .lg   { padding: 0.875rem 1.875rem; font-size: var(--text-base); }
 .icon { padding: var(--space-1); width: 2rem; height: 2rem; }

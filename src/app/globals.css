@@ -98,9 +98,8 @@
   --font-body:    var(--font-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
 
   /* Typography scale */
-  --text-xs:   0.75rem;    /* 12px — labels, badges */
-  --text-sm:   0.875rem;   /* 14px */
-  --text-base: 0.9375rem;  /* 15px — body text */
+  --text-sm:   0.75rem;    /* 12px — labels, badges */
+  --text-base: 0.875rem;   /* 14px — body text */
   --text-md:   1.0625rem;  /* 17px — slightly larger body */
   --text-lg:   1.25rem;    /* 20px */
   --text-xl:   1.5rem;     /* 24px */

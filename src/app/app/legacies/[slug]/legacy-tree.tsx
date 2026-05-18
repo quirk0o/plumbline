@@ -5,10 +5,13 @@ import { FamilyTree } from '@/components/family-tree/FamilyTree'
 type Props = { legacySlug: string }
 
 export function LegacyTree({ legacySlug }: Props) {
-  const { data, isLoading } = trpc.sims.getTreeData.useQuery({ legacySlug })
+  const { data, isLoading, isError } = trpc.sims.getTreeData.useQuery({ legacySlug })
 
   if (isLoading) {
     return <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>Loading tree…</p>
+  }
+  if (isError) {
+    return <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>Could not load family tree.</p>
   }
   if (!data || data.sims.length === 0) {
     return <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>No sims yet.</p>

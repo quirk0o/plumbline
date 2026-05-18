@@ -21,6 +21,14 @@ const imageUrlSchema = z
   )
   .optional()
 
+type MiniTreeSimData = {
+  id: string
+  firstName: string
+  lastName: string
+  imageUrl: string | null
+  generationNumber: number | null
+}
+
 export const simsRouter = router({
   create: protectedProcedure
     .input(
@@ -257,14 +265,13 @@ export const simsRouter = router({
       })
       if (!focusedSim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
 
-      type SimData = { id: string; firstName: string; lastName: string; imageUrl: string | null; generationNumber: number | null }
-      const simMap = new Map<string, SimData>()
+      const simMap = new Map<string, MiniTreeSimData>()
       const familyEdgeSet = new Set<string>()
       const partnerEdgeSet = new Set<string>()
       const familyEdges: { parentId: string; childId: string }[] = []
       const partnerEdges: { simAId: string; simBId: string }[] = []
 
-      function addSim(s: SimData) {
+      function addSim(s: MiniTreeSimData) {
         if (!simMap.has(s.id)) simMap.set(s.id, s)
       }
       function addFamilyEdge(parentId: string, childId: string) {
@@ -298,9 +305,11 @@ export const simsRouter = router({
       }
 
       // Fetch any partner sims not yet in the map
-      const missingPartnerIds = partnerEdges
-        .flatMap((e) => [e.simAId, e.simBId])
-        .filter((id) => !simMap.has(id))
+      const missingPartnerIds = [...new Set(
+        partnerEdges
+          .flatMap((e) => [e.simAId, e.simBId])
+          .filter((id) => !simMap.has(id))
+      )]
       if (missingPartnerIds.length > 0) {
         const partnerSims = await ctx.db.sim.findMany({
           where: { id: { in: missingPartnerIds } },

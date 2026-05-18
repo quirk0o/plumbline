@@ -201,6 +201,117 @@ export const simsRouter = router({
       }
     }),
 
+  getMiniTreeData: protectedProcedure
+    .input(z.object({ simId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const focusedSim = await ctx.db.sim.findFirst({
+        where: { id: input.simId, legacy: { userId } },
+        select: {
+          id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
+          childOf: {
+            where: { type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] } },
+            select: {
+              parentId: true,
+              parent: {
+                select: {
+                  id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
+                  childOf: {
+                    where: { type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] } },
+                    select: {
+                      parentId: true,
+                      parent: {
+                        select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true },
+                      },
+                    },
+                  },
+                  socialRelationshipsA: {
+                    where: { romanticStatus: { not: RomanticStatus.NONE } },
+                    select: { simAId: true, simBId: true },
+                  },
+                  socialRelationshipsB: {
+                    where: { romanticStatus: { not: RomanticStatus.NONE } },
+                    select: { simAId: true, simBId: true },
+                  },
+                },
+              },
+            },
+          },
+          parentsOf: {
+            where: { type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] } },
+            select: {
+              childId: true,
+              child: { select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true } },
+            },
+          },
+          socialRelationshipsA: {
+            where: { romanticStatus: { not: RomanticStatus.NONE } },
+            select: { simAId: true, simBId: true },
+          },
+          socialRelationshipsB: {
+            where: { romanticStatus: { not: RomanticStatus.NONE } },
+            select: { simAId: true, simBId: true },
+          },
+        },
+      })
+      if (!focusedSim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+
+      type SimData = { id: string; firstName: string; lastName: string; imageUrl: string | null; generationNumber: number | null }
+      const simMap = new Map<string, SimData>()
+      const familyEdgeSet = new Set<string>()
+      const partnerEdgeSet = new Set<string>()
+      const familyEdges: { parentId: string; childId: string }[] = []
+      const partnerEdges: { simAId: string; simBId: string }[] = []
+
+      function addSim(s: SimData) {
+        if (!simMap.has(s.id)) simMap.set(s.id, s)
+      }
+      function addFamilyEdge(parentId: string, childId: string) {
+        const key = `${parentId}-${childId}`
+        if (!familyEdgeSet.has(key)) { familyEdgeSet.add(key); familyEdges.push({ parentId, childId }) }
+      }
+      function addPartnerEdge(simAId: string, simBId: string) {
+        const key = [simAId, simBId].sort().join('-')
+        if (!partnerEdgeSet.has(key)) { partnerEdgeSet.add(key); partnerEdges.push({ simAId, simBId }) }
+      }
+
+      addSim(focusedSim)
+      focusedSim.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
+      focusedSim.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
+
+      for (const parentRel of focusedSim.childOf) {
+        const parent = parentRel.parent
+        addSim(parent)
+        addFamilyEdge(parent.id, focusedSim.id)
+        parent.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
+        parent.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
+        for (const gpRel of parent.childOf) {
+          addSim(gpRel.parent)
+          addFamilyEdge(gpRel.parent.id, parent.id)
+        }
+      }
+
+      for (const childRel of focusedSim.parentsOf) {
+        addSim(childRel.child)
+        addFamilyEdge(focusedSim.id, childRel.child.id)
+      }
+
+      // Fetch any partner sims not yet in the map
+      const missingPartnerIds = partnerEdges
+        .flatMap((e) => [e.simAId, e.simBId])
+        .filter((id) => !simMap.has(id))
+      if (missingPartnerIds.length > 0) {
+        const partnerSims = await ctx.db.sim.findMany({
+          where: { id: { in: missingPartnerIds } },
+          select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true },
+        })
+        partnerSims.forEach(addSim)
+      }
+
+      return { sims: Array.from(simMap.values()), familyEdges, partnerEdges }
+    }),
+
   update: protectedProcedure
     .input(
       z.object({

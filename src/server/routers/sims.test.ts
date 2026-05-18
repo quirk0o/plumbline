@@ -1032,3 +1032,68 @@ describe('sims.getTreeData', () => {
     await cleanupUser(otherUser.id)
   })
 })
+
+describe('sims.getMiniTreeData', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('includes the focused sim, their parents, and grandparents', async () => {
+    const caller = authedCaller(userId)
+    const grandparent = await createTestSim(legacyId, { firstName: 'Grandparent' })
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    const child = await createTestSim(legacyId, { firstName: 'Child' })
+    await db.familyRelationship.createMany({
+      data: [
+        { parentId: grandparent.id, childId: parent.id, type: FamilyRelationshipType.BIOLOGICAL },
+        { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL },
+      ],
+    })
+    const result = await caller.sims.getMiniTreeData({ simId: child.id })
+    const ids = result.sims.map((s) => s.id)
+    expect(ids).toContain(child.id)
+    expect(ids).toContain(parent.id)
+    expect(ids).toContain(grandparent.id)
+  })
+
+  it("includes the focused sim's children", async () => {
+    const caller = authedCaller(userId)
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    const child = await createTestSim(legacyId, { firstName: 'Child' })
+    await db.familyRelationship.create({
+      data: { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL },
+    })
+    const result = await caller.sims.getMiniTreeData({ simId: parent.id })
+    expect(result.sims.map((s) => s.id)).toContain(child.id)
+  })
+
+  it('excludes step-parent edges', async () => {
+    const caller = authedCaller(userId)
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    const child = await createTestSim(legacyId, { firstName: 'Child' })
+    await db.familyRelationship.create({
+      data: { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.STEP },
+    })
+    const result = await caller.sims.getMiniTreeData({ simId: child.id })
+    expect(result.familyEdges).not.toContainEqual({ parentId: parent.id, childId: child.id })
+  })
+
+  it('throws NOT_FOUND for a sim that does not belong to the user', async () => {
+    const otherUser = await createTestUser()
+    const otherLegacy = await createTestLegacy(otherUser.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    const caller = authedCaller(userId)
+    await expect(caller.sims.getMiniTreeData({ simId: otherSim.id })).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    await cleanupUser(otherUser.id)
+  })
+})

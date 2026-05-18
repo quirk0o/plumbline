@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { authedCaller } from '@/test/caller'
-import { createTestUser, cleanupUser, createTestLegacy, createTestTrackerType } from '@/test/helpers'
+import { createTestUser, cleanupUser, createTestLegacy, createTestTrackerType, createTestSim } from '@/test/helpers'
 import { db } from '@/server/db'
 import { Prisma } from '@prisma/client'
+import { recomputeLegacyTrackers } from '@/server/lib/trackerComputation'
 
 async function buildChallengeWithPhaseAndTracker(userId: string, trackerTypeId: string) {
   const challenge = await authedCaller(userId).challenges.create({ name: `Test Challenge ${Date.now()}` })
@@ -388,6 +389,217 @@ describe('challengeRuns.listByLegacy', () => {
     } finally {
       await cleanupUser(other.id)
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Full flow: template → link → sim mutation → recompute
+// ---------------------------------------------------------------------------
+
+describe('full flow — link creates correct initial state for auto-computed tracker', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('initializes TrackerProgress.value to 0 and isManual to false for a NUMERICAL auto-computed tracker', async () => {
+    // Build a tracker type whose computationSpec counts sims in the phase generation.
+    // A fresh legacy has no sims, so the initial count is 0.
+    const autoTt = await db.trackerType.create({
+      data: {
+        name: `Auto NUMERICAL ${Date.now()}`,
+        valueKind: 'NUMERICAL',
+        configSchema: {},
+        isBuiltIn: false,
+        isPublic: false,
+        ownerId: userId,
+        computationSpec: {
+          simFilter: { generationNumber: '$phase.generationNumber' },
+          conditions: [{ source: 'skills', dataFilter: {} }],
+          aggregation: { op: 'count' },
+          valueKind: 'NUMERICAL',
+        },
+      },
+    })
+
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({
+      challengeId: challenge.id,
+      generationNumber: 1,
+      title: 'Gen 1',
+    })
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: autoTt.id,
+      name: 'Sim Skill Count',
+      config: {},
+    })
+
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+
+    expect(progress).not.toBeNull()
+    expect(progress?.value).toBe(0)
+    expect(progress?.isManual).toBe(false)
+  })
+})
+
+describe('full flow — recompute updates tracker progress after sim mutation', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('updates TrackerProgress.value and stamps completedAt when the BOOLEAN condition becomes true', async () => {
+    // Use the seeded "Skill Maxed" built-in tracker type — its computationSpec uses
+    // aggregation: { op: 'any' } over skills with maxed: true, returning a boolean.
+    const skillMaxedType = await db.trackerType.findFirst({
+      where: { isBuiltIn: true, name: 'Skill Maxed' },
+    })
+    if (!skillMaxedType) return // guard: skip if DB not seeded
+
+    // Pick any skill with maxLevel 10 so we can fully max it
+    const skill = await db.skill.findFirst({ where: { maxLevel: 10 } })
+    if (!skill) return
+
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({
+      challengeId: challenge.id,
+      generationNumber: 1,
+      title: 'Gen 1',
+    })
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: skillMaxedType.id,
+      name: 'Max a skill',
+      config: { skillId: skill.id },
+    })
+
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+
+    // Before mutation: progress should be false, not complete
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+    const progressBefore = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progressBefore?.value).toBe(false)
+    expect(progressBefore?.completedAt).toBeNull()
+
+    // Create a gen-1 sim and max the skill
+    const sim = await createTestSim(legacyId)
+    await db.sim.update({ where: { id: sim.id }, data: { generationNumber: 1 } })
+    await db.simSkill.create({ data: { simId: sim.id, skillId: skill.id, level: skill.maxLevel } })
+
+    // Recompute
+    await recomputeLegacyTrackers(db, legacyId)
+
+    const progressAfter = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progressAfter?.value).toBe(true)
+    expect(progressAfter?.completedAt).not.toBeNull()
+  })
+})
+
+describe('full flow — THRESHOLD tracker earns points per threshold crossed via recompute', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    ({ id: userId } = await createTestUser())
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('increments earnedPoints as more sims acquire the skill, completing when all thresholds are crossed', async () => {
+    // Design: a THRESHOLD tracker type whose computationSpec counts sims in gen 1
+    // that have a specific skill at any level (minLevel: 1).
+    // goalConfig thresholds [1, 2, 3] means: 1 sim earned, 2 sims earned, 3 sims earned.
+    // As we add sims with that skill, recompute advances the stored value.
+    const skill = await db.skill.findFirst({ where: { maxLevel: 10 } })
+    if (!skill) return
+
+    const thresholdTt = await db.trackerType.create({
+      data: {
+        name: `Threshold Skill Count ${Date.now()}`,
+        valueKind: 'THRESHOLD',
+        configSchema: {},
+        isBuiltIn: false,
+        isPublic: false,
+        ownerId: userId,
+        computationSpec: {
+          simFilter: { generationNumber: '$phase.generationNumber' },
+          conditions: [{ source: 'skills', dataFilter: { skillId: skill.id, minLevel: 1 } }],
+          aggregation: { op: 'count' },
+          valueKind: 'THRESHOLD',
+        },
+      },
+    })
+
+    const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
+    const phase = await authedCaller(userId).challenges.addPhase({
+      challengeId: challenge.id,
+      generationNumber: 1,
+      title: 'Gen 1',
+    })
+    // thresholds [1, 2, 3] — each sim that acquires the skill crosses one threshold
+    await authedCaller(userId).challenges.addTracker({
+      challengePhaseId: phase.id,
+      trackerTypeId: thresholdTt.id,
+      name: 'Skill Holders',
+      config: {},
+      goalConfig: { thresholds: [1, 2, 3] },
+    })
+
+    const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
+    const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
+
+    // Initial state: 0 sims have skill → rawValue = 0 → 0 thresholds crossed
+    const progressInit = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progressInit?.value).toBe(0)
+    expect(progressInit?.completedAt).toBeNull()
+
+    // Add sim 1 with the skill → rawValue = 1 → crosses threshold 1 → earnedPoints = 1
+    const sim1 = await createTestSim(legacyId)
+    await db.sim.update({ where: { id: sim1.id }, data: { generationNumber: 1 } })
+    await db.simSkill.create({ data: { simId: sim1.id, skillId: skill.id, level: 7 } })
+    await recomputeLegacyTrackers(db, legacyId)
+
+    const progress1 = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progress1?.value).toBe(1)
+    expect(progress1?.completedAt).toBeNull()
+
+    // Add sim 2 with the skill → rawValue = 2 → crosses threshold 2 → earnedPoints = 2
+    const sim2 = await createTestSim(legacyId)
+    await db.sim.update({ where: { id: sim2.id }, data: { generationNumber: 1 } })
+    await db.simSkill.create({ data: { simId: sim2.id, skillId: skill.id, level: 12 } })
+    await recomputeLegacyTrackers(db, legacyId)
+
+    const progress2 = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progress2?.value).toBe(2)
+    expect(progress2?.completedAt).toBeNull()
+
+    // Add sim 3 with the skill → rawValue = 3 → crosses all 3 thresholds → earnedPoints = 3, complete
+    const sim3 = await createTestSim(legacyId)
+    await db.sim.update({ where: { id: sim3.id }, data: { generationNumber: 1 } })
+    await db.simSkill.create({ data: { simId: sim3.id, skillId: skill.id, level: 15 } })
+    await recomputeLegacyTrackers(db, legacyId)
+
+    const progress3 = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
+    expect(progress3?.value).toBe(3)
+    expect(progress3?.completedAt).not.toBeNull()
   })
 })
 

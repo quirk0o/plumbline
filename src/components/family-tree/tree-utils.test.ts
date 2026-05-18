@@ -70,6 +70,14 @@ describe('buildDagreGraph', () => {
     expect(nodes).toHaveLength(1)
     expect(edges).toHaveLength(0)
   })
+
+  it('does not stack disconnected sims on top of each other', () => {
+    const sims = [makeSim('a', 1), makeSim('b', 1)]
+    const { nodes } = buildDagreGraph(sims, [])
+    const a = nodes.find((n) => n.id === 'a')!
+    const b = nodes.find((n) => n.id === 'b')!
+    expect(a.position.x).not.toBe(b.position.x)
+  })
 })
 
 describe('buildPartnerEdges', () => {

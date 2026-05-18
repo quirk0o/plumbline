@@ -224,7 +224,7 @@ export const simsRouter = router({
 
       const recomputeFields = ['generationNumber', 'lifeStage', 'isHeir', 'causeOfDeath', 'occultType'] as const
       const needsRecompute = recomputeFields.some((f) => input[f] !== undefined)
-      if (needsRecompute) await recomputeLegacyTrackers(ctx.db, result.legacyId)
+      if (needsRecompute) void recomputeLegacyTrackers(ctx.db, result.legacyId)
       return result
     }),
 

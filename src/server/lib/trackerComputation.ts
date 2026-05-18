@@ -226,61 +226,71 @@ export async function evaluateSpec(
 }
 
 export async function recomputeLegacyTrackers(db: PrismaClient, legacyId: string): Promise<void> {
-  const runs = await db.challengeRun.findMany({
-    where: { legacyId, completedAt: null },
-    include: {
-      phases: {
-        include: {
-          trackers: {
-            include: {
-              trackerType: true,
-              progress: true,
+  try {
+    const runs = await db.challengeRun.findMany({
+      where: { legacyId, completedAt: null },
+      include: {
+        phases: {
+          include: {
+            trackers: {
+              include: {
+                trackerType: true,
+                progress: true,
+              },
             },
           },
         },
       },
-    },
-  })
+    })
 
-  for (const run of runs) {
-    for (const phase of run.phases) {
-      for (const tracker of phase.trackers) {
-        if (!tracker.progress || tracker.progress.isManual) continue
-        const spec = tracker.trackerType.computationSpec as ComputationSpec | null
-        if (!spec) continue
+    const now = new Date()
+    const updates: Parameters<typeof db.trackerProgress.update>[0][] = []
 
-        const config = tracker.config as Record<string, unknown>
-        const rawValue = await evaluateSpec(db, legacyId, spec, config, phase.generationNumber)
-        const now = new Date()
+    for (const run of runs) {
+      for (const phase of run.phases) {
+        for (const tracker of phase.trackers) {
+          if (!tracker.progress || tracker.progress.isManual) continue
+          const spec = tracker.trackerType.computationSpec as ComputationSpec | null
+          if (!spec) continue
 
-        const goalConfig = tracker.goalConfig
+          const config = tracker.config as Record<string, unknown>
+          const rawValue = await evaluateSpec(db, legacyId, spec, config, phase.generationNumber)
 
-        let storedValue: unknown = rawValue
-        if (tracker.trackerType.valueKind === 'THRESHOLD' && typeof rawValue === 'number') {
-          const thresholds = resolveThresholds(goalConfig)
-          storedValue = thresholds !== null ? countThresholdsCrossed(rawValue, thresholds) : null
-        }
+          const goalConfig = tracker.goalConfig
 
-        const isNowComplete = (() => {
-          if (tracker.trackerType.valueKind === 'BOOLEAN') return storedValue === true
-          if (tracker.trackerType.valueKind === 'THRESHOLD') {
+          let storedValue: unknown = rawValue
+          if (tracker.trackerType.valueKind === 'THRESHOLD' && typeof rawValue === 'number') {
             const thresholds = resolveThresholds(goalConfig)
-            return thresholds !== null && typeof storedValue === 'number' && storedValue >= thresholds.length
+            storedValue = thresholds !== null ? countThresholdsCrossed(rawValue, thresholds) : null
           }
-          return typeof storedValue === 'number' && storedValue > 0
-        })()
 
-        const wasComplete = tracker.progress.completedAt !== null
+          const isNowComplete = (() => {
+            if (tracker.trackerType.valueKind === 'BOOLEAN') return storedValue === true
+            if (tracker.trackerType.valueKind === 'THRESHOLD') {
+              const thresholds = resolveThresholds(goalConfig)
+              return thresholds !== null && typeof storedValue === 'number' && storedValue >= thresholds.length
+            }
+            return typeof storedValue === 'number' && storedValue > 0
+          })()
 
-        await db.trackerProgress.update({
-          where: { challengeRunTrackerId: tracker.id },
-          data: {
-            value: storedValue as Prisma.InputJsonValue,
-            evaluatedAt: now,
-            ...(!wasComplete && isNowComplete ? { completedAt: now } : {}),
-          },
-        })
+          const wasComplete = tracker.progress.completedAt !== null
+
+          updates.push({
+            where: { challengeRunTrackerId: tracker.id },
+            data: {
+              value: storedValue as Prisma.InputJsonValue,
+              evaluatedAt: now,
+              ...(!wasComplete && isNowComplete ? { completedAt: now } : {}),
+            },
+          })
+        }
       }
     }
+
+    if (updates.length > 0) {
+      await db.$transaction(updates.map((u) => db.trackerProgress.update(u)))
+    }
+  } catch (err) {
+    console.error('[recomputeLegacyTrackers] failed for legacyId', legacyId, err)
   }
 }

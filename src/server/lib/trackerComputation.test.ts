@@ -482,6 +482,25 @@ describe('evaluateSpec — unknown condition source throws', () => {
   })
 })
 
+describe('recomputeLegacyTrackers — swallows internal errors instead of rejecting', () => {
+  it('resolves without throwing when evaluateSpec throws internally', async () => {
+    // Pass a db proxy where $transaction would throw — verifies try-catch wraps the body.
+    // We use a real legacyId format but inject a broken db that throws on findMany.
+    const brokenDb = new Proxy({} as Parameters<typeof recomputeLegacyTrackers>[0], {
+      get(_target, prop) {
+        if (prop === 'challengeRun') {
+          return {
+            findMany: () => { throw new Error('simulated DB failure') },
+          }
+        }
+        return undefined
+      },
+    })
+    // Should resolve (not reject) — error is swallowed by the try-catch
+    await expect(recomputeLegacyTrackers(brokenDb, 'non-existent-legacy')).resolves.toBeUndefined()
+  })
+})
+
 describe('evaluateSpec — unknown simFilter keys throw', () => {
   let userId: string
   let legacyId: string

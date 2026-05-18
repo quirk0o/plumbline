@@ -586,6 +586,146 @@ async function main() {
     await prisma.career.upsert({ where: { name: c.name }, update: {}, create: c })
   }
 
+  // ── Built-in TrackerTypes ─────────────────────────────────────────────────
+  console.log('Seeding built-in tracker types...')
+
+  const builtInTrackerTypes = [
+    {
+      name: 'Skill Maxed',
+      description: 'A sim in the phase generation has maxed a specific skill.',
+      valueKind: 'BOOLEAN' as const,
+      computationSpec: {
+        simFilter: { generationNumber: '$phase.generationNumber' },
+        conditions: [{ source: 'skills', dataFilter: { skillId: '$config.skillId', maxed: true } }],
+        aggregation: { op: 'any' },
+        valueKind: 'BOOLEAN',
+      },
+      configSchema: { type: 'object', properties: { skillId: { type: 'string' } }, required: ['skillId'] },
+      goalSchema: null as object | null,
+    },
+    {
+      name: 'Skill Level',
+      description: 'A sim in the phase generation has reached a target skill level.',
+      valueKind: 'BOOLEAN' as const,
+      computationSpec: {
+        simFilter: { generationNumber: '$phase.generationNumber' },
+        conditions: [{ source: 'skills', dataFilter: { skillId: '$config.skillId', minLevel: '$config.targetLevel' } }],
+        aggregation: { op: 'any' },
+        valueKind: 'BOOLEAN',
+      },
+      configSchema: {
+        type: 'object',
+        properties: { skillId: { type: 'string' }, targetLevel: { type: 'number' } },
+        required: ['skillId', 'targetLevel'],
+      },
+      goalSchema: null as object | null,
+    },
+    {
+      name: 'Aspiration Completed',
+      description: 'A sim in the phase generation has completed a specific aspiration.',
+      valueKind: 'BOOLEAN' as const,
+      computationSpec: {
+        simFilter: { generationNumber: '$phase.generationNumber' },
+        conditions: [{ source: 'aspirations', dataFilter: { aspirationId: '$config.aspirationId', completed: true } }],
+        aggregation: { op: 'any' },
+        valueKind: 'BOOLEAN',
+      },
+      configSchema: { type: 'object', properties: { aspirationId: { type: 'string' } }, required: ['aspirationId'] },
+      goalSchema: null as object | null,
+    },
+    {
+      name: 'Career Completed',
+      description: 'A sim in the phase generation has completed a specific career.',
+      valueKind: 'BOOLEAN' as const,
+      computationSpec: {
+        simFilter: { generationNumber: '$phase.generationNumber' },
+        conditions: [{ source: 'careers', dataFilter: { careerId: '$config.careerId', completed: true } }],
+        aggregation: { op: 'any' },
+        valueKind: 'BOOLEAN',
+      },
+      configSchema: { type: 'object', properties: { careerId: { type: 'string' } }, required: ['careerId'] },
+      goalSchema: null as object | null,
+    },
+    {
+      name: 'Sim Died By Cause',
+      description: 'Any legacy sim died by a specific cause.',
+      valueKind: 'BOOLEAN' as const,
+      computationSpec: {
+        simFilter: {},
+        conditions: [{ source: 'sims', dataFilter: { causeOfDeath: '$config.causeOfDeath' } }],
+        aggregation: { op: 'any' },
+        valueKind: 'BOOLEAN',
+      },
+      configSchema: { type: 'object', properties: { causeOfDeath: { type: 'string' } }, required: ['causeOfDeath'] },
+      goalSchema: null as object | null,
+    },
+    {
+      name: 'Count Unique Traits',
+      description: 'Count distinct personality traits across sims in the phase generation.',
+      valueKind: 'NUMERICAL' as const,
+      computationSpec: {
+        simFilter: { generationNumber: '$phase.generationNumber' },
+        conditions: [{ source: 'personalityTraits', dataFilter: {} }],
+        aggregation: { op: 'countUnique', field: 'personalityTraitId' },
+        valueKind: 'NUMERICAL',
+      },
+      configSchema: { type: 'object', properties: { category: { type: 'string' } } },
+      goalSchema: { type: 'object', properties: { goalValue: { type: 'number' }, unit: { type: 'string' } }, required: ['goalValue'] } as object | null,
+    },
+    {
+      name: 'Manual Goal',
+      description: 'A custom goal the user marks complete manually.',
+      valueKind: 'BOOLEAN' as const,
+      computationSpec: null,
+      configSchema: { type: 'object', properties: {} },
+      goalSchema: null as object | null,
+    },
+    {
+      name: 'Manual Numerical Goal',
+      description: 'A custom numerical goal the user tracks manually toward a target value.',
+      valueKind: 'NUMERICAL' as const,
+      computationSpec: null,
+      configSchema: { type: 'object', properties: {} },
+      goalSchema: { type: 'object', properties: { goalValue: { type: 'number' }, unit: { type: 'string' } }, required: ['goalValue'] } as object | null,
+    },
+    {
+      name: 'Manual Threshold Goal',
+      description: 'A goal with multiple thresholds, each worth one point when crossed.',
+      valueKind: 'THRESHOLD' as const,
+      computationSpec: null,
+      configSchema: { type: 'object', properties: {} },
+      goalSchema: {
+        type: 'object',
+        oneOf: [
+          { properties: { thresholds: { type: 'array', items: { type: 'number' } }, unit: { type: 'string' } }, required: ['thresholds'] },
+          { properties: { start: { type: 'number' }, step: { type: 'number' }, count: { type: 'number' }, unit: { type: 'string' } }, required: ['start', 'step', 'count'] },
+        ],
+      } as object | null,
+    },
+  ]
+
+  for (const tt of builtInTrackerTypes) {
+    await prisma.trackerType.upsert({
+      where: { name: tt.name },
+      update: {
+        description: tt.description,
+        computationSpec: tt.computationSpec ?? undefined,
+        configSchema: tt.configSchema,
+        goalSchema: tt.goalSchema ?? undefined,
+      },
+      create: {
+        name: tt.name,
+        description: tt.description,
+        valueKind: tt.valueKind,
+        isBuiltIn: true,
+        isPublic: true,
+        computationSpec: tt.computationSpec ?? undefined,
+        configSchema: tt.configSchema,
+        goalSchema: tt.goalSchema ?? undefined,
+      },
+    })
+  }
+
   console.log('Seed complete.')
 }
 

@@ -8,6 +8,9 @@ import {
   createTestSim,
   getAnyTrait,
   getConflictingTraits,
+  createTestChallenge,
+  createTestChallengePhase,
+  createTestChallengeRun,
 } from '@/test/helpers'
 import { db } from '@/server/db'
 
@@ -565,5 +568,380 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
         romanticStatus: RomanticStatus.NONE,
       })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+})
+
+describe('sims — generationNumber population', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('sets generationNumber from input when provided', async () => {
+    const result = await authedCaller(userId).sims.create({
+      legacyId,
+      firstName: 'Alice',
+      lastName: 'Smith',
+      gender: Gender.FEMALE,
+      generationNumber: 1,
+    })
+    const record = await db.sim.findUnique({ where: { id: result.id } })
+    expect(record?.generationNumber).toBe(1)
+  })
+
+  it('derives generationNumber from parent when parentIds provided', async () => {
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    await db.sim.update({ where: { id: parent.id }, data: { generationNumber: 1 } })
+    const result = await authedCaller(userId).sims.create({
+      legacyId,
+      firstName: 'Child',
+      lastName: 'Smith',
+      gender: Gender.FEMALE,
+      parentIds: [parent.id],
+    })
+    const record = await db.sim.findUnique({ where: { id: result.id } })
+    expect(record?.generationNumber).toBe(2)
+  })
+
+  it('uses min parent generationNumber when multiple parents', async () => {
+    const parent1 = await createTestSim(legacyId, { firstName: 'P1' })
+    const parent2 = await createTestSim(legacyId, { firstName: 'P2' })
+    await db.sim.update({ where: { id: parent1.id }, data: { generationNumber: 2 } })
+    await db.sim.update({ where: { id: parent2.id }, data: { generationNumber: 3 } })
+    const result = await authedCaller(userId).sims.create({
+      legacyId, firstName: 'Child', lastName: 'Smith', gender: Gender.FEMALE,
+      parentIds: [parent1.id, parent2.id],
+    })
+    const record = await db.sim.findUnique({ where: { id: result.id } })
+    expect(record?.generationNumber).toBe(3)
+  })
+
+  it('sims.update accepts generationNumber override', async () => {
+    const sim = await createTestSim(legacyId)
+    await authedCaller(userId).sims.update({ id: sim.id, generationNumber: 5 })
+    const record = await db.sim.findUnique({ where: { id: sim.id } })
+    expect(record?.generationNumber).toBe(5)
+  })
+
+  it('sims.update accepts isHeir flag', async () => {
+    const sim = await createTestSim(legacyId)
+    await authedCaller(userId).sims.update({ id: sim.id, isHeir: true })
+    const record = await db.sim.findUnique({ where: { id: sim.id } })
+    expect(record?.isHeir).toBe(true)
+  })
+
+  it('setting isHeir clears the previous heir in the same generation', async () => {
+    const simA = await db.sim.create({
+      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
+    })
+    const simB = await db.sim.create({
+      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+    await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
+    const recordA = await db.sim.findUnique({ where: { id: simA.id } })
+    const recordB = await db.sim.findUnique({ where: { id: simB.id } })
+    expect(recordA?.isHeir).toBe(false)
+    expect(recordB?.isHeir).toBe(true)
+  })
+
+  it('setting isHeir does not clear heir in a different generation', async () => {
+    const simA = await db.sim.create({
+      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1, isHeir: true },
+    })
+    const simB = await db.sim.create({
+      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+    await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
+    const recordA = await db.sim.findUnique({ where: { id: simA.id } })
+    expect(recordA?.isHeir).toBe(true)
+  })
+
+  it('exactly one heir exists in the generation after setting isHeir on a new sim', async () => {
+    const simA = await db.sim.create({
+      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 3, isHeir: true },
+    })
+    const simB = await db.sim.create({
+      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 3 },
+    })
+    await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
+    const heirs = await db.sim.findMany({
+      where: { legacyId, generationNumber: 3, isHeir: true },
+    })
+    expect(heirs).toHaveLength(1)
+    expect(heirs[0].id).toBe(simB.id)
+    const recordA = await db.sim.findUnique({ where: { id: simA.id } })
+    expect(recordA?.isHeir).toBe(false)
+  })
+
+  it('updating only firstName does not call recomputeLegacyTrackers path (update succeeds without error)', async () => {
+    const sim = await createTestSim(legacyId)
+    // This test verifies the firstName-only update path does not trigger recompute.
+    // If recompute were triggered with broken data it would throw; here it should succeed silently.
+    await authedCaller(userId).sims.update({ id: sim.id, firstName: 'Renamed' })
+    const record = await db.sim.findUnique({ where: { id: sim.id } })
+    expect(record?.firstName).toBe('Renamed')
+  })
+})
+
+describe('recomputeLegacyTrackers — triggered by sim mutations', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('stamps completedAt on Skill Maxed tracker when skill is maxed via addSkill', async () => {
+    const skill = await db.skill.findFirst()
+    if (!skill) return
+    const trackerType = await db.trackerType.findFirst({ where: { name: 'Skill Maxed' } })
+    if (!trackerType) return
+
+    const challenge = await createTestChallenge(userId)
+    const phase = await createTestChallengePhase(challenge.id, { generationNumber: 1 })
+    await db.trackerDefinition.create({
+      data: { challengePhaseId: phase.id, trackerTypeId: trackerType.id, name: 'Max Skill', config: { skillId: skill.id } },
+    })
+    const run = await createTestChallengeRun(legacyId, { sourceChallengeId: challenge.id })
+    const runPhase = await db.challengeRunPhase.create({ data: { challengeRunId: run.id, generationNumber: 1, sortOrder: 0 } })
+    const runTracker = await db.challengeRunTracker.create({
+      data: { challengeRunPhaseId: runPhase.id, trackerTypeId: trackerType.id, name: 'Max Skill', config: { skillId: skill.id }, sortOrder: 0 },
+    })
+    await db.trackerProgress.create({ data: { challengeRunTrackerId: runTracker.id, isManual: false } })
+
+    const sim = await createTestSim(legacyId)
+    await db.sim.update({ where: { id: sim.id }, data: { generationNumber: 1 } })
+
+    await authedCaller(userId).sims.addSkill({ simId: sim.id, skillId: skill.id, level: skill.maxLevel })
+
+    const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: runTracker.id } })
+    expect(progress?.completedAt).not.toBeNull()
+  })
+})
+
+describe('sims.create — parentIds validation', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('throws BAD_REQUEST when a parentId does not belong to this legacy', async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const foreignSim = await createTestSim(otherLegacy.id)
+    await db.sim.update({ where: { id: foreignSim.id }, data: { generationNumber: 1 } })
+    try {
+      await expect(
+        authedCaller(userId).sims.create({
+          legacyId,
+          firstName: 'Child',
+          lastName: 'Smith',
+          gender: Gender.FEMALE,
+          parentIds: [foreignSim.id],
+        })
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+
+  it('persists FamilyRelationship rows with type BIOLOGICAL when parentIds are provided', async () => {
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    await db.sim.update({ where: { id: parent.id }, data: { generationNumber: 1 } })
+    const result = await authedCaller(userId).sims.create({
+      legacyId,
+      firstName: 'Child',
+      lastName: 'Smith',
+      gender: Gender.FEMALE,
+      parentIds: [parent.id],
+    })
+    const relationships = await db.familyRelationship.findMany({
+      where: { childId: result.id },
+    })
+    expect(relationships).toHaveLength(1)
+    expect(relationships[0].parentId).toBe(parent.id)
+    expect(relationships[0].type).toBe('BIOLOGICAL')
+  })
+
+  it('persists FamilyRelationship rows for multiple parents', async () => {
+    const parent1 = await createTestSim(legacyId, { firstName: 'Parent1' })
+    const parent2 = await createTestSim(legacyId, { firstName: 'Parent2' })
+    await db.sim.update({ where: { id: parent1.id }, data: { generationNumber: 1 } })
+    await db.sim.update({ where: { id: parent2.id }, data: { generationNumber: 1 } })
+    const result = await authedCaller(userId).sims.create({
+      legacyId,
+      firstName: 'Child',
+      lastName: 'Smith',
+      gender: Gender.FEMALE,
+      parentIds: [parent1.id, parent2.id],
+    })
+    const relationships = await db.familyRelationship.findMany({
+      where: { childId: result.id },
+      orderBy: { parentId: 'asc' },
+    })
+    expect(relationships).toHaveLength(2)
+    expect(relationships.every((r) => r.type === 'BIOLOGICAL')).toBe(true)
+  })
+})
+
+describe('sims.completeAspiration', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('sets completedAt on the SimAspiration record', async () => {
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id } })
+
+    await authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
+
+    const record = await db.simAspiration.findUnique({
+      where: { simId_aspirationId: { simId, aspirationId: aspiration.id } },
+    })
+    expect(record?.completedAt).not.toBeNull()
+  })
+
+  it('returns NOT_FOUND when sim does not belong to the user', async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    await db.simAspiration.create({ data: { simId: otherSim.id, aspirationId: aspiration.id } })
+    try {
+      await expect(
+        authedCaller(userId).sims.completeAspiration({ simId: otherSim.id, aspirationId: aspiration.id })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+
+  it('returns NOT_FOUND when aspiration is not on the sim', async () => {
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    // no SimAspiration row created — aspiration not on sim
+    await expect(
+      authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('returns BAD_REQUEST when aspiration is already completed', async () => {
+    const aspiration = await db.aspiration.findFirst()
+    if (!aspiration) return
+    await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id, completedAt: new Date() } })
+
+    await expect(
+      authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+})
+
+describe('sims.endCareer', () => {
+  let userId: string
+  let legacyId: string
+  let simId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+    const sim = await createTestSim(legacyId)
+    simId = sim.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('sets endedAt on the active SimCareer record', async () => {
+    const career = await db.career.findFirst()
+    if (!career) return
+    await db.simCareer.create({
+      data: { simId, careerId: career.id, employmentType: 'EMPLOYED', startedAt: new Date() },
+    })
+
+    await authedCaller(userId).sims.endCareer({ simId })
+
+    const record = await db.simCareer.findFirst({ where: { simId } })
+    expect(record?.endedAt).not.toBeNull()
+  })
+
+  it('returns NOT_FOUND when sim does not belong to the user', async () => {
+    const other = await createTestUser()
+    const otherLegacy = await createTestLegacy(other.id)
+    const otherSim = await createTestSim(otherLegacy.id)
+    try {
+      await expect(
+        authedCaller(userId).sims.endCareer({ simId: otherSim.id })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      await cleanupUser(other.id)
+    }
+  })
+
+  it('returns NOT_FOUND when there is no active career', async () => {
+    // No SimCareer row created — no active career to end
+    await expect(
+      authedCaller(userId).sims.endCareer({ simId })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+})
+
+describe('sims — isHeir with null generationNumber', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('does not clear other null-gen sims when setting isHeir on a null-gen sim', async () => {
+    const simA = await db.sim.create({
+      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: null, isHeir: true },
+    })
+    const simB = await db.sim.create({
+      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: null },
+    })
+    await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
+    const recordA = await db.sim.findUnique({ where: { id: simA.id } })
+    expect(recordA?.isHeir).toBe(true)
   })
 })

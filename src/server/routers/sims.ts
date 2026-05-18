@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
+import { recomputeLegacyTrackers } from '../lib/trackerComputation'
 
 const imageUrlSchema = z
   .string()
@@ -37,6 +38,8 @@ export const simsRouter = router({
         aspirationId: z.string().optional(),
         careerId: z.string().optional(),
         occultType: z.nativeEnum(OccultType).optional(),
+        generationNumber: z.number().int().min(1).optional(),
+        parentIds: z.array(z.string()).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -54,9 +57,25 @@ export const simsRouter = router({
         })
       }
 
-      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, ...simFields } = input
+      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, parentIds: _parentIds, generationNumber: _gen, ...simFields } = input
 
-      return ctx.db.sim.create({
+      let generationNumber = input.generationNumber ?? null
+      let parents: { id: string; generationNumber: number | null }[] = []
+      if (input.parentIds?.length) {
+        parents = await ctx.db.sim.findMany({
+          where: { id: { in: input.parentIds }, legacyId: input.legacyId },
+          select: { id: true, generationNumber: true },
+        })
+        if (parents.length !== input.parentIds.length) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'One or more parentIds do not belong to this legacy' })
+        }
+        if (!generationNumber) {
+          const parentGens = parents.map((p) => p.generationNumber).filter((g): g is number => g !== null)
+          if (parentGens.length > 0) generationNumber = Math.min(...parentGens) + 1
+        }
+      }
+
+      const newSim = await ctx.db.sim.create({
         data: {
           legacyId: input.legacyId,
           firstName: simFields.firstName,
@@ -68,6 +87,7 @@ export const simsRouter = router({
           pronounPossessive: simFields.pronounPossessive ?? null,
           imageUrl: simFields.imageUrl ?? null,
           occultType: simFields.occultType ?? null,
+          generationNumber,
           householdId: household.id,
           ...(personalityTraitIds?.length
             ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
@@ -78,6 +98,19 @@ export const simsRouter = router({
             : {}),
         },
       })
+
+      if (parents.length > 0) {
+        await ctx.db.familyRelationship.createMany({
+          data: parents.map((parent) => ({
+            parentId: parent.id,
+            childId: newSim.id,
+            type: FamilyRelationshipType.BIOLOGICAL,
+          })),
+          skipDuplicates: true,
+        })
+      }
+
+      return newSim
     }),
 
   getById: protectedProcedure
@@ -138,6 +171,8 @@ export const simsRouter = router({
         causeOfDeath: z.nativeEnum(CauseOfDeath).nullable().optional(),
         aspirationId: z.string().nullable().optional(),
         careerId: z.string().nullable().optional(),
+        generationNumber: z.number().int().min(1).nullable().optional(),
+        isHeir: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -161,7 +196,32 @@ export const simsRouter = router({
         }
       }
 
-      return ctx.db.sim.update({ where: { id }, data: fields })
+      let result: Awaited<ReturnType<typeof ctx.db.sim.update>>
+      if (input.isHeir === true) {
+        if (sim.generationNumber !== null && sim.generationNumber !== undefined) {
+          result = await ctx.db.$transaction(async (tx) => {
+            await tx.sim.updateMany({
+              where: {
+                legacyId: sim.legacyId,
+                generationNumber: sim.generationNumber,
+                isHeir: true,
+                NOT: { id: input.id },
+              },
+              data: { isHeir: false },
+            })
+            return tx.sim.update({ where: { id }, data: fields })
+          })
+        } else {
+          result = await ctx.db.sim.update({ where: { id }, data: fields })
+        }
+      } else {
+        result = await ctx.db.sim.update({ where: { id }, data: fields })
+      }
+
+      const recomputeFields = ['generationNumber', 'lifeStage', 'isHeir', 'causeOfDeath', 'occultType'] as const
+      const needsRecompute = recomputeFields.some((f) => input[f] !== undefined)
+      if (needsRecompute) void recomputeLegacyTrackers(ctx.db, result.legacyId)
+      return result
     }),
 
   addTrait: protectedProcedure
@@ -205,11 +265,13 @@ export const simsRouter = router({
       if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
       if (input.level > skill.maxLevel)
         throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
-      return ctx.db.simSkill.upsert({
+      const result = await ctx.db.simSkill.upsert({
         where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
         create: { simId: input.simId, skillId: input.skillId, level: input.level },
         update: { level: input.level },
       })
+      await recomputeLegacyTrackers(ctx.db, sim.legacyId)
+      return result
     }),
 
   setSkillLevel: protectedProcedure
@@ -222,10 +284,12 @@ export const simsRouter = router({
       if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
       if (input.level > skill.maxLevel)
         throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
-      return ctx.db.simSkill.update({
+      const result = await ctx.db.simSkill.update({
         where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
         data: { level: input.level },
       })
+      await recomputeLegacyTrackers(ctx.db, sim.legacyId)
+      return result
     }),
 
   removeSkill: protectedProcedure
@@ -338,5 +402,50 @@ export const simsRouter = router({
       return ctx.db.socialRelationship.delete({
         where: { simAId_simBId: { simAId: normalA, simBId: normalB } },
       })
+    }),
+
+  completeAspiration: protectedProcedure
+    .input(z.object({ simId: z.string(), aspirationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({
+        where: { id: input.simId, legacy: { userId } },
+        select: { id: true, legacyId: true },
+      })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+
+      const record = await ctx.db.simAspiration.findUnique({
+        where: { simId_aspirationId: { simId: input.simId, aspirationId: input.aspirationId } },
+      })
+      if (!record) throw new TRPCError({ code: 'NOT_FOUND', message: 'Aspiration not found on this sim' })
+      if (record.completedAt) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aspiration already completed' })
+
+      await ctx.db.simAspiration.update({
+        where: { simId_aspirationId: { simId: input.simId, aspirationId: input.aspirationId } },
+        data: { completedAt: new Date() },
+      })
+      void recomputeLegacyTrackers(ctx.db, sim.legacyId)
+    }),
+
+  endCareer: protectedProcedure
+    .input(z.object({ simId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const sim = await ctx.db.sim.findFirst({
+        where: { id: input.simId, legacy: { userId } },
+        select: { id: true, legacyId: true },
+      })
+      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+
+      const activeCareer = await ctx.db.simCareer.findFirst({
+        where: { simId: input.simId, endedAt: null },
+      })
+      if (!activeCareer) throw new TRPCError({ code: 'NOT_FOUND', message: 'No active career to end' })
+
+      await ctx.db.simCareer.update({
+        where: { id: activeCareer.id },
+        data: { endedAt: new Date() },
+      })
+      void recomputeLegacyTrackers(ctx.db, sim.legacyId)
     }),
 })

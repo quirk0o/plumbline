@@ -74,3 +74,58 @@ export async function getAnyCareer() {
   if (!career) throw new Error('No careers found. Is the DB seeded?')
   return career
 }
+
+export async function createTestTrackerType(
+  overrides: { name?: string; valueKind?: 'BOOLEAN' | 'NUMERICAL' | 'THRESHOLD'; ownerId?: string } = {},
+) {
+  return db.trackerType.create({
+    data: {
+      name: overrides.name ?? `Test Tracker ${randomUUID()}`,
+      valueKind: overrides.valueKind ?? 'BOOLEAN',
+      configSchema: {},
+      isBuiltIn: false,
+      isPublic: false,
+      ownerId: overrides.ownerId ?? null,
+    },
+  })
+}
+
+export async function createTestChallenge(
+  ownerId: string,
+  overrides: { name?: string; isPublic?: boolean } = {},
+) {
+  return db.challenge.create({
+    data: {
+      name: overrides.name ?? `Test Challenge ${randomUUID()}`,
+      isPublic: overrides.isPublic ?? false,
+      ownerId,
+    },
+  })
+}
+
+export async function createTestChallengePhase(
+  challengeId: string,
+  overrides: { generationNumber?: number | null; title?: string } = {},
+) {
+  return db.challengePhase.create({
+    data: {
+      challengeId,
+      generationNumber: overrides.generationNumber ?? null,
+      title: overrides.title ?? 'Phase 1',
+      sortOrder: 0,
+    },
+  })
+}
+
+export async function createTestChallengeRun(
+  legacyId: string,
+  overrides: { name?: string; sourceChallengeId?: string } = {},
+) {
+  return db.challengeRun.create({
+    data: {
+      legacyId,
+      name: overrides.name ?? `Test Run ${randomUUID()}`,
+      sourceChallengeId: overrides.sourceChallengeId ?? null,
+    },
+  })
+}

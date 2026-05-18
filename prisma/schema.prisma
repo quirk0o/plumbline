@@ -113,6 +113,12 @@ enum RomanticStatus {
   WIDOWED
 }
 
+enum ValueKind {
+  BOOLEAN
+  NUMERICAL
+  THRESHOLD
+}
+
 model Pack {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -238,10 +244,12 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts  Account[]
-  sessions  Session[]
-  userPacks UserPack[]
-  legacies  Legacy[]
+  accounts     Account[]
+  sessions     Session[]
+  userPacks    UserPack[]
+  legacies     Legacy[]
+  trackerTypes TrackerType[] @relation("UserTrackerTypes")
+  challenges   Challenge[]   @relation("UserChallenges")
 
   @@map("users")
 }
@@ -309,10 +317,11 @@ model Legacy {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  founderSim Sim?        @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
-  households Household[]
-  sims       Sim[]       @relation("LegacyMember")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  founderSim    Sim?           @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
+  households    Household[]
+  sims          Sim[]          @relation("LegacyMember")
+  challengeRuns ChallengeRun[]
 
   @@unique([userId, slug])
   @@map("legacies")
@@ -347,6 +356,8 @@ model Sim {
   causeOfDeath      CauseOfDeath?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  generationNumber  Int?
+  isHeir            Boolean       @default(false)
 
   household            Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)
   legacy               Legacy                @relation("LegacyMember", fields: [legacyId], references: [id], onDelete: Cascade)
@@ -361,6 +372,7 @@ model Sim {
   socialRelationshipsA SocialRelationship[]  @relation("SocialA")
   socialRelationshipsB SocialRelationship[]  @relation("SocialB")
 
+  @@index([legacyId, generationNumber])
   @@map("sims")
 }
 
@@ -468,4 +480,150 @@ model SocialRelationship {
   @@unique([simAId, simBId])
   @@index([simBId])
   @@map("social_relationships")
+}
+
+model TrackerType {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  isBuiltIn       Boolean   @default(false)
+  isPublic        Boolean   @default(false)
+  ownerId         String?
+  computationSpec Json?
+  configSchema    Json      @default("{}")
+  goalSchema      Json?
+  valueKind       ValueKind
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  owner       User?                 @relation("UserTrackerTypes", fields: [ownerId], references: [id], onDelete: SetNull)
+  trackerDefs TrackerDefinition[]
+  runTrackers ChallengeRunTracker[]
+
+  @@index([ownerId])
+  @@map("tracker_types")
+}
+
+model Challenge {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  ownerId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner  User?            @relation("UserChallenges", fields: [ownerId], references: [id], onDelete: SetNull)
+  phases ChallengePhase[]
+  runs   ChallengeRun[]
+
+  @@index([ownerId])
+  @@map("challenges")
+}
+
+model ChallengePhase {
+  id               String   @id @default(cuid())
+  challengeId      String
+  generationNumber Int?
+  title            String?
+  description      String?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  challenge Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  trackers  TrackerDefinition[]
+
+  @@map("challenge_phases")
+}
+
+model TrackerDefinition {
+  id               String   @id @default(cuid())
+  challengePhaseId String
+  trackerTypeId    String
+  name             String
+  description      String?
+  config           Json     @default("{}")
+  goalConfig       Json?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  phase       ChallengePhase @relation(fields: [challengePhaseId], references: [id], onDelete: Cascade)
+  trackerType TrackerType    @relation(fields: [trackerTypeId], references: [id])
+
+  @@index([challengePhaseId])
+  @@index([trackerTypeId])
+  @@map("tracker_definitions")
+}
+
+model ChallengeRun {
+  id                String    @id @default(cuid())
+  legacyId          String
+  sourceChallengeId String?
+  name              String
+  description       String?
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  legacy          Legacy              @relation(fields: [legacyId], references: [id], onDelete: Cascade)
+  sourceChallenge Challenge?          @relation(fields: [sourceChallengeId], references: [id], onDelete: SetNull)
+  phases          ChallengeRunPhase[]
+
+  @@index([legacyId, completedAt])
+  @@map("challenge_runs")
+}
+
+model ChallengeRunPhase {
+  id               String   @id @default(cuid())
+  challengeRunId   String
+  generationNumber Int?
+  title            String?
+  description      String?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  run      ChallengeRun          @relation(fields: [challengeRunId], references: [id], onDelete: Cascade)
+  trackers ChallengeRunTracker[]
+
+  @@index([challengeRunId])
+  @@map("challenge_run_phases")
+}
+
+model ChallengeRunTracker {
+  id                  String   @id @default(cuid())
+  challengeRunPhaseId String
+  trackerTypeId       String
+  name                String
+  description         String?
+  config              Json     @default("{}")
+  goalConfig          Json?
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  phase       ChallengeRunPhase @relation(fields: [challengeRunPhaseId], references: [id], onDelete: Cascade)
+  trackerType TrackerType       @relation(fields: [trackerTypeId], references: [id])
+  progress    TrackerProgress?
+
+  @@index([challengeRunPhaseId])
+  @@index([trackerTypeId])
+  @@map("challenge_run_trackers")
+}
+
+model TrackerProgress {
+  id                    String    @id @default(cuid())
+  challengeRunTrackerId String    @unique
+  value                 Json?
+  completedAt           DateTime?
+  isManual              Boolean   @default(true)
+  evaluatedAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+
+  tracker ChallengeRunTracker @relation(fields: [challengeRunTrackerId], references: [id], onDelete: Cascade)
+
+  @@map("tracker_progress")
 }

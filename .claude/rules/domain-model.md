@@ -101,3 +101,25 @@ A 2024 update to the family tree system expanded support for in-law and step-rel
 Separately from family bonds, every pair of Sims has a social relationship tracking friendship and romance as independent numeric scores, as well as a categorical romantic status (None through to Married, Ex-Partner, or Widowed).
 
 The base game supports monogamy — one Married status at a time. The Romantic Boundaries system added in *High School Years* lets Sims configure individual jealousy tolerances, enabling functional polyamory without constant conflict, but does not create multiple simultaneous legal spouses.
+
+---
+
+## Challenges
+
+A **challenge** is a structured goal-tracking framework that players apply to a legacy. Well-known examples include the official Legacy Challenge and Rags to Riches. Challenges define a set of objectives — "max the Painting skill in generation 1", "have a Sim die by cowplant" — that players work toward across the generations of their dynasty.
+
+In SimsTrack, a challenge is a reusable template: it exists independently of any particular legacy and can be shared or used by any player. A challenge is organized into **phases**, each optionally tied to a generation number. Phases group related goals together — a founder's objectives live in a different phase from the heir's. A phase without a generation number holds goals that apply to the legacy as a whole rather than to a specific generation.
+
+Each phase contains **trackers** — individual goal items. A tracker records what the player is trying to achieve and, optionally, how SimsTrack should detect progress automatically. Trackers come in three flavors: **boolean** (either done or not), **numerical** (a measured quantity that must reach a target, such as simoleons earned), and **threshold** (a quantity that earns points at each milestone crossed, like wealth levels or collection sizes). The behavior of a tracker is defined by its **tracker type** — a reusable, shareable definition that specifies how to compute the tracker's value from the legacy's data and what configuration parameters the user provides when adding it to a challenge.
+
+When a player starts running a challenge against their legacy, SimsTrack creates a **challenge run** — a full, independent copy of the challenge template stamped at that moment. Phases and trackers in the run can then be tweaked without affecting the original template. A legacy may have multiple challenge runs active simultaneously, since players sometimes pursue several challenges in parallel.
+
+Progress on a tracker is either automatic or manual. **Automatic** trackers are evaluated by the application whenever a relevant sim event occurs — adding a skill level, completing an aspiration, ending a career, or updating a sim's status. **Manual** trackers require the player to enter the current value themselves. Both kinds record whether the tracker's goal has been met and, once met, the timestamp at which it was first completed.
+
+The total score of a challenge run is the sum of points across all its trackers: one point per met boolean goal, one point per met numerical goal, and one point per threshold milestone crossed. Phase and run completion are derived at query time rather than stored — a phase is complete when all its trackers are complete, and a run is complete when all its phases are, or when the player explicitly marks it done.
+
+### Generation number and heir
+
+Each Sim in a legacy carries a **generation number** — an integer recording which generation of the dynasty they belong to. The founding Sim is always generation 1. When a new Sim is created, SimsTrack derives their generation number from their parents: one more than the minimum generation number among their parents. This stored value avoids any need for tree traversal at query time.
+
+A Sim may also be marked as the **heir** — the individual carrying the legacy forward into the next generation. Multiple Sims across different generations can each be an heir at the same time (one per generation). The heir flag is used by tracker computation to scope goals to the heir of a given generation.

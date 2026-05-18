@@ -7,8 +7,7 @@ import { IdentitySection } from './identity-section'
 import { TraitEditor } from './trait-editor'
 import { GoalsSection } from './goals-section'
 import { SkillEditor } from './skill-editor'
-import { FamilyEditor } from './family-editor'
-import { SocialEditor } from './social-editor'
+import { RelationshipsEditor } from './relationships-editor'
 import { DeathSection } from './death-section'
 import styles from './page.module.css'
 
@@ -57,42 +56,43 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
         <span aria-current="page">{sim.firstName} {sim.lastName}</span>
       </nav>
 
-      <IdentitySection sim={sim} />
+      <div className={styles.card}>
+        <IdentitySection sim={sim} />
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionLabel}>Personality Traits</h2>
-          <div className={styles.sectionLine} />
-        </div>
-        <TraitEditor sim={sim} traits={traits} />
-      </section>
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionLabel}>Personality Traits</h2>
+            <div className={styles.sectionLine} />
+          </div>
+          <TraitEditor sim={sim} traits={traits} />
+        </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionLabel}>Goals &amp; Career</h2>
-          <div className={styles.sectionLine} />
-        </div>
-        <GoalsSection sim={sim} aspirations={aspirations} careers={careers} />
-      </section>
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionLabel}>Goals &amp; Career</h2>
+            <div className={styles.sectionLine} />
+          </div>
+          <GoalsSection sim={sim} aspirations={aspirations} careers={careers} />
+        </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionLabel}>Skills</h2>
-          <div className={styles.sectionLine} />
-        </div>
-        <SkillEditor sim={sim} allSkills={skills} />
-      </section>
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionLabel}>Skills</h2>
+            <div className={styles.sectionLine} />
+          </div>
+          <SkillEditor sim={sim} allSkills={skills} />
+        </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionLabel}>Relationships</h2>
-          <div className={styles.sectionLine} />
-        </div>
-        <FamilyEditor sim={sim} slug={slug} legacySims={legacySims} />
-        <SocialEditor sim={sim} slug={slug} legacySims={legacySims} />
-      </section>
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionLabel}>Relationships</h2>
+            <div className={styles.sectionLine} />
+          </div>
+          <RelationshipsEditor sim={sim} slug={slug} legacySims={legacySims} />
+        </section>
 
-      <DeathSection simId={sim.id} initialCauseOfDeath={sim.causeOfDeath} />
+        <DeathSection simId={sim.id} initialCauseOfDeath={sim.causeOfDeath} />
+      </div>
     </div>
   )
 }

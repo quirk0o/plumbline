@@ -14,7 +14,7 @@ Gap analysis against the official Legacy Challenge confirmed the model covers th
 
 ### Sim
 - **`generationNumber: Int?`** — set at creation as `min(parent.generationNumber) + 1`. The founder sim is always generation `1`, set when the legacy is created. User-overridable. No recursive CTE needed — parent's value is already stored.
-- **`isHeir: Boolean @default(false)`** — marks the sim carrying the legacy forward. Multiple sims across generations can have `isHeir = true`. Supported as a simFilter keyword in computation specs.
+- **`isHeir: Boolean @default(false)`** — marks the sim carrying the legacy forward. Only one sim per generation per legacy may be heir at a time. When `isHeir = true` is set on a sim in generation N, any other sim with the same `generationNumber` in the same legacy is automatically cleared to `isHeir = false`. Supported as a simFilter keyword in computation specs.
 
 ---
 
@@ -97,15 +97,14 @@ Total challenge score = sum of points across all TrackerProgress rows for the ru
 
 ## Computation spec format
 
-Stored in `TrackerType.computationSpec`. Two shapes: **simple** and **compound**.
-
-### Simple spec
+Stored in `TrackerType.computationSpec`. There is a single unified shape for both simple and compound goals:
 
 ```json
 {
-  "source": "skills | aspirations | personalityTraits | careers | traits | sims",
   "simFilter": { "<simField>": "<literal> | $phase.generationNumber | $config.<key>" },
-  "dataFilter": { "<field>": "<literal> | $config.<key>" },
+  "conditions": [
+    { "source": "skills | aspirations | personalityTraits | careers | traits | sims", "dataFilter": { "<field>": "<literal> | $config.<key>" } }
+  ],
   "aggregation": {
     "op": "any | all | count | countUnique | sum",
     "field": "<field — required for countUnique and sum>"
@@ -114,25 +113,35 @@ Stored in `TrackerType.computationSpec`. Two shapes: **simple** and **compound**
 }
 ```
 
-When `source: "sims"`, `simFilter` sets scope (generation, isHeir, etc.) and `dataFilter` checks sim-level properties (occultType, causeOfDeath, gender, lifeStage).
+- `simFilter` scopes which sims are candidates (generation, isHeir, etc.)
+- Each entry in `conditions` checks one data source per sim
+- A sim "matches" if it satisfies **all** conditions — the same-sim constraint is structural, not a separate keyword
+- `aggregation` is applied across matching sims: `any` → at least one; `count` → how many; `countUnique` → distinct values of `field` across all scoped sims
 
-### Compound spec
-
-For goals requiring multiple conditions satisfied by the **same sim**:
-
+**Single-condition example** (one sim maxed a skill):
 ```json
 {
-  "compound": "AND",
-  "constraint": "sameSimId",
-  "conditions": [
-    { "source": "...", "simFilter": { ... }, "dataFilter": { ... }, "aggregation": { ... } },
-    { "source": "...", "simFilter": { ... }, "dataFilter": { ... }, "aggregation": { ... } }
-  ],
+  "simFilter": { "generationNumber": "$phase.generationNumber" },
+  "conditions": [{ "source": "skills", "dataFilter": { "skillId": "$config.skillId", "maxed": true } }],
+  "aggregation": { "op": "any" },
   "valueKind": "BOOLEAN"
 }
 ```
 
-Without `constraint: "sameSimId"`, each condition can be satisfied by different sims.
+**Multi-condition example** (one sim maxed cooking AND gourmet cooking):
+```json
+{
+  "simFilter": { "generationNumber": "$phase.generationNumber" },
+  "conditions": [
+    { "source": "skills", "dataFilter": { "skillId": "cooking", "maxed": true } },
+    { "source": "skills", "dataFilter": { "skillId": "gourmet-cooking", "maxed": true } }
+  ],
+  "aggregation": { "op": "any" },
+  "valueKind": "BOOLEAN"
+}
+```
+
+When `source: "sims"`, `simFilter` sets the broad scope and `dataFilter` checks additional sim-level properties (occultType, causeOfDeath, gender, lifeStage).
 
 ---
 
@@ -178,34 +187,34 @@ Irregular example (collection milestones at 3, 7, 13): `{ "thresholds": [3, 7, 1
 
 **Skill Maxed** — `BOOLEAN`, `configSchema: { skillId: string }`
 ```json
-{ "source": "skills", "simFilter": { "generationNumber": "$phase.generationNumber" }, "dataFilter": { "skillId": "$config.skillId", "maxed": true }, "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
+{ "simFilter": { "generationNumber": "$phase.generationNumber" }, "conditions": [{ "source": "skills", "dataFilter": { "skillId": "$config.skillId", "maxed": true } }], "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
 ```
 
 **Skill Level** — `BOOLEAN`, `configSchema: { skillId: string, targetLevel: number }`
 ```json
-{ "source": "skills", "simFilter": { "generationNumber": "$phase.generationNumber" }, "dataFilter": { "skillId": "$config.skillId", "minLevel": "$config.targetLevel" }, "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
+{ "simFilter": { "generationNumber": "$phase.generationNumber" }, "conditions": [{ "source": "skills", "dataFilter": { "skillId": "$config.skillId", "minLevel": "$config.targetLevel" } }], "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
 ```
 
 **Aspiration Completed** — `BOOLEAN`, `configSchema: { aspirationId: string }`
 ```json
-{ "source": "aspirations", "simFilter": { "generationNumber": "$phase.generationNumber" }, "dataFilter": { "aspirationId": "$config.aspirationId", "completed": true }, "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
+{ "simFilter": { "generationNumber": "$phase.generationNumber" }, "conditions": [{ "source": "aspirations", "dataFilter": { "aspirationId": "$config.aspirationId", "completed": true } }], "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
 ```
 
 **Career Completed** — `BOOLEAN`, `configSchema: { careerId: string }`
 ```json
-{ "source": "careers", "simFilter": { "generationNumber": "$phase.generationNumber" }, "dataFilter": { "careerId": "$config.careerId", "completed": true }, "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
+{ "simFilter": { "generationNumber": "$phase.generationNumber" }, "conditions": [{ "source": "careers", "dataFilter": { "careerId": "$config.careerId", "completed": true } }], "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
 ```
 
 **Sim Died By Cause** — `BOOLEAN`, `configSchema: { causeOfDeath: CauseOfDeath }`
 ```json
-{ "source": "sims", "simFilter": {}, "dataFilter": { "causeOfDeath": "$config.causeOfDeath" }, "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
+{ "simFilter": {}, "conditions": [{ "source": "sims", "dataFilter": { "causeOfDeath": "$config.causeOfDeath" } }], "aggregation": { "op": "any" }, "valueKind": "BOOLEAN" }
 ```
 
 **Count Unique Traits** — `NUMERICAL`, `configSchema: { category?: TraitCategory }`, `goalSchema: { goalValue: number, unit?: string }`
 ```json
-{ "source": "personalityTraits", "simFilter": { "generationNumber": "$phase.generationNumber" }, "dataFilter": { "category": "$config.category" }, "aggregation": { "op": "countUnique", "field": "personalityTraitId" }, "valueKind": "NUMERICAL" }
+{ "simFilter": { "generationNumber": "$phase.generationNumber" }, "conditions": [{ "source": "personalityTraits", "dataFilter": { "category": "$config.category" } }], "aggregation": { "op": "countUnique", "field": "personalityTraitId" }, "valueKind": "NUMERICAL" }
 ```
-`countUnique` counts distinct trait IDs across all sims in scope, not per-sim.
+`countUnique` counts distinct trait IDs across all sims in scope.
 
 **Manual Boolean** — `computationSpec: null`, `valueKind: BOOLEAN`, `configSchema: {}`
 

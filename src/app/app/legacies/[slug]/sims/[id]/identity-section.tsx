@@ -197,7 +197,6 @@ function InlineTextField({
           if (e.key === 'Enter') e.currentTarget.blur()
           if (e.key === 'Escape') { setCurrent(saved); e.currentTarget.blur() }
         }}
-        style={{ width: `${(Math.max(current.length, 3) * 1.2).toFixed(1)}ch` }}
       />
       {error && <span className={styles.inlineError}>{error}</span>}
     </span>

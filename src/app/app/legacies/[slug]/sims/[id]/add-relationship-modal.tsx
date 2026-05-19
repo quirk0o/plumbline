@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { FamilyRelationshipType, RomanticStatus } from '@prisma/client'
+import { Combobox } from '@/components/ui'
 import styles from './page.module.css'
 
 type SimMini = { id: string; firstName: string; lastName: string; imageUrl: string | null }
@@ -111,40 +112,43 @@ export function AddRelationshipModal({
         {tab === 'partner' ? (
           <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem' }}>
             Romantic status
-            <select
-              className={styles.editableChip}
+            <Combobox
               value={romanticStatus}
-              onChange={(e) => setRomanticStatus(e.target.value as RomanticStatus)}
+              onChange={(v) => setRomanticStatus(v as RomanticStatus)}
+              size="sm"
+              aria-label="Romantic status"
             >
               {ROMANTIC_STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{formatStatus(s)}</option>
+                <Combobox.Item key={s} value={s}>{formatStatus(s)}</Combobox.Item>
               ))}
-            </select>
+            </Combobox>
           </label>
         ) : (
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem' }}>
               Role
-              <select
-                className={styles.editableChip}
+              <Combobox
                 value={role}
-                onChange={(e) => setRole(e.target.value as 'parent' | 'child')}
+                onChange={(v) => setRole(v as 'parent' | 'child')}
+                size="sm"
+                aria-label="Role"
               >
-                <option value="parent">This sim is the parent</option>
-                <option value="child">This sim is the child</option>
-              </select>
+                <Combobox.Item value="parent">This sim is the parent</Combobox.Item>
+                <Combobox.Item value="child">This sim is the child</Combobox.Item>
+              </Combobox>
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem' }}>
               Relationship type
-              <select
-                className={styles.editableChip}
+              <Combobox
                 value={relType}
-                onChange={(e) => setRelType(e.target.value as FamilyRelationshipType)}
+                onChange={(v) => setRelType(v as FamilyRelationshipType)}
+                size="sm"
+                aria-label="Relationship type"
               >
-                <option value={FamilyRelationshipType.BIOLOGICAL}>Biological</option>
-                <option value={FamilyRelationshipType.ADOPTIVE}>Adoptive</option>
-                <option value={FamilyRelationshipType.STEP}>Step</option>
-              </select>
+                <Combobox.Item value={FamilyRelationshipType.BIOLOGICAL}>Biological</Combobox.Item>
+                <Combobox.Item value={FamilyRelationshipType.ADOPTIVE}>Adoptive</Combobox.Item>
+                <Combobox.Item value={FamilyRelationshipType.STEP}>Step</Combobox.Item>
+              </Combobox>
             </label>
           </div>
         )}

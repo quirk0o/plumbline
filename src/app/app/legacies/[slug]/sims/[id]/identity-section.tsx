@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Gender, LifeStage, OccultType } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import { ImageUpload } from '@/app/components/image-upload'
+import { Combobox } from '@/components/ui'
 import styles from './page.module.css'
 
 const GENDER_OPTIONS: Gender[] = [Gender.MALE, Gender.FEMALE, Gender.NON_BINARY]
@@ -54,6 +55,10 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
     return update.mutateAsync(fields)
   }
 
+  const [gender, setGender] = useState<Gender>(sim.gender as Gender)
+  const [lifeStage, setLifeStage] = useState<LifeStage>(sim.lifeStage as LifeStage)
+  const [occultType, setOccultType] = useState<OccultType | ''>((sim.occultType ?? '') as OccultType | '')
+
   return (
     <div className={styles.hero}>
       <PortraitUpload sim={sim} onSave={(imageUrl) => save({ id: sim.id, imageUrl })} />
@@ -75,41 +80,49 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
         <PronounEditor sim={sim} onSave={save} />
 
         <div className={styles.metaRow}>
-          <select
-            className={styles.editableChip}
-            defaultValue={sim.gender}
+          <Combobox
+            value={gender}
+            onChange={(v) => {
+              setGender(v as Gender)
+              save({ id: sim.id, gender: v as Gender })
+            }}
+            size="sm"
             aria-label="Gender"
-            onChange={(e) => save({ id: sim.id, gender: e.target.value as Gender })}
           >
             {GENDER_OPTIONS.map((g) => (
-              <option key={g} value={g}>{formatEnum(g)}</option>
+              <Combobox.Item key={g} value={g}>{formatEnum(g)}</Combobox.Item>
             ))}
-          </select>
+          </Combobox>
 
-          <select
-            className={styles.editableChip}
-            defaultValue={sim.lifeStage}
+          <Combobox
+            value={lifeStage}
+            onChange={(v) => {
+              setLifeStage(v as LifeStage)
+              save({ id: sim.id, lifeStage: v as LifeStage })
+            }}
+            size="sm"
             aria-label="Life stage"
-            onChange={(e) => save({ id: sim.id, lifeStage: e.target.value as LifeStage })}
           >
             {LIFE_STAGE_OPTIONS.map((s) => (
-              <option key={s} value={s}>{formatEnum(s)}</option>
+              <Combobox.Item key={s} value={s}>{formatEnum(s)}</Combobox.Item>
             ))}
-          </select>
+          </Combobox>
 
-          <select
-            className={styles.editableChip}
-            defaultValue={sim.occultType ?? ''}
+          <Combobox
+            value={occultType}
+            onChange={(v) => {
+              setOccultType(v as OccultType | '')
+              save({ id: sim.id, occultType: (v as OccultType) || null })
+            }}
+            size="sm"
             aria-label="Occult type"
-            onChange={(e) =>
-              save({ id: sim.id, occultType: (e.target.value as OccultType) || null })
-            }
+            placeholder="Human"
           >
-            <option value="">Human</option>
+            <Combobox.Item value="">Human</Combobox.Item>
             {OCCULT_OPTIONS.map((o) => (
-              <option key={o} value={o}>{formatEnum(o)}</option>
+              <Combobox.Item key={o} value={o}>{formatEnum(o)}</Combobox.Item>
             ))}
-          </select>
+          </Combobox>
         </div>
 
       </div>

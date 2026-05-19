@@ -2,7 +2,34 @@
 
 import { useState } from 'react'
 import { trpc } from '@/trpc/client'
+import { Combobox } from '@/components/ui'
 import styles from './page.module.css'
+
+function SkillPicker({
+  available,
+  onAdd,
+}: {
+  available: { id: string; name: string }[]
+  onAdd: (id: string) => void
+}) {
+  const [value, setValue] = useState('')
+  return (
+    <Combobox
+      value={value}
+      onChange={(v) => {
+        if (!v) return
+        onAdd(v)
+        setValue('')
+      }}
+      placeholder="+ Add skill"
+      aria-label="Add skill"
+    >
+      {available.map((s) => (
+        <Combobox.Item key={s.id} value={s.id}>{s.name}</Combobox.Item>
+      ))}
+    </Combobox>
+  )
+}
 
 interface SimProp {
   id: string
@@ -93,18 +120,9 @@ export function SkillEditor({
       </div>
 
       {available.length > 0 && (
-        <select
-          className={styles.addChip}
-          style={{ marginTop: '12px' }}
-          value=""
-          aria-label="Add skill"
-          onChange={(e) => { if (e.target.value) handleAdd(e.target.value) }}
-        >
-          <option value="">+ Add skill</option>
-          {available.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+        <div style={{ marginTop: '12px' }}>
+          <SkillPicker available={available} onAdd={handleAdd} />
+        </div>
       )}
     </div>
   )

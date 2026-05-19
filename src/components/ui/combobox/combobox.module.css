@@ -111,6 +111,7 @@
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   width: var(--radix-popover-trigger-width);
+  min-width: 200px;
   z-index: 50;
 }
 

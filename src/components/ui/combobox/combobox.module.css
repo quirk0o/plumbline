@@ -59,7 +59,7 @@
 /* Chip variant: pill-shaped, auto-width, transparent — for inline meta rows */
 .chip {
   width: auto;
-  padding: 3px 10px;
+  padding: 3px 1.75rem 3px 10px;
   border-radius: var(--radius-full);
   background: transparent;
   --_font-size: var(--text-base);

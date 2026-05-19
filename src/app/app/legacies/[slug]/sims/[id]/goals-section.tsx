@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { trpc } from '@/trpc/client'
+import { Combobox } from '@/components/ui'
 import styles from './page.module.css'
 
 interface SimProp {
@@ -22,6 +24,9 @@ export function GoalsSection({
   const currentAspiration = sim.aspirations[0]?.aspiration
   const currentCareer = sim.careers.find((c) => c.career)?.career
 
+  const [aspirationId, setAspirationId] = useState(currentAspiration?.id ?? '')
+  const [careerId, setCareerId] = useState(currentCareer?.id ?? '')
+
   const aspirationsByCategory = aspirations.reduce<Record<string, typeof aspirations>>((acc, a) => {
     ;(acc[a.category] ??= []).push(a)
     return acc
@@ -36,44 +41,46 @@ export function GoalsSection({
     <div className={styles.twoCol}>
       <div>
         <span className={styles.fieldLabel}>Aspiration</span>
-        <select
-          className={styles.goalSelect}
-          defaultValue={currentAspiration?.id ?? ''}
+        <Combobox
+          value={aspirationId}
+          onChange={(v) => {
+            setAspirationId(v)
+            update.mutate({ id: sim.id, aspirationId: v || null })
+          }}
+          placeholder="None"
           aria-label="Aspiration"
-          onChange={(e) =>
-            update.mutate({ id: sim.id, aspirationId: e.target.value || null })
-          }
         >
-          <option value="">None</option>
+          <Combobox.Item value="">None</Combobox.Item>
           {Object.entries(aspirationsByCategory).map(([cat, items]) => (
-            <optgroup key={cat} label={cat}>
+            <Combobox.Section key={cat} heading={cat}>
               {items.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
+                <Combobox.Item key={a.id} value={a.id}>{a.name}</Combobox.Item>
               ))}
-            </optgroup>
+            </Combobox.Section>
           ))}
-        </select>
+        </Combobox>
       </div>
 
       <div>
         <span className={styles.fieldLabel}>Career</span>
-        <select
-          className={styles.goalSelect}
-          defaultValue={currentCareer?.id ?? ''}
+        <Combobox
+          value={careerId}
+          onChange={(v) => {
+            setCareerId(v)
+            update.mutate({ id: sim.id, careerId: v || null })
+          }}
+          placeholder="None"
           aria-label="Career"
-          onChange={(e) =>
-            update.mutate({ id: sim.id, careerId: e.target.value || null })
-          }
         >
-          <option value="">None</option>
+          <Combobox.Item value="">None</Combobox.Item>
           {Object.entries(careersByType).map(([type, items]) => (
-            <optgroup key={type} label={type}>
+            <Combobox.Section key={type} heading={type}>
               {items.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <Combobox.Item key={c.id} value={c.id}>{c.name}</Combobox.Item>
               ))}
-            </optgroup>
+            </Combobox.Section>
           ))}
-        </select>
+        </Combobox>
       </div>
     </div>
   )

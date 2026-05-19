@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { trpc } from '@/trpc/client'
+import { Combobox } from '@/components/ui'
 import { AddRelationshipModal } from './add-relationship-modal'
 import styles from './page.module.css'
 
@@ -199,25 +200,18 @@ export function RelationshipsEditor({
               </div>
               <span className={styles.simCardName}>{rel.sim.firstName} {rel.sim.lastName}</span>
             </Link>
-            <select
-              className={styles.simCardSub}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                textAlign: 'center',
-                fontSize: '0.6875rem',
-                color: 'var(--text-muted)',
-              }}
-              value={rel.romanticStatus}
-              aria-label={`Romantic status with ${rel.sim.firstName}`}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => handleStatusChange(rel, e.target.value as RomanticStatus)}
-            >
-              {ROMANTIC_STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{formatStatus(s)}</option>
-              ))}
-            </select>
+            <div onClick={(e) => e.stopPropagation()}>
+              <Combobox
+                value={rel.romanticStatus}
+                onChange={(v) => handleStatusChange(rel, v as RomanticStatus)}
+                size="sm"
+                aria-label={`Romantic status with ${rel.sim.firstName}`}
+              >
+                {ROMANTIC_STATUS_OPTIONS.map((s) => (
+                  <Combobox.Item key={s} value={s}>{formatStatus(s)}</Combobox.Item>
+                ))}
+              </Combobox>
+            </div>
             <button
               className={styles.simCardRemove}
               aria-label={`Remove ${rel.sim.firstName}`}

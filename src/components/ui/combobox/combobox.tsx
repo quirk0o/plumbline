@@ -37,6 +37,7 @@ export type ComboboxProps = {
   placeholder?: string
   error?: boolean
   size?: 'sm' | 'base' | 'lg'
+  variant?: 'default' | 'chip'
   disabled?: boolean
   id?: string
   'aria-label'?: string
@@ -64,6 +65,7 @@ function ComboboxRoot({
   placeholder = 'Select…',
   error = false,
   size = 'base',
+  variant = 'default',
   disabled = false,
   id,
   'aria-label': ariaLabel,
@@ -103,7 +105,7 @@ function ComboboxRoot({
 
   const triggerClass = [
     styles.trigger,
-    size !== 'base' ? styles[size] : '',
+    variant === 'chip' ? styles.chip : size !== 'base' ? styles[size] : '',
     error ? styles.error : '',
   ]
     .filter(Boolean)

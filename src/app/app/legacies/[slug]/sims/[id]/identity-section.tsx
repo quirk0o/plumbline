@@ -86,7 +86,7 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
               setGender(v as Gender)
               save({ id: sim.id, gender: v as Gender })
             }}
-            size="sm"
+            variant="chip"
             aria-label="Gender"
           >
             {GENDER_OPTIONS.map((g) => (
@@ -100,7 +100,7 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
               setLifeStage(v as LifeStage)
               save({ id: sim.id, lifeStage: v as LifeStage })
             }}
-            size="sm"
+            variant="chip"
             aria-label="Life stage"
           >
             {LIFE_STAGE_OPTIONS.map((s) => (
@@ -114,7 +114,7 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
               setOccultType(v as OccultType | '')
               save({ id: sim.id, occultType: (v as OccultType) || null })
             }}
-            size="sm"
+            variant="chip"
             aria-label="Occult type"
             placeholder="Human"
           >

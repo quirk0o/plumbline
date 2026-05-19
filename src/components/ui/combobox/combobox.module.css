@@ -56,6 +56,20 @@
   --_padding-x: 1.25rem;
 }
 
+/* Chip variant: pill-shaped, auto-width, transparent — for inline meta rows */
+.chip {
+  width: auto;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  --_font-size: var(--text-base);
+}
+
+.chip:hover {
+  border-color: var(--green);
+  background: var(--bg-card);
+}
+
 .triggerValue {
   flex: 1;
   overflow: hidden;

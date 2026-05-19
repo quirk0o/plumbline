@@ -1,0 +1,201 @@
+/* src/components/ui/combobox/combobox.module.css */
+
+/* ── Trigger ─────────────────────────────────────────── */
+.trigger {
+  --_padding-y: 0.8125rem;
+  --_padding-x: 1rem;
+  --_font-size: var(--text-base);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: var(--_padding-y) 2.25rem var(--_padding-y) var(--_padding-x);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  font-family: var(--font-body);
+  font-size: var(--_font-size);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.trigger:focus-visible {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: var(--focus-ring);
+}
+
+.trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trigger.error {
+  border-color: var(--error);
+}
+
+.trigger.error:focus-visible {
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.2);
+}
+
+.sm {
+  --_padding-y: 0.5rem;
+  --_padding-x: 0.75rem;
+  --_font-size: var(--text-sm);
+}
+
+.lg {
+  --_padding-y: 1rem;
+  --_padding-x: 1.25rem;
+}
+
+.triggerValue {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.triggerPlaceholder {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-subtle);
+}
+
+.chevron {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  transition:
+    transform var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.chevronOpen {
+  transform: translateY(-50%) rotate(180deg);
+  color: var(--green);
+}
+
+/* ── Popover ─────────────────────────────────────────── */
+.popover {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  width: var(--radix-popover-trigger-width);
+  z-index: 50;
+}
+
+/* forceMount keeps content in DOM; hide it when closed via the HTML hidden attribute */
+.popover[hidden] {
+  display: none;
+}
+
+/* ── Search ──────────────────────────────────────────── */
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.searchIcon {
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text);
+}
+
+.searchInput::placeholder {
+  color: var(--text-subtle);
+}
+
+/* cmdk may wrap CommandInput in a div; if search styling looks wrong,
+   add: .searchInput input { all: unset; width: 100%; color: var(--text); } */
+
+.divider {
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── List ────────────────────────────────────────────── */
+.list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+/* cmdk group heading */
+.list [cmdk-group-heading] {
+  padding: 0.5rem 1rem 0.25rem;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* ── Item ────────────────────────────────────────────── */
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.item[data-selected='true'] {
+  font-weight: var(--weight-medium);
+}
+
+/* cmdk highlights the active (keyboard-focused) item */
+.item[aria-selected='true'] {
+  background: rgba(26, 92, 53, 0.08);
+  color: var(--green);
+}
+
+.item:hover {
+  background: rgba(26, 92, 53, 0.05);
+  color: var(--green);
+}
+
+.checkIcon {
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+/* ── Empty state ─────────────────────────────────────── */
+.empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+}

@@ -5,7 +5,7 @@ import { Gender, LifeStage, OccultType } from '@prisma/client'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, Controller } from 'react-hook-form'
-import { FormField, Input, Button, Select } from '@/components/ui'
+import { FormField, Input, Button, Combobox } from '@/components/ui'
 import { ImageUpload } from './image-upload'
 import { TraitPicker, type Trait } from './trait-picker'
 import styles from './sim-form.module.css'
@@ -213,39 +213,58 @@ export function SimForm({
               />
             </FormField>
 
-            <FormField label="Gender" htmlFor="gender" required error={formErrors.gender?.message}>
-              <Select
-                id="gender"
-                {...register('gender')}
-                error={!!formErrors.gender}
-              >
-                <option value="">Select gender</option>
-                <option value={Gender.FEMALE}>Female</option>
-                <option value={Gender.MALE}>Male</option>
-                <option value={Gender.NON_BINARY}>Non-Binary</option>
-              </Select>
-            </FormField>
+            <Controller
+              control={control}
+              name="gender"
+              render={({ field }) => (
+                <FormField label="Gender" htmlFor="gender" required error={formErrors.gender?.message}>
+                  <Combobox
+                    id="gender"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    placeholder="Select gender"
+                    error={!!formErrors.gender}
+                  >
+                    <Combobox.Item value={Gender.FEMALE}>Female</Combobox.Item>
+                    <Combobox.Item value={Gender.MALE}>Male</Combobox.Item>
+                    <Combobox.Item value={Gender.NON_BINARY}>Non-Binary</Combobox.Item>
+                  </Combobox>
+                </FormField>
+              )}
+            />
 
-            <FormField label="Life stage" htmlFor="lifeStage">
-              <Select id="lifeStage" {...register('lifeStage')}>
-                {LIFE_STAGES.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </Select>
-            </FormField>
+            <Controller
+              control={control}
+              name="lifeStage"
+              render={({ field }) => (
+                <FormField label="Life stage" htmlFor="lifeStage">
+                  <Combobox
+                    id="lifeStage"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    placeholder="Select…"
+                  >
+                    {LIFE_STAGES.map((s) => (
+                      <Combobox.Item key={s.value} value={s.value}>{s.label}</Combobox.Item>
+                    ))}
+                  </Combobox>
+                </FormField>
+              )}
+            />
 
             <div className={styles.pronounRow}>
               <FormField label="Pronouns" htmlFor="pronounPreset">
-                <Select
+                <Combobox
                   id="pronounPreset"
                   value={pronounPreset}
-                  onChange={(e) => handlePronounPreset(e.target.value)}
+                  onChange={handlePronounPreset}
+                  placeholder="— optional —"
                 >
-                  <option value="">— optional —</option>
+                  <Combobox.Item value="">— optional —</Combobox.Item>
                   {PRONOUN_PRESETS.map((p) => (
-                    <option key={p.label} value={p.label}>{p.label}</option>
+                    <Combobox.Item key={p.label} value={p.label}>{p.label}</Combobox.Item>
                   ))}
-                </Select>
+                </Combobox>
               </FormField>
             </div>
 
@@ -265,14 +284,25 @@ export function SimForm({
 
             <div className={styles.pronounRow}>
               <div className={styles.halfCol}>
-                <FormField label="Occult type" htmlFor="occultType">
-                  <Select id="occultType" {...register('occultType')}>
-                    <option value="">None</option>
-                    {OCCULT_TYPES.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </Select>
-                </FormField>
+                <Controller
+                  control={control}
+                  name="occultType"
+                  render={({ field }) => (
+                    <FormField label="Occult type" htmlFor="occultType">
+                      <Combobox
+                        id="occultType"
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                        placeholder="None"
+                      >
+                        <Combobox.Item value="">None</Combobox.Item>
+                        {OCCULT_TYPES.map((o) => (
+                          <Combobox.Item key={o.value} value={o.value}>{o.label}</Combobox.Item>
+                        ))}
+                      </Combobox>
+                    </FormField>
+                  )}
+                />
               </div>
             </div>
           </div>
@@ -285,27 +315,49 @@ export function SimForm({
           <div className={styles.sectionLine} />
         </div>
         <div className={styles.twoCol}>
-          <FormField label="Aspiration" htmlFor="aspiration">
-            <Select id="aspiration" {...register('aspirationId')}>
-              <option value="">None</option>
-              {Object.entries(groupedAspirations).map(([category, items]) => (
-                <optgroup key={category} label={category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}>
-                  {items.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </optgroup>
-              ))}
-            </Select>
-          </FormField>
+          <Controller
+            control={control}
+            name="aspirationId"
+            render={({ field }) => (
+              <FormField label="Aspiration" htmlFor="aspiration">
+                <Combobox
+                  id="aspiration"
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="None"
+                >
+                  <Combobox.Item value="">None</Combobox.Item>
+                  {Object.entries(groupedAspirations).map(([category, items]) => (
+                    <Combobox.Section key={category} heading={category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}>
+                      {items.map((a) => <Combobox.Item key={a.id} value={a.id}>{a.name}</Combobox.Item>)}
+                    </Combobox.Section>
+                  ))}
+                </Combobox>
+              </FormField>
+            )}
+          />
 
-          <FormField label="Career" htmlFor="career">
-            <Select id="career" {...register('careerId')}>
-              <option value="">Unemployed</option>
-              {Object.entries(groupedCareers).map(([type, items]) => (
-                <optgroup key={type} label={CAREER_TYPE_LABELS[type] ?? type}>
-                  {items.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </optgroup>
-              ))}
-            </Select>
-          </FormField>
+          <Controller
+            control={control}
+            name="careerId"
+            render={({ field }) => (
+              <FormField label="Career" htmlFor="career">
+                <Combobox
+                  id="career"
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="Unemployed"
+                >
+                  <Combobox.Item value="">Unemployed</Combobox.Item>
+                  {Object.entries(groupedCareers).map(([type, items]) => (
+                    <Combobox.Section key={type} heading={CAREER_TYPE_LABELS[type] ?? type}>
+                      {items.map((c) => <Combobox.Item key={c.id} value={c.id}>{c.name}</Combobox.Item>)}
+                    </Combobox.Section>
+                  ))}
+                </Combobox>
+              </FormField>
+            )}
+          />
         </div>
       </div>
 

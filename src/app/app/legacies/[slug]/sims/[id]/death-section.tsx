@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { CauseOfDeath } from '@prisma/client'
 import { trpc } from '@/trpc/client'
-import { Button } from '@/components/ui'
+import { Button, Combobox } from '@/components/ui'
 import styles from './page.module.css'
 
 const CAUSE_OF_DEATH_OPTIONS: CauseOfDeath[] = [
@@ -39,6 +39,7 @@ export function DeathSection({ simId, initialCauseOfDeath }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [pendingCause, setPendingCause] = useState<CauseOfDeath>(CauseOfDeath.OLD_AGE)
   const [editingCause, setEditingCause] = useState(false)
+  const [editCause, setEditCause] = useState<CauseOfDeath>(initialCauseOfDeath ?? CauseOfDeath.OLD_AGE)
 
   function handleConfirmDeath() {
     update.mutate(
@@ -88,15 +89,15 @@ export function DeathSection({ simId, initialCauseOfDeath }: Props) {
         <div className={styles.deathConfirm}>
           <p className={styles.deathConfirmTitle}>Mark as deceased</p>
           <span className={styles.fieldLabel}>Cause of death</span>
-          <select
-            className={styles.goalSelect}
+          <Combobox
             value={pendingCause}
-            onChange={(e) => setPendingCause(e.target.value as CauseOfDeath)}
+            onChange={(v) => setPendingCause(v as CauseOfDeath)}
+            aria-label="Cause of death"
           >
             {CAUSE_OF_DEATH_OPTIONS.map((c) => (
-              <option key={c} value={c}>{formatCause(c)}</option>
+              <Combobox.Item key={c} value={c}>{formatCause(c)}</Combobox.Item>
             ))}
-          </select>
+          </Combobox>
           <div className={styles.deathConfirmActions}>
             <Button
               type="button"
@@ -122,16 +123,18 @@ export function DeathSection({ simId, initialCauseOfDeath }: Props) {
           <div className={styles.deathCardMeta}>
             <span className={styles.fieldLabel}>Cause of death</span>
             {editingCause ? (
-              <select
-                className={styles.goalSelect}
-                defaultValue={causeOfDeath}
-                autoFocus
-                onChange={(e) => handleChangeCause(e.target.value as CauseOfDeath)}
+              <Combobox
+                value={editCause}
+                onChange={(v) => {
+                  setEditCause(v as CauseOfDeath)
+                  handleChangeCause(v as CauseOfDeath)
+                }}
+                aria-label="Cause of death"
               >
                 {CAUSE_OF_DEATH_OPTIONS.map((c) => (
-                  <option key={c} value={c}>{formatCause(c)}</option>
+                  <Combobox.Item key={c} value={c}>{formatCause(c)}</Combobox.Item>
                 ))}
-              </select>
+              </Combobox>
             ) : (
               <p className={styles.deathCardCause}>{formatCause(causeOfDeath)}</p>
             )}
@@ -139,7 +142,7 @@ export function DeathSection({ simId, initialCauseOfDeath }: Props) {
               <button
                 className={styles.deathCardLink}
                 type="button"
-                onClick={() => setEditingCause(true)}
+                onClick={() => { setEditCause(causeOfDeath!); setEditingCause(true) }}
               >
                 Change cause
               </button>

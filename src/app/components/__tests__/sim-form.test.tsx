@@ -30,6 +30,19 @@ function renderForm(props?: Partial<React.ComponentProps<typeof SimForm>>) {
   return { onSubmit }
 }
 
+/**
+ * Open a Combobox by clicking its trigger (found via aria label), then click
+ * the option with the given visible text.
+ */
+async function selectComboboxOption(
+  user: ReturnType<typeof userEvent.setup>,
+  triggerLabel: RegExp | string,
+  optionText: string,
+) {
+  await user.click(screen.getByLabelText(triggerLabel))
+  await user.click(screen.getByRole('option', { name: optionText }))
+}
+
 describe('SimForm', () => {
   it('renders identity fields and a submit button', () => {
     renderForm()
@@ -56,7 +69,7 @@ describe('SimForm', () => {
 
     await user.type(screen.getByLabelText(/first name/i), 'Alice ')
     await user.type(screen.getByLabelText(/last name/i), ' Smith')
-    await user.selectOptions(screen.getByLabelText(/gender/i), Gender.FEMALE)
+    await selectComboboxOption(user, /gender/i, 'Female')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
@@ -77,9 +90,9 @@ describe('SimForm', () => {
 
     await user.type(screen.getByLabelText(/first name/i), 'Bob')
     await user.type(screen.getByLabelText(/last name/i), 'Newbie')
-    await user.selectOptions(screen.getByLabelText(/gender/i), Gender.MALE)
-    await user.selectOptions(screen.getByLabelText(/aspiration/i), 'asp-1')
-    await user.selectOptions(screen.getByLabelText(/career/i), 'car-1')
+    await selectComboboxOption(user, /gender/i, 'Male')
+    await selectComboboxOption(user, /aspiration/i, 'Popularity')
+    await selectComboboxOption(user, /career/i, 'Journalist')
     await user.click(screen.getByRole('button', { name: 'Pick trait' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -101,7 +114,7 @@ describe('SimForm', () => {
     expect(screen.queryByLabelText(/object/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/possessive/i)).not.toBeInTheDocument()
 
-    await user.selectOptions(screen.getByLabelText(/pronouns/i), 'Custom')
+    await selectComboboxOption(user, /pronouns/i, 'Custom')
 
     expect(screen.getByLabelText(/subject/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/object/i)).toBeInTheDocument()
@@ -114,8 +127,8 @@ describe('SimForm', () => {
 
     await user.type(screen.getByLabelText(/first name/i), 'Zara')
     await user.type(screen.getByLabelText(/last name/i), 'Wells')
-    await user.selectOptions(screen.getByLabelText(/gender/i), Gender.FEMALE)
-    await user.selectOptions(screen.getByLabelText(/pronouns/i), 'She / Her / Hers')
+    await selectComboboxOption(user, /gender/i, 'Female')
+    await selectComboboxOption(user, /pronouns/i, 'She / Her / Hers')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
@@ -148,7 +161,8 @@ describe('SimForm', () => {
 
     expect(screen.getByLabelText<HTMLInputElement>(/first name/i).value).toBe('Eve')
     expect(screen.getByLabelText<HTMLInputElement>(/last name/i).value).toBe('Garden')
-    expect(screen.getByLabelText<HTMLSelectElement>(/life stage/i).value).toBe(LifeStage.ADULT)
+    // Combobox trigger shows the selected label as visible text
+    expect(screen.getByLabelText(/life stage/i)).toHaveTextContent('Adult')
   })
 
   it('renders a Back button when onBack is provided', () => {
@@ -175,7 +189,8 @@ describe('SimForm', () => {
         pronounPossessive: 'hers',
       },
     })
-    expect(screen.getByLabelText<HTMLSelectElement>(/pronouns/i).value).toBe('She / Her / Hers')
+    // Combobox trigger shows the selected label as visible text
+    expect(screen.getByLabelText(/pronouns/i)).toHaveTextContent('She / Her / Hers')
   })
 
   it('shows custom pronoun inputs immediately when defaultValues has non-preset pronouns', () => {

@@ -116,7 +116,7 @@ export function AddRelationshipModal({
                   </Combobox.Item>
                 ))}
                 <Combobox.Item value="__create__" textValue="Create new sim…">
-                  + Create new sim…
+                  <span style={{ color: 'var(--green)', fontWeight: 'var(--weight-semibold)' }}>+ Create new sim…</span>
                 </Combobox.Item>
               </Combobox>
 

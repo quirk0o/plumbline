@@ -61,6 +61,7 @@ export function RelationshipsEditor({
   slug: string
   legacySims: SimMini[]
 }) {
+  const legacyId = sim.legacyId
   const addFamily = trpc.sims.addFamilyRelationship.useMutation()
   const removeFamily = trpc.sims.removeFamilyRelationship.useMutation()
   const addSocial = trpc.sims.addSocialRelationship.useMutation()
@@ -106,28 +107,24 @@ export function RelationshipsEditor({
   const partnerAvailable = legacySims.filter((s) => !partnerLinkedIds.has(s.id))
   const familyAvailable = legacySims.filter((s) => !familyLinkedIds.has(s.id))
 
-  function handleAddPartner(pickedId: string, romanticStatus: RomanticStatus) {
-    const picked = legacySims.find((s) => s.id === pickedId)
-    if (!picked) return
-    const [a, b] = [sim.id, pickedId].sort()
+  function handleAddPartner(picked: SimMini, romanticStatus: RomanticStatus) {
+    const [a, b] = [sim.id, picked.id].sort()
     const rel: SocialRel = { sim: picked, romanticStatus, simAId: a, simBId: b }
     setPartners((prev) => [...prev, rel])
     addSocial.mutate(
       { simAId: a, simBId: b, romanticStatus },
-      { onError: () => setPartners((prev) => prev.filter((r) => r.sim.id !== pickedId)) },
+      { onError: () => setPartners((prev) => prev.filter((r) => r.sim.id !== picked.id)) },
     )
     setAdding(false)
   }
 
-  function handleAddFamily(pickedId: string, role: 'parent' | 'child', relType: FamilyRelationshipType) {
-    const picked = legacySims.find((s) => s.id === pickedId)
-    if (!picked) return
-    const parentId = role === 'parent' ? pickedId : sim.id
-    const childId = role === 'parent' ? sim.id : pickedId
+  function handleAddFamily(picked: SimMini, role: 'parent' | 'child', relType: FamilyRelationshipType) {
+    const parentId = role === 'parent' ? picked.id : sim.id
+    const childId = role === 'parent' ? sim.id : picked.id
     setMembers((prev) => [...prev, { sim: picked, relType, role, parentId, childId }])
     addFamily.mutate(
       { parentId, childId, type: relType },
-      { onError: () => setMembers((prev) => prev.filter((m) => m.sim.id !== pickedId)) },
+      { onError: () => setMembers((prev) => prev.filter((m) => m.sim.id !== picked.id)) },
     )
     setAdding(false)
   }
@@ -264,6 +261,7 @@ export function RelationshipsEditor({
 
       {adding && (
         <AddRelationshipModal
+          legacyId={legacyId}
           familyAvailable={familyAvailable}
           partnerAvailable={partnerAvailable}
           onAddFamily={handleAddFamily}

@@ -129,7 +129,7 @@ function ComboboxRoot({
             aria-haspopup="listbox"
             aria-expanded={open}
             aria-controls={open ? listboxId : undefined}
-            aria-label={ariaLabel ?? (selectedLabel ? undefined : placeholder)}
+            aria-label={selectedLabel ? undefined : (ariaLabel ?? placeholder)}
           >
             <span className={selectedLabel ? styles.triggerValue : styles.triggerPlaceholder}>
               {selectedLabel ?? placeholder}
@@ -147,6 +147,7 @@ function ComboboxRoot({
           </button>
         </Popover.Trigger>
 
+        <Popover.Portal forceMount>
           <Popover.Content
             forceMount
             hidden={!open}
@@ -187,6 +188,7 @@ function ComboboxRoot({
               </CommandList>
             </Command>
           </Popover.Content>
+        </Popover.Portal>
       </Popover.Root>
     </ComboboxContext.Provider>
   )

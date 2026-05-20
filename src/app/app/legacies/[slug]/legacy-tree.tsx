@@ -8,10 +8,18 @@ export function LegacyTree({ legacySlug }: Props) {
   const { data, isLoading, isError } = trpc.sims.getTreeData.useQuery({ legacySlug })
 
   if (isLoading) {
-    return <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>Loading tree…</p>
+    return (
+      <div role="status" aria-live="polite">
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>Loading tree…</p>
+      </div>
+    )
   }
   if (isError) {
-    return <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>Could not load family tree.</p>
+    return (
+      <div role="alert" aria-live="assertive">
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>Could not load family tree.</p>
+      </div>
+    )
   }
   if (!data || data.sims.length === 0) {
     return <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>No sims yet.</p>
@@ -24,6 +32,7 @@ export function LegacyTree({ legacySlug }: Props) {
       partnerEdges={data.partnerEdges}
       showMiniMap
       style={{ height: 500 }}
+      ariaLabel="Legacy family tree"
     />
   )
 }

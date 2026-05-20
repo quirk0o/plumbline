@@ -1031,6 +1031,52 @@ describe('sims.getTreeData', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
     await cleanupUser(otherUser.id)
   })
+
+  it('throws UNAUTHORIZED without a session', async () => {
+    const caller = unauthCaller()
+    await expect(
+      caller.sims.getTreeData({ legacySlug }),
+    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+  })
+
+  it('returns empty arrays for a legacy with no sims', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.sims.getTreeData({ legacySlug })
+    expect(result).toEqual({ sims: [], familyEdges: [], partnerEdges: [] })
+  })
+
+  it('does not return partner edges that cross legacy boundaries', async () => {
+    // Two users, each with their own legacy and a MARRIED pair
+    const userA = await createTestUser()
+    const userB = await createTestUser()
+    try {
+      const legacyA = await createTestLegacy(userA.id)
+      const legacyB = await createTestLegacy(userB.id)
+      const simA1 = await createTestSim(legacyA.id, { firstName: 'A1' })
+      const simA2 = await createTestSim(legacyA.id, { firstName: 'A2' })
+      const simB1 = await createTestSim(legacyB.id, { firstName: 'B1' })
+      const simB2 = await createTestSim(legacyB.id, { firstName: 'B2' })
+
+      // Legitimate edges within each legacy
+      const [a1, a2] = [simA1.id, simA2.id].sort()
+      await db.socialRelationship.create({
+        data: { simAId: a1, simBId: a2, romanticStatus: RomanticStatus.MARRIED, friendshipScore: 0, romanceScore: 0 },
+      })
+      const [b1, b2] = [simB1.id, simB2.id].sort()
+      await db.socialRelationship.create({
+        data: { simAId: b1, simBId: b2, romanticStatus: RomanticStatus.MARRIED, friendshipScore: 0, romanceScore: 0 },
+      })
+
+      const callerA = authedCaller(userA.id)
+      const result = await callerA.sims.getTreeData({ legacySlug: legacyA.slug })
+      const edgeIds = result.partnerEdges.flatMap((e) => [e.simAId, e.simBId])
+      expect(edgeIds).not.toContain(simB1.id)
+      expect(edgeIds).not.toContain(simB2.id)
+    } finally {
+      await cleanupUser(userA.id)
+      await cleanupUser(userB.id)
+    }
+  })
 })
 
 describe('sims.getMiniTreeData', () => {
@@ -1116,5 +1162,93 @@ describe('sims.getMiniTreeData', () => {
     const caller = authedCaller(userId)
     await expect(caller.sims.getMiniTreeData({ simId: otherSim.id })).rejects.toMatchObject({ code: 'NOT_FOUND' })
     await cleanupUser(otherUser.id)
+  })
+
+  it('throws UNAUTHORIZED without a session', async () => {
+    const sim = await createTestSim(legacyId, { firstName: 'Focused' })
+    const caller = unauthCaller()
+    await expect(caller.sims.getMiniTreeData({ simId: sim.id })).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+  })
+
+  it('includes an ADOPTIVE parent in sims and familyEdges', async () => {
+    const caller = authedCaller(userId)
+    const parent = await createTestSim(legacyId, { firstName: 'AdoptiveParent' })
+    const child = await createTestSim(legacyId, { firstName: 'AdoptedChild' })
+    await db.familyRelationship.create({
+      data: { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.ADOPTIVE },
+    })
+    const result = await caller.sims.getMiniTreeData({ simId: child.id })
+    expect(result.sims.map((s) => s.id)).toContain(parent.id)
+    expect(result.familyEdges).toContainEqual({ parentId: parent.id, childId: child.id })
+  })
+
+  it('does not include the great-grandparent (4-generation chain)', async () => {
+    const caller = authedCaller(userId)
+    const greatGrandparent = await createTestSim(legacyId, { firstName: 'GreatGrandparent' })
+    const grandparent = await createTestSim(legacyId, { firstName: 'Grandparent' })
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    const child = await createTestSim(legacyId, { firstName: 'Child' })
+    await db.familyRelationship.createMany({
+      data: [
+        { parentId: greatGrandparent.id, childId: grandparent.id, type: FamilyRelationshipType.BIOLOGICAL },
+        { parentId: grandparent.id, childId: parent.id, type: FamilyRelationshipType.BIOLOGICAL },
+        { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL },
+      ],
+    })
+    const result = await caller.sims.getMiniTreeData({ simId: child.id })
+    const ids = result.sims.map((s) => s.id)
+    expect(ids).toContain(child.id)
+    expect(ids).toContain(parent.id)
+    expect(ids).toContain(grandparent.id)
+    expect(ids).not.toContain(greatGrandparent.id)
+  })
+
+  it('includes EX_PARTNER in partnerEdges', async () => {
+    const caller = authedCaller(userId)
+    const focused = await createTestSim(legacyId, { firstName: 'Focused' })
+    const exPartner = await createTestSim(legacyId, { firstName: 'ExPartner' })
+    const [idA, idB] = [focused.id, exPartner.id].sort()
+    await db.socialRelationship.create({
+      data: {
+        simAId: idA,
+        simBId: idB,
+        romanticStatus: RomanticStatus.EX_PARTNER,
+        friendshipScore: 0,
+        romanceScore: 0,
+      },
+    })
+    const result = await caller.sims.getMiniTreeData({ simId: focused.id })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB })
+    expect(result.sims.map((s) => s.id)).toContain(exPartner.id)
+  })
+
+  it('does not include a partner sim from another legacy in the backfill', async () => {
+    // After the backfill fix, missingPartnerIds are scoped to the user's own legacies only.
+    // We manufacture the scenario by directly creating a cross-legacy social relationship
+    // between a sim in our legacy (simA) and a sim in another user's legacy (simB).
+    // The backfill query must not return simB.
+    const otherUser = await createTestUser()
+    try {
+      const otherLegacy = await createTestLegacy(otherUser.id)
+      const ourSim = await createTestSim(legacyId, { firstName: 'OurSim' })
+      const theirSim = await createTestSim(otherLegacy.id, { firstName: 'TheirSim' })
+
+      // Force-insert a cross-legacy social relationship directly (bypassing the tRPC guard)
+      const [idA, idB] = [ourSim.id, theirSim.id].sort()
+      await db.socialRelationship.create({
+        data: {
+          simAId: idA,
+          simBId: idB,
+          romanticStatus: RomanticStatus.MARRIED,
+          friendshipScore: 0,
+          romanceScore: 0,
+        },
+      })
+
+      const result = await authedCaller(userId).sims.getMiniTreeData({ simId: ourSim.id })
+      expect(result.sims.map((s) => s.id)).not.toContain(theirSim.id)
+    } finally {
+      await cleanupUser(otherUser.id)
+    }
   })
 })

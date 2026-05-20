@@ -17,6 +17,12 @@
   box-shadow: var(--shadow-sm);
 }
 
+.node:focus-visible {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-glow);
+  outline: none;
+}
+
 .focused {
   border-color: var(--green);
   border-width: 2.5px;
@@ -43,13 +49,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 14px;
+  color: var(--bg-card);
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
 .name {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text);
   text-align: center;
   overflow: hidden;

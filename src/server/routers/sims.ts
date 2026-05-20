@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
+import { Prisma, Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 import { recomputeLegacyTrackers } from '../lib/trackerComputation'
@@ -21,13 +21,11 @@ const imageUrlSchema = z
   )
   .optional()
 
-type MiniTreeSimData = {
-  id: string
-  firstName: string
-  lastName: string
-  imageUrl: string | null
-  generationNumber: number | null
-}
+const miniTreeSimSelect = {
+  id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
+} as const
+
+export type MiniTreeSimData = Prisma.SimGetPayload<{ select: typeof miniTreeSimSelect }>
 
 export const simsRouter = router({
   create: protectedProcedure
@@ -164,7 +162,7 @@ export const simsRouter = router({
     }),
 
   getTreeData: protectedProcedure
-    .input(z.object({ legacySlug: z.string() }))
+    .input(z.object({ legacySlug: z.string().min(1).max(100) }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const legacy = await ctx.db.legacy.findFirst({
@@ -172,75 +170,82 @@ export const simsRouter = router({
       })
       if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
 
-      const sims = await ctx.db.sim.findMany({
-        where: { legacyId: legacy.id },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          imageUrl: true,
-          generationNumber: true,
-        },
-      })
-
-      const familyEdges = await ctx.db.familyRelationship.findMany({
-        where: {
-          parent: { legacyId: legacy.id },
-          type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] },
-        },
-        select: { parentId: true, childId: true },
-      })
-
-      const partnerEdges = await ctx.db.socialRelationship.findMany({
-        where: {
-          OR: [
-            { simA: { legacyId: legacy.id } },
-            { simB: { legacyId: legacy.id } },
-          ],
-          romanticStatus: { not: RomanticStatus.NONE },
-        },
-        select: { simAId: true, simBId: true },
-      })
+      const [sims, familyEdges, partnerEdges] = await Promise.all([
+        ctx.db.sim.findMany({
+          where: { legacyId: legacy.id },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            imageUrl: true,
+            generationNumber: true,
+          },
+          orderBy: { id: 'asc' },
+        }),
+        ctx.db.familyRelationship.findMany({
+          where: {
+            parent: { legacyId: legacy.id },
+            child: { legacyId: legacy.id },
+            type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] },
+          },
+          select: { parentId: true, childId: true },
+          orderBy: { parentId: 'asc' },
+        }),
+        ctx.db.socialRelationship.findMany({
+          where: {
+            AND: [
+              { simA: { legacyId: legacy.id } },
+              { simB: { legacyId: legacy.id } },
+            ],
+            romanticStatus: { not: RomanticStatus.NONE },
+          },
+          select: { simAId: true, simBId: true },
+          orderBy: { simAId: 'asc' },
+        }),
+      ])
 
       return {
-        sims,
+        sims: sims.map((s) => ({ ...s, href: `/app/legacies/${input.legacySlug}/sims/${s.id}` })),
         familyEdges: familyEdges.map((e) => ({ parentId: e.parentId, childId: e.childId })),
         partnerEdges: partnerEdges.map((e) => ({ simAId: e.simAId, simBId: e.simBId })),
       }
     }),
 
   getMiniTreeData: protectedProcedure
-    .input(z.object({ simId: z.string() }))
+    .input(z.object({ simId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
 
       const focusedSim = await ctx.db.sim.findFirst({
         where: { id: input.simId, legacy: { userId } },
         select: {
-          id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
+          ...miniTreeSimSelect,
+          legacy: { select: { slug: true } },
           childOf: {
             where: { type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] } },
             select: {
               parentId: true,
               parent: {
                 select: {
-                  id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
+                  ...miniTreeSimSelect,
                   childOf: {
                     where: { type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] } },
                     select: {
                       parentId: true,
                       parent: {
-                        select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true },
+                        select: miniTreeSimSelect,
                       },
                     },
                   },
                   socialRelationshipsA: {
                     where: { romanticStatus: { not: RomanticStatus.NONE } },
                     select: { simAId: true, simBId: true },
+                    orderBy: { simAId: 'asc' },
                   },
                   socialRelationshipsB: {
                     where: { romanticStatus: { not: RomanticStatus.NONE } },
                     select: { simAId: true, simBId: true },
+                    orderBy: { simAId: 'asc' },
                   },
                 },
               },
@@ -250,37 +255,42 @@ export const simsRouter = router({
             where: { type: { in: [FamilyRelationshipType.BIOLOGICAL, FamilyRelationshipType.ADOPTIVE] } },
             select: {
               childId: true,
-              child: { select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true } },
+              child: { select: miniTreeSimSelect },
             },
           },
           socialRelationshipsA: {
             where: { romanticStatus: { not: RomanticStatus.NONE } },
             select: { simAId: true, simBId: true },
+            orderBy: { simAId: 'asc' },
           },
           socialRelationshipsB: {
             where: { romanticStatus: { not: RomanticStatus.NONE } },
             select: { simAId: true, simBId: true },
+            orderBy: { simAId: 'asc' },
           },
         },
       })
       if (!focusedSim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
 
-      const simMap = new Map<string, MiniTreeSimData>()
+      const legacySlug = focusedSim.legacy.slug
+
+      const simMap = new Map<string, MiniTreeSimData & { href: string }>()
       const familyEdgeSet = new Set<string>()
       const partnerEdgeSet = new Set<string>()
       const familyEdges: { parentId: string; childId: string }[] = []
       const partnerEdges: { simAId: string; simBId: string }[] = []
 
       function addSim(s: MiniTreeSimData) {
-        if (!simMap.has(s.id)) simMap.set(s.id, s)
+        if (!simMap.has(s.id)) simMap.set(s.id, { ...s, href: `/app/legacies/${legacySlug}/sims/${s.id}` })
       }
       function addFamilyEdge(parentId: string, childId: string) {
         const key = `${parentId}-${childId}`
         if (!familyEdgeSet.has(key)) { familyEdgeSet.add(key); familyEdges.push({ parentId, childId }) }
       }
       function addPartnerEdge(simAId: string, simBId: string) {
-        const key = [simAId, simBId].sort().join('-')
-        if (!partnerEdgeSet.has(key)) { partnerEdgeSet.add(key); partnerEdges.push({ simAId, simBId }) }
+        const [a, b] = [simAId, simBId].sort()
+        const key = `${a}-${b}`
+        if (!partnerEdgeSet.has(key)) { partnerEdgeSet.add(key); partnerEdges.push({ simAId: a, simBId: b }) }
       }
 
       addSim(focusedSim)
@@ -312,8 +322,9 @@ export const simsRouter = router({
       )]
       if (missingPartnerIds.length > 0) {
         const partnerSims = await ctx.db.sim.findMany({
-          where: { id: { in: missingPartnerIds } },
-          select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true },
+          where: { id: { in: missingPartnerIds }, legacy: { userId } },
+          select: miniTreeSimSelect,
+          orderBy: { id: 'asc' },
         })
         partnerSims.forEach(addSim)
       }

@@ -1,5 +1,5 @@
 'use client'
-import type { CSSProperties } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 import {
   ReactFlow,
   Background,
@@ -13,7 +13,7 @@ import { SimNode } from './SimNode'
 import { useTreeLayout } from './useTreeLayout'
 import type { TreeSim, FamilyEdge, PartnerEdge } from './tree-utils'
 
-const nodeTypes: NodeTypes = { simNode: SimNode as NodeTypes[string] }
+const nodeTypes = { simNode: SimNode } satisfies NodeTypes
 
 type FamilyTreeProps = {
   sims: TreeSim[]
@@ -22,6 +22,7 @@ type FamilyTreeProps = {
   focusSimId?: string
   showMiniMap?: boolean
   style?: CSSProperties
+  ariaLabel?: string
 }
 
 function FamilyTreeInner({
@@ -31,14 +32,16 @@ function FamilyTreeInner({
   focusSimId,
   showMiniMap,
   style,
+  ariaLabel,
 }: FamilyTreeProps) {
-  const simsWithFocus = focusSimId
-    ? sims.map((s) => ({ ...s, isFocused: s.id === focusSimId }))
-    : sims
+  const simsWithFocus = useMemo(
+    () => focusSimId ? sims.map((s) => ({ ...s, isFocused: s.id === focusSimId })) : sims,
+    [sims, focusSimId],
+  )
   const { nodes, edges } = useTreeLayout({ sims: simsWithFocus, familyEdges, partnerEdges })
 
   return (
-    <div style={{ height: 400, ...style }}>
+    <div style={{ height: 400, ...style }} aria-label={ariaLabel}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

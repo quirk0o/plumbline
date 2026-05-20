@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import type { TreeSim } from './tree-utils'
 import styles from './SimNode.module.css'
@@ -9,11 +9,10 @@ export type SimNodeType = Node<TreeSim, 'simNode'>
 
 export function SimNode({ data }: NodeProps<SimNodeType>) {
   const router = useRouter()
-  const params = useParams<{ slug: string }>()
-  const initials = `${data.firstName[0]}${data.lastName[0]}`
+  const initials = `${data.firstName[0] ?? ''}${data.lastName[0] ?? ''}`.toUpperCase() || '?'
 
   function handleClick() {
-    router.push(`/app/legacies/${params.slug}/sims/${data.id}`)
+    router.push(data.href)
   }
 
   return (

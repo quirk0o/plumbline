@@ -9,8 +9,10 @@ export type TreeSim = {
   firstName: string
   lastName: string
   imageUrl: string | null
+  /** Stored for display purposes; not used by Dagre for layout (Dagre derives rank from edges). */
   generationNumber: number | null
   isFocused?: boolean
+  href: string
 }
 
 export type FamilyEdge = {
@@ -31,10 +33,17 @@ export function buildDagreGraph(
   g.setGraph({ rankdir: 'TB', ranksep: 80, nodesep: 40 })
   g.setDefaultEdgeLabel(() => ({}))
 
+  const ids = new Set(sims.map((s) => s.id))
+
   for (const sim of sims) {
     g.setNode(sim.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
   }
-  for (const { parentId, childId } of familyEdges) {
+
+  const validFamilyEdges = familyEdges.filter(
+    ({ parentId, childId }) => ids.has(parentId) && ids.has(childId),
+  )
+
+  for (const { parentId, childId } of validFamilyEdges) {
     g.setEdge(parentId, childId)
   }
 
@@ -50,7 +59,7 @@ export function buildDagreGraph(
     }
   })
 
-  const edges: Edge[] = familyEdges.map(({ parentId, childId }) => ({
+  const edges: Edge[] = validFamilyEdges.map(({ parentId, childId }) => ({
     id: `family-${parentId}-${childId}`,
     source: parentId,
     target: childId,
@@ -62,11 +71,15 @@ export function buildDagreGraph(
 }
 
 export function buildPartnerEdges(partnerPairs: PartnerEdge[]): Edge[] {
-  return partnerPairs.map(({ simAId, simBId }) => ({
-    id: `partner-${simAId}-${simBId}`,
-    source: simAId,
-    target: simBId,
-    type: 'straight',
-    style: { stroke: 'var(--border)', strokeDasharray: '4 2' },
-  }))
+  return partnerPairs.map(({ simAId, simBId }) => {
+    const [lo, hi] = [simAId, simBId].sort()
+    const id = `partner-${lo}-${hi}`
+    return {
+      id,
+      source: simAId,
+      target: simBId,
+      type: 'straight',
+      style: { stroke: 'var(--border)', strokeDasharray: '4 2' },
+    }
+  })
 }

@@ -8,6 +8,7 @@ const makeSim = (id: string, gen: number): TreeSim => ({
   lastName: 'Goth',
   imageUrl: null,
   generationNumber: gen,
+  href: `/app/legacies/goth/sims/${id}`,
 })
 
 describe('buildDagreGraph', () => {

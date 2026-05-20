@@ -45,7 +45,7 @@ vi.mock('../trait-picker', () => ({
 
 describe('CreateSimModal', () => {
   it('shows loading state while queries are pending', () => {
-    vi.mocked(trpc.traits.getAll.useQuery).mockReturnValueOnce({ data: undefined, isLoading: true } as never)
+    vi.mocked(trpc.traits.getAll.useQuery).mockReturnValueOnce({ data: undefined, isLoading: true } as unknown as ReturnType<typeof trpc.traits.getAll.useQuery>)
     render(<CreateSimModal legacyId="leg-1" onCreated={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })

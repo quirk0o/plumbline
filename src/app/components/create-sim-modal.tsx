@@ -23,7 +23,7 @@ export function CreateSimModal({ legacyId, onCreated, onClose }: CreateSimModalP
 
   async function handleSubmit(data: SimFormData) {
     const sim = await createSim.mutateAsync({ legacyId, ...data })
-    onCreated({ id: sim.id, firstName: sim.firstName, lastName: sim.lastName, imageUrl: sim.imageUrl ?? null })
+    onCreated({ id: sim.id, firstName: sim.firstName, lastName: sim.lastName, imageUrl: sim.imageUrl })
   }
 
   return (

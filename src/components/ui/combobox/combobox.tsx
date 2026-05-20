@@ -179,7 +179,9 @@ function ComboboxRoot({
               <div className={styles.divider} aria-hidden="true" />
               <CommandList id={listboxId} className={styles.list} role="listbox">
                 {!hasMatch && (
-                  <div className={styles.empty} role="presentation">No results</div>
+                  <div className={styles.empty} role="status">
+                    {search ? `No results for "${search}"` : 'No results'}
+                  </div>
                 )}
                 {children}
               </CommandList>

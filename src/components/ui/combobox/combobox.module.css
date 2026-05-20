@@ -54,6 +54,7 @@
 .lg {
   --_padding-y: 1rem;
   --_padding-x: 1.25rem;
+  --_font-size: var(--text-base);
 }
 
 /* Chip variant: pill-shaped, auto-width, transparent — for inline meta rows */
@@ -70,6 +71,12 @@
   background: var(--bg-card);
 }
 
+.chip:focus-visible {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: var(--focus-ring);
+}
+
 .triggerValue {
   flex: 1;
   overflow: hidden;
@@ -83,7 +90,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-subtle);
+  color: var(--text-muted);
 }
 
 .chevron {
@@ -129,7 +136,7 @@
 }
 
 .searchIcon {
-  color: var(--text-subtle);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -144,7 +151,7 @@
 }
 
 .searchInput::placeholder {
-  color: var(--text-subtle);
+  color: var(--text-muted);
 }
 
 /* cmdk may wrap CommandInput in a div; if search styling looks wrong,
@@ -162,7 +169,7 @@
   padding: 0.25rem 0;
 }
 
-/* cmdk group heading */
+/* cmdk group heading — --text-subtle is correct here: uppercase metadata label */
 .list [cmdk-group-heading] {
   padding: 0.5rem 1rem 0.25rem;
   font-family: var(--font-body);
@@ -190,15 +197,13 @@
   font-weight: var(--weight-medium);
 }
 
-/* cmdk highlights the active (keyboard-focused) item */
+/* color-mix tracks --green token so the tint is correct in both light and dark mode */
 .item[aria-selected='true'] {
-  background: rgba(26, 92, 53, 0.08);
-  color: var(--green);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
 }
 
 .item:hover {
-  background: rgba(26, 92, 53, 0.05);
-  color: var(--green);
+  background: color-mix(in srgb, var(--green) 6%, transparent);
 }
 
 .checkIcon {
@@ -210,7 +215,7 @@
 .empty {
   padding: 1.5rem 1rem;
   text-align: center;
-  color: var(--text-subtle);
+  color: var(--text-muted);
   font-size: var(--text-sm);
   font-family: var(--font-body);
 }

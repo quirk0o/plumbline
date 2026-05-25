@@ -7,8 +7,12 @@
  * content (never hard-coded to the mock's 1000×460).
  */
 
-/** A sim as returned by `sims.getTreeData` (structural subset used for layout). */
-export type LineageTreeSim = {
+/**
+ * The structural subset of a sim that the layout math needs. The full sim
+ * type (with names, portraits, heir flags, etc.) lives in `lineage-tree.tsx`
+ * as `LineageTreeSim`; this lean shape keeps the pure layout decoupled.
+ */
+export type LayoutSim = {
   id: string
   generationNumber: number | null
 }
@@ -98,7 +102,7 @@ type Cluster = {
  *  4. The viewBox grows with content: width = widest row, height = row count.
  */
 export function computeLineageLayout(
-  sims: LineageTreeSim[],
+  sims: LayoutSim[],
   familyEdges: LineageFamilyEdge[],
   partnerEdges: LineagePartnerEdge[],
 ): LineageLayout {
@@ -121,7 +125,7 @@ export function computeLineageLayout(
     ? [...realGenerations, null]
     : [...realGenerations]
 
-  const simsByRow: LineageTreeSim[][] = rowGenerations.map((gen) =>
+  const simsByRow: LayoutSim[][] = rowGenerations.map((gen) =>
     sorted.filter((s) => s.generationNumber === gen),
   )
 
@@ -238,7 +242,7 @@ export function computeLineageLayout(
 function centerChildrenUnderParents(
   nodes: PositionedNode[],
   byId: Record<string, PositionedNode>,
-  simsByRow: LineageTreeSim[][],
+  simsByRow: LayoutSim[][],
   rowGenerations: (number | null)[],
   parentsOfChild: Map<string, string[]>,
   partnerOf: Map<string, string>,
@@ -275,7 +279,6 @@ function centerChildrenUnderParents(
         cluster.members.length === 2
           ? NODE_WIDTH * 2 + MARRIAGE_BOND_GAP
           : NODE_WIDTH
-      const currentCenter = cluster.minX + clusterWidth / 2
 
       const parentCenters: number[] = []
       for (const member of cluster.members) {
@@ -303,9 +306,6 @@ function centerChildrenUnderParents(
       // Only move rightward or to the centered spot; never collapse left of start.
       applyClusterShift(byId, cluster.members, newMinX - cluster.minX)
       leftBound = newMinX + clusterWidth
-
-      // currentCenter is unused beyond documentation of intent.
-      void currentCenter
     }
   }
 }

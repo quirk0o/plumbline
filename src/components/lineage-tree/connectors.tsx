@@ -41,8 +41,8 @@ type ParentChildLineProps = {
 }
 
 /**
- * A right-angle connector from the parents' bond midpoint (or a single parent's
- * medallion bottom) down to the top of the child's medallion.
+ * A right-angle connector from the parents' marriage-bond line down to the top
+ * of the child's medallion.
  */
 export function ParentChildLine({ parents, child }: ParentChildLineProps) {
   if (parents.length === 0) return null
@@ -50,8 +50,10 @@ export function ParentChildLine({ parents, child }: ParentChildLineProps) {
   // Source x: midpoint of parents' medallion centers.
   const sourceX =
     parents.reduce((sum, p) => sum + p.x + CREST_ANCHORS.cx, 0) / parents.length
-  // Source y: bottom of the highest parent's medallion (use medallion center +
-  // radius via the bottom anchor of the topmost parent row).
+  // Source y: the parents' marriage-bond line, which sits at the medallion
+  // vertical center (cy) — the bond is where children descend from. For a lone
+  // parent this starts at the medallion center and is occluded by the medallion
+  // until it exits below (connectors render beneath nodes).
   const topParentY = Math.min(...parents.map((p) => p.y))
   const sourceY = topParentY + CREST_ANCHORS.cy
 

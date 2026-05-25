@@ -87,7 +87,7 @@ export function LineageTree({
         const label = gen === null ? 'GEN —' : `GEN ${roman(gen)}`
         return (
           <g
-            key={`gen-${rowIndex}`}
+            key={`gen-${gen ?? 'null'}`}
             transform={`translate(8, ${rowY + NODE_HEIGHT / 2 - 30})`}
             aria-hidden="true"
           >

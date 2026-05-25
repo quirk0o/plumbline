@@ -3,13 +3,13 @@ import {
   computeLineageLayout,
   NODE_WIDTH,
   MARRIAGE_BOND_GAP,
-  type LineageTreeSim,
+  type LayoutSim,
   type LineageFamilyEdge,
   type LineagePartnerEdge,
 } from '../layout'
 
 // Fixture: 2 real generations + 1 null-generation sim, ≥1 couple, ≥1 parent-child link.
-const sims: LineageTreeSim[] = [
+const sims: LayoutSim[] = [
   { id: 'founder-a', generationNumber: 1 },
   { id: 'founder-b', generationNumber: 1 },
   { id: 'child-c', generationNumber: 2 },
@@ -72,5 +72,21 @@ describe('computeLineageLayout', () => {
     const result = computeLineageLayout([], [], [])
     expect(result.nodes).toHaveLength(0)
     expect(result.viewBox.width).toBeGreaterThan(0)
+  })
+
+  it('keeps nodes in the same row non-overlapping after centering', () => {
+    const { nodes } = computeLineageLayout(sims, familyEdges, partnerEdges)
+    const byRow = new Map<number, number[]>()
+    for (const n of nodes) {
+      const xs = byRow.get(n.y) ?? []
+      xs.push(n.x)
+      byRow.set(n.y, xs)
+    }
+    for (const xs of byRow.values()) {
+      const sorted = [...xs].sort((a, b) => a - b)
+      for (let i = 1; i < sorted.length; i++) {
+        expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(NODE_WIDTH)
+      }
+    }
   })
 })

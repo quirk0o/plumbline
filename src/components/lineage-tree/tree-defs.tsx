@@ -14,7 +14,6 @@ type TreeDefsProps = {
 export function treeDefIds(idPrefix: string) {
   return {
     plumbobGradient: `${idPrefix}-plumbob`,
-    liftShadow: `${idPrefix}-lift`,
   }
 }
 
@@ -27,10 +26,6 @@ export function TreeDefs({ idPrefix }: TreeDefsProps) {
         <stop offset="0%" stopColor="var(--green-bright)" />
         <stop offset="100%" stopColor="var(--green)" />
       </linearGradient>
-      {/* Gentle warm-tinted lift, never a heavy drop shadow (per brand). */}
-      <filter id={ids.liftShadow} x="-20%" y="-20%" width="140%" height="160%">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="var(--text)" floodOpacity="0.08" />
-      </filter>
     </defs>
   )
 }

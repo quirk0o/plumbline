@@ -49,7 +49,7 @@ function pickAspirationName(
   if (inProgress.length > 0) return inProgress[0].aspiration.name
 
   // Step 2 — most recently completed
-  const completed = [...aspirations]
+  const completed = aspirations
     .filter((a) => a.completedAt !== null)
     .sort(
       (a, b) =>
@@ -59,12 +59,9 @@ function pickAspirationName(
 
   if (completed.length > 0) return completed[0].aspiration.name
 
-  // Step 3 — first by createdAt (fallback, should be unreachable given
-  // steps 1 & 2 cover all cases; kept for exhaustiveness)
-  const byCreated = [...aspirations].sort(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-  )
-  return byCreated[0].aspiration.name
+  // A non-empty list is always covered by step 1 or step 2, so reaching
+  // here means no aspirations.
+  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -249,13 +246,6 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
       ? `${sim.firstName} ${sim.lastName} founds the legacy`
       : `${sim.firstName} ${sim.lastName} is born`
 
-    // Blurb: emit a short derived blurb only for the first sim of a new
-    // generation (gen > 1). Founder gets no blurb (it's self-evident).
-    // We can't know "first of gen" cheaply without sorting all sims here, so
-    // we keep it simple: null for founder, null for all births. The renderer
-    // can add its own copy if desired. (YAGNI — no fabricated places/dates.)
-    const blurb: string | null = null
-
     return {
       milestone: {
         id: `birth-${sim.id}`,
@@ -263,7 +253,8 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
         gen: sim.generationNumber,
         simIds: [sim.id],
         title,
-        blurb,
+        // No derived blurb: we never fabricate places, dates, or events.
+        blurb: null,
         userAuthored: false as const,
       },
       sortKey: sim.createdAt.getTime(),
@@ -283,14 +274,19 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
     if (seenPairs.has(pairKey)) continue
     seenPairs.add(pairKey)
 
-    const simA = simMap.get(rel.simAId)
-    const simB = simMap.get(rel.simBId)
+    // Resolve partners by the canonical (sorted) ids so the title, simIds,
+    // and id are all deterministic regardless of which row order won de-dup.
+    const simA = simMap.get(idA)
+    const simB = simMap.get(idB)
 
-    // Resolve names for the title; fall back gracefully if a sim is missing
-    const aFirst = simA?.firstName ?? 'Unknown'
-    const aLast = simA?.lastName ?? ''
-    const bFirst = simB?.firstName ?? 'Unknown'
-    const bLast = simB?.lastName ?? ''
+    // Names for the title; fall back gracefully if a partner is missing, and
+    // drop empty segments so an empty lastName never produces a double space.
+    const aName = [simA?.firstName ?? 'Unknown', simA?.lastName ?? '']
+      .filter(Boolean)
+      .join(' ')
+    const bName = [simB?.firstName ?? 'Unknown', simB?.lastName ?? '']
+      .filter(Boolean)
+      .join(' ')
 
     // Marriage gen = min of non-null generation numbers of the two partners
     const gens = [simA?.generationNumber, simB?.generationNumber].filter(
@@ -306,8 +302,8 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
         id: `marriage-${idA}-${idB}`,
         kind: 'Marriage',
         gen,
-        simIds: [rel.simAId, rel.simBId],
-        title: `${aFirst} ${aLast} marries ${bFirst} ${bLast}`,
+        simIds: [idA, idB],
+        title: `${aName} marries ${bName}`,
         blurb: null,
         userAuthored: false as const,
       },

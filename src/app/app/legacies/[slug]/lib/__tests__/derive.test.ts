@@ -421,6 +421,52 @@ describe('deriveMilestones', () => {
   it('userAuthored is always false', () => {
     milestones.forEach((m) => expect(m.userAuthored).toBe(false))
   })
+
+  it('handles a marriage to a sim outside the legacy without crashing or double-spacing', () => {
+    const PRESENT = 'sim-present'
+    const MISSING = 'sim-missing'
+    const legacy: FetchedLegacy = {
+      id: 'legacy-x',
+      name: 'Edge Legacy',
+      description: null,
+      founderSimId: PRESENT,
+      households: [],
+      sims: [
+        {
+          id: PRESENT,
+          firstName: 'Agatha',
+          lastName: 'Crumplebottom',
+          imageUrl: null,
+          generationNumber: 1,
+          isHeir: false,
+          lifeStage: 'ELDER',
+          createdAt: d('01'),
+          aspirations: [],
+        },
+      ],
+      socialRelationships: [
+        {
+          id: 'rel-x',
+          simAId: PRESENT,
+          simBId: MISSING,
+          romanticStatus: 'MARRIED',
+          createdAt: d('02'),
+        },
+      ],
+    }
+
+    const result = deriveMilestones(legacy)
+    const marriage = result.find((m) => m.kind === 'Marriage')
+    expect(marriage).toBeDefined()
+    // simIds + id use the canonical sorted pair, regardless of input order.
+    const [idA, idB] = [PRESENT, MISSING].sort()
+    expect(marriage!.simIds).toEqual([idA, idB])
+    expect(marriage!.id).toBe(`marriage-${idA}-${idB}`)
+    // The missing partner renders as "Unknown"; no doubled spaces anywhere.
+    expect(marriage!.title).toContain('Agatha Crumplebottom')
+    expect(marriage!.title).toContain('Unknown')
+    expect(marriage!.title).not.toMatch(/\s{2,}/)
+  })
 })
 
 // ---------------------------------------------------------------------------

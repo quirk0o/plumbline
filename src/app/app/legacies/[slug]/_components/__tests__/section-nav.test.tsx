@@ -48,6 +48,14 @@ function fireSectionVisible(id: string, ratio: number) {
   })
 }
 
+/** Fire the IO callback marking a section as having left the viewport. */
+function fireSectionExit(id: string) {
+  if (!ioCallback) throw new Error('IntersectionObserver callback not captured')
+  act(() => {
+    ioCallback!([{ target: { id } as Element, isIntersecting: false, intersectionRatio: 0 }])
+  })
+}
+
 describe('SectionNav', () => {
   let scrollToSpy: ReturnType<typeof vi.fn>
   let getByIdSpy: ReturnType<typeof vi.spyOn>
@@ -61,6 +69,12 @@ describe('SectionNav', () => {
     scrollToSpy = vi.fn()
     vi.stubGlobal('scrollTo', scrollToSpy)
     Object.defineProperty(window, 'scrollY', { value: 100, configurable: true })
+
+    // jsdom has no matchMedia; default to "motion allowed" (matches: false).
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: false } as MediaQueryList),
+    )
 
     // Map ids to stub elements with distinct getBoundingClientRect tops.
     const els: Record<string, HTMLElement> = {
@@ -112,6 +126,27 @@ describe('SectionNav', () => {
 
     // A new section with a higher ratio wins.
     fireSectionVisible('milestones', 0.95)
+    expect(screen.getByRole('button', { name: 'Milestones' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Succession' })).not.toHaveAttribute(
+      'aria-current',
+    )
+  })
+
+  it('transfers aria-current when the active section leaves and another enters', () => {
+    render(<SectionNav items={items} />)
+
+    fireSectionVisible('succession', 0.8)
+    expect(screen.getByRole('button', { name: 'Succession' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+
+    // Succession scrolls out (ratio 0) and milestones becomes the visible one.
+    fireSectionExit('succession')
+    fireSectionVisible('milestones', 0.4)
     expect(screen.getByRole('button', { name: 'Milestones' })).toHaveAttribute(
       'aria-current',
       'true',

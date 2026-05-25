@@ -30,6 +30,9 @@ export function SectionNav({ items }: SectionNavProps) {
   const ratios = useRef<Map<string, number>>(new Map())
 
   useEffect(() => {
+    // Reset accumulated ratios so a re-observe (e.g. items change) never keeps
+    // stale section ids that could win the highest-ratio comparison.
+    ratios.current.clear()
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -66,9 +69,12 @@ export function SectionNav({ items }: SectionNavProps) {
   function handleClick(id: string) {
     const el = document.getElementById(id)
     if (el) {
+      const prefersReduced = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      ).matches
       window.scrollTo({
         top: el.getBoundingClientRect().top + window.scrollY - 56,
-        behavior: 'smooth',
+        behavior: prefersReduced ? 'auto' : 'smooth',
       })
     }
   }

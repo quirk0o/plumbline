@@ -25,10 +25,11 @@
   background-size: 24px 24px;
 }
 
-/* SUCCESSION + MILESTONES — white card surface. */
+/* SUCCESSION + MILESTONES — parchment, matching the rest of the page.
+   (No white band: the page should never read as pure white.) */
 .cardSection {
   padding: 40px 64px;
-  background: var(--bg-card);
+  background: var(--bg);
 }
 
 /* ROSTER — parchment base again, with extra bottom breathing room. */

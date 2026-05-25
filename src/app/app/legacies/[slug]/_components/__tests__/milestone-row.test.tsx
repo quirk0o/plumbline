@@ -10,6 +10,19 @@ vi.mock('next/image', () => ({
   ),
 }))
 
+vi.mock('next/link', () => ({
+  default: (props: {
+    href: string
+    children: React.ReactNode
+    className?: string
+    'aria-label'?: string
+  }) => (
+    <a href={props.href} className={props.className} aria-label={props['aria-label']}>
+      {props.children}
+    </a>
+  ),
+}))
+
 // Mock Plumbob so we can assert its presence by a testid without
 // needing to render the real CSS-triangle component in jsdom.
 vi.mock('@/components/plumbob', () => ({
@@ -59,32 +72,32 @@ const derivedMilestone: Milestone = {
 
 describe('MilestoneRow', () => {
   it('renders a Plumbob marker for a derived (userAuthored: false) row', () => {
-    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} />)
+    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} slug="caliente" />)
     expect(screen.getByTestId('plumbob')).toBeInTheDocument()
   })
 
   it('does not render the authored marker for a derived row', () => {
-    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} />)
+    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} slug="caliente" />)
     expect(
       screen.queryByTestId('milestone-authored-marker'),
     ).not.toBeInTheDocument()
   })
 
   it('renders the milestone title', () => {
-    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} />)
+    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} slug="caliente" />)
     expect(
       screen.getByText('Dina arrives in Willow Creek'),
     ).toBeInTheDocument()
   })
 
   it('renders the blurb when provided', () => {
-    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} />)
+    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} slug="caliente" />)
     expect(screen.getByText('The legacy begins.')).toBeInTheDocument()
   })
 
   it('hides the blurb line when blurb is null', () => {
     const noBlurb: Milestone = { ...derivedMilestone, blurb: null }
-    render(<MilestoneRow milestone={noBlurb} simsById={simsById} />)
+    render(<MilestoneRow milestone={noBlurb} simsById={simsById} slug="caliente" />)
     expect(screen.queryByText('The legacy begins.')).not.toBeInTheDocument()
   })
 
@@ -93,7 +106,7 @@ describe('MilestoneRow', () => {
       ...derivedMilestone,
       simIds: ['dina', 'unknown-sim'],
     }
-    render(<MilestoneRow milestone={withUnknown} simsById={simsById} />)
+    render(<MilestoneRow milestone={withUnknown} simsById={simsById} slug="caliente" />)
     // Only Dina's avatar should appear; unknown-sim has no portrait
     // imageUrl is null → monogram rendered instead
     const initials = screen.queryAllByText('DC')
@@ -107,19 +120,19 @@ describe('MilestoneRow', () => {
       kind: 'Marriage',
       simIds: ['dina', 'reed'],
     }
-    render(<MilestoneRow milestone={twoSims} simsById={simsById} />)
+    render(<MilestoneRow milestone={twoSims} simsById={simsById} slug="caliente" />)
     expect(screen.getByText('DC')).toBeInTheDocument()
     expect(screen.getByText('RC')).toBeInTheDocument()
   })
 
   it('renders the generation label when gen is non-null', () => {
-    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} />)
+    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} slug="caliente" />)
     expect(screen.getByText('Gen I')).toBeInTheDocument()
   })
 
   it('omits the generation label when gen is null', () => {
     const noGen: Milestone = { ...derivedMilestone, gen: null }
-    render(<MilestoneRow milestone={noGen} simsById={simsById} />)
+    render(<MilestoneRow milestone={noGen} simsById={simsById} slug="caliente" />)
     expect(screen.queryByText(/Gen /)).not.toBeInTheDocument()
   })
 })

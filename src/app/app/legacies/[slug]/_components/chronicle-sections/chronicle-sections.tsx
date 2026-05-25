@@ -52,6 +52,7 @@ export function ChronicleSections({
           <Hero
             name={name}
             description={description}
+            slug={slug}
             stats={stats}
             founder={founder}
             currentHeir={currentHeir}
@@ -66,7 +67,7 @@ export function ChronicleSections({
         className={styles.cardSection}
       >
         <div className={styles.inner}>
-          <Succession steps={succession} />
+          <Succession steps={succession} slug={slug} />
         </div>
       </section>
 
@@ -76,7 +77,7 @@ export function ChronicleSections({
         className={styles.cardSection}
       >
         <div className={styles.inner}>
-          <Milestones milestones={milestones} simsById={simsById} />
+          <Milestones milestones={milestones} simsById={simsById} slug={slug} />
         </div>
       </section>
 

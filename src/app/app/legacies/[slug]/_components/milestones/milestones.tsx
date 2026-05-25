@@ -6,9 +6,10 @@ import styles from './milestones.module.css'
 export interface MilestonesProps {
   milestones: Milestone[]
   simsById: Record<string, ChronicleSim>
+  slug: string
 }
 
-export function Milestones({ milestones, simsById }: MilestonesProps) {
+export function Milestones({ milestones, simsById, slug }: MilestonesProps) {
   return (
     <div className={styles.container}>
       <SectionHeading
@@ -26,6 +27,7 @@ export function Milestones({ milestones, simsById }: MilestonesProps) {
               key={milestone.id}
               milestone={milestone}
               simsById={simsById}
+              slug={slug}
             />
           ))}
         </ul>

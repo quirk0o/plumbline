@@ -1,9 +1,4 @@
-import {
-  Breadcrumb,
-  Eyebrow,
-  StatBlock,
-  PortraitAvatar,
-} from '@/components/ui'
+import { Eyebrow, StatBlock, PortraitAvatar } from '@/components/ui'
 import { roman } from '@/lib/legacy-format'
 import type { ChronicleSim, LegacyStats } from '../../lib/types'
 import { splitLegacyName } from '../../lib/legacy-title'
@@ -17,9 +12,10 @@ interface NowThenColumnProps {
   label: string
   sim: ChronicleSim
   ring: 'founder' | 'heir'
+  href: string
 }
 
-function NowThenColumn({ label, sim, ring }: NowThenColumnProps) {
+function NowThenColumn({ label, sim, ring, href }: NowThenColumnProps) {
   return (
     <div className={styles.nowThenColumn}>
       <Eyebrow color={ring === 'heir' ? 'var(--color-amber-700)' : undefined}>
@@ -31,6 +27,7 @@ function NowThenColumn({ label, sim, ring }: NowThenColumnProps) {
         lastName={sim.lastName}
         size={96}
         ring={ring}
+        href={href}
       />
       <div className={styles.nowThenNameBlock}>
         <span className={styles.nowThenName}>
@@ -51,6 +48,7 @@ function NowThenColumn({ label, sim, ring }: NowThenColumnProps) {
 export interface HeroProps {
   name: string
   description: string | null
+  slug: string
   stats: LegacyStats
   founder: ChronicleSim | null
   currentHeir: ChronicleSim | null
@@ -75,6 +73,7 @@ function LegacyTitle({ name }: { name: string }) {
 export function Hero({
   name,
   description,
+  slug,
   stats,
   founder,
   currentHeir,
@@ -86,10 +85,6 @@ export function Hero({
     <div className={styles.grid}>
       {/* LEFT — chronicle info */}
       <div className={styles.left}>
-        <Breadcrumb
-          items={[{ label: 'Dashboard', href: '/app' }, { label: name }]}
-          className={styles.breadcrumb}
-        />
         <Eyebrow>Legacy · Chronicle</Eyebrow>
         <LegacyTitle name={name} />
         {description && <p className={styles.blurb}>{description}</p>}
@@ -122,6 +117,7 @@ export function Hero({
                 }
                 sim={founder}
                 ring="founder"
+                href={`/app/legacies/${slug}/sims/${founder.id}`}
               />
             )}
             {founder && currentHeir && (
@@ -136,6 +132,7 @@ export function Hero({
                 }
                 sim={currentHeir}
                 ring="heir"
+                href={`/app/legacies/${slug}/sims/${currentHeir.id}`}
               />
             )}
           </div>

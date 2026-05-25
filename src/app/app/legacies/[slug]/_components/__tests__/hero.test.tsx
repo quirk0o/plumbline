@@ -64,6 +64,7 @@ describe('Hero', () => {
         name="The Caliente Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={null}
       />,
@@ -83,6 +84,7 @@ describe('Hero', () => {
         name="The Caliente Chronicle"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={null}
       />,
@@ -98,6 +100,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={null}
       />,
@@ -114,6 +117,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={null}
       />,
@@ -127,6 +131,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={founder}
         currentHeir={null}
       />,
@@ -141,6 +146,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={heir}
       />,
@@ -155,6 +161,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={{ ...heir, generationNumber: null }}
       />,
@@ -169,6 +176,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={null}
         treeSlot={<button>View family tree</button>}
@@ -185,6 +193,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description="A great family story."
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={null}
       />,
@@ -196,6 +205,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={null}
         currentHeir={null}
       />,
@@ -211,6 +221,7 @@ describe('Hero', () => {
         name="Test Legacy"
         description={null}
         stats={stats}
+        slug="caliente"
         founder={founder}
         currentHeir={heir}
       />,

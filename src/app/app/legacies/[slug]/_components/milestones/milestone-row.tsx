@@ -9,9 +9,10 @@ import styles from './milestone-row.module.css'
 export interface MilestoneRowProps {
   milestone: Milestone
   simsById: Record<string, ChronicleSim>
+  slug: string
 }
 
-export function MilestoneRow({ milestone, simsById }: MilestoneRowProps) {
+export function MilestoneRow({ milestone, simsById, slug }: MilestoneRowProps) {
   const { kind, gen, title, blurb, userAuthored, simIds } = milestone
 
   // Resolve only the sim ids that exist in simsById
@@ -66,6 +67,7 @@ export function MilestoneRow({ milestone, simsById }: MilestoneRowProps) {
               lastName={sim.lastName}
               size={32}
               ring={ringFor(sim)}
+              href={`/app/legacies/${slug}/sims/${sim.id}`}
             />
           </div>
         ))}

@@ -9,6 +9,19 @@ vi.mock('next/image', () => ({
   ),
 }))
 
+vi.mock('next/link', () => ({
+  default: (props: {
+    href: string
+    children: React.ReactNode
+    className?: string
+    'aria-label'?: string
+  }) => (
+    <a href={props.href} className={props.className} aria-label={props['aria-label']}>
+      {props.children}
+    </a>
+  ),
+}))
+
 describe('PortraitAvatar', () => {
   it('renders monogram initials when imageUrl is null', () => {
     render(
@@ -46,5 +59,25 @@ describe('PortraitAvatar', () => {
     )
     const avatar = container.firstChild as HTMLElement
     expect(avatar.style.boxShadow).toBe('')
+  })
+
+  it('renders a link to the sim when href is provided', () => {
+    render(
+      <PortraitAvatar
+        imageUrl={null}
+        firstName="Dina"
+        lastName="Caliente"
+        href="/app/legacies/caliente/sims/dina"
+      />
+    )
+    const link = screen.getByRole('link', { name: 'View Dina Caliente' })
+    expect(link).toHaveAttribute('href', '/app/legacies/caliente/sims/dina')
+    // The monogram still renders inside the link.
+    expect(screen.getByText('DC')).toBeInTheDocument()
+  })
+
+  it('does not render a link when href is absent', () => {
+    render(<PortraitAvatar imageUrl={null} firstName="Dina" lastName="Caliente" />)
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })

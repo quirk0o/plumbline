@@ -5,9 +5,10 @@ import styles from './succession.module.css'
 
 export interface SuccessionProps {
   steps: SuccessionStep[]
+  slug: string
 }
 
-export function Succession({ steps }: SuccessionProps) {
+export function Succession({ steps, slug }: SuccessionProps) {
   return (
     <div className={styles.container}>
       <SectionHeading
@@ -31,6 +32,7 @@ export function Succession({ steps }: SuccessionProps) {
                   lastName={step.sim.lastName}
                   size={72}
                   ring={ringFor(step.sim)}
+                  href={`/app/legacies/${slug}/sims/${step.sim.id}`}
                 />
                 <span className={styles.stepName}>
                   {step.sim.firstName} {step.sim.lastName}

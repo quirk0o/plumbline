@@ -1,3 +1,16 @@
+/* Linked variant — hugs the circular avatar, no extra box. */
+.link {
+  display: inline-flex;
+  line-height: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* Photo variant */
 .photoContainer {
   border-radius: 50%;

@@ -187,7 +187,9 @@ html {
 
 html, body {
   max-width: 100vw;
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) prevents horizontal scroll without establishing a
+     scroll container — `hidden` here silently breaks `position: sticky`. */
+  overflow-x: clip;
 }
 
 body {

@@ -10,6 +10,19 @@ vi.mock('next/image', () => ({
   ),
 }))
 
+vi.mock('next/link', () => ({
+  default: (props: {
+    href: string
+    children: React.ReactNode
+    className?: string
+    'aria-label'?: string
+  }) => (
+    <a href={props.href} className={props.className} aria-label={props['aria-label']}>
+      {props.children}
+    </a>
+  ),
+}))
+
 const founder: SuccessionStep = {
   sim: {
     id: 'dina',
@@ -46,33 +59,33 @@ const heir: SuccessionStep = {
 
 describe('Succession', () => {
   it('renders the empty-state sentence when steps is empty', () => {
-    render(<Succession steps={[]} />)
+    render(<Succession steps={[]} slug="caliente" />)
     expect(
       screen.getByText('No succession line yet — name an heir to begin.'),
     ).toBeInTheDocument()
   })
 
   it('does not render the empty state when steps are present', () => {
-    render(<Succession steps={[founder]} />)
+    render(<Succession steps={[founder]} slug="caliente" />)
     expect(
       screen.queryByText('No succession line yet — name an heir to begin.'),
     ).not.toBeInTheDocument()
   })
 
   it('renders one role label per step', () => {
-    render(<Succession steps={[founder, heir]} />)
+    render(<Succession steps={[founder, heir]} slug="caliente" />)
     expect(screen.getByText('Founder')).toBeInTheDocument()
     expect(screen.getByText('Heir designate')).toBeInTheDocument()
   })
 
   it('renders the sim names for each step', () => {
-    render(<Succession steps={[founder, heir]} />)
+    render(<Succession steps={[founder, heir]} slug="caliente" />)
     expect(screen.getByText('Dina Caliente')).toBeInTheDocument()
     expect(screen.getByText('Reed Caliente')).toBeInTheDocument()
   })
 
   it('renders the section heading', () => {
-    render(<Succession steps={[]} />)
+    render(<Succession steps={[]} slug="caliente" />)
     expect(
       screen.getByRole('heading', { name: 'Succession line' }),
     ).toBeInTheDocument()

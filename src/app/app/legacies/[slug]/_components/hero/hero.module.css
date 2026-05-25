@@ -15,10 +15,6 @@
   min-width: 0;
 }
 
-.breadcrumb {
-  margin-bottom: 32px;
-}
-
 .title {
   font-family: var(--font-display);
   font-size: 56px;

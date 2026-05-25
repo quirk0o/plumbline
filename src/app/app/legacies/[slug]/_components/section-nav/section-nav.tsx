@@ -33,6 +33,31 @@ export function SectionNav({ items }: SectionNavProps) {
     // Reset accumulated ratios so a re-observe (e.g. items change) never keeps
     // stale section ids that could win the highest-ratio comparison.
     ratios.current.clear()
+
+    function recompute() {
+      // The observer's bottom rootMargin means a short final section near the
+      // page bottom can never reach the active band. When the page is scrolled
+      // to the bottom, force the last item active so it's always reachable.
+      const docEl = document.documentElement
+      const scrollable = docEl.scrollHeight > window.innerHeight + 4
+      const atBottom =
+        window.innerHeight + window.scrollY >= docEl.scrollHeight - 2
+      if (scrollable && atBottom && items.length > 0) {
+        setActiveId(items[items.length - 1].id)
+        return
+      }
+
+      let bestId: string | null = null
+      let bestRatio = 0
+      for (const [id, ratio] of ratios.current) {
+        if (ratio > bestRatio) {
+          bestRatio = ratio
+          bestId = id
+        }
+      }
+      if (bestId !== null) setActiveId(bestId)
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -40,16 +65,7 @@ export function SectionNav({ items }: SectionNavProps) {
           if (!id) continue
           ratios.current.set(id, entry.isIntersecting ? entry.intersectionRatio : 0)
         }
-
-        let bestId: string | null = null
-        let bestRatio = 0
-        for (const [id, ratio] of ratios.current) {
-          if (ratio > bestRatio) {
-            bestRatio = ratio
-            bestId = id
-          }
-        }
-        if (bestId !== null) setActiveId(bestId)
+        recompute()
       },
       {
         root: null,
@@ -63,7 +79,23 @@ export function SectionNav({ items }: SectionNavProps) {
       if (el) observer.observe(el)
     }
 
-    return () => observer.disconnect()
+    // A passive scroll listener (rAF-throttled) catches the bottom-of-page case,
+    // which the IntersectionObserver alone cannot resolve for short sections.
+    let frame = 0
+    function onScroll() {
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        recompute()
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', onScroll)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
   }, [items])
 
   function handleClick(id: string) {

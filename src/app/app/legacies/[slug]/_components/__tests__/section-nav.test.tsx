@@ -156,6 +156,29 @@ describe('SectionNav', () => {
     )
   })
 
+  it('forces the last item active when the page is scrolled to the bottom', () => {
+    // Make the document scrollable and positioned at the very bottom.
+    Object.defineProperty(window, 'innerHeight', { value: 720, configurable: true })
+    Object.defineProperty(window, 'scrollY', { value: 800, configurable: true })
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: 1520,
+      configurable: true,
+    })
+
+    render(<SectionNav items={items} />)
+
+    // Even though Milestones reports the highest ratio, being at the bottom
+    // must activate the last item (Family/sims) so it is reachable.
+    fireSectionVisible('milestones', 0.9)
+    expect(screen.getByRole('button', { name: 'Family' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Milestones' })).not.toHaveAttribute(
+      'aria-current',
+    )
+  })
+
   it('disconnects the observer on unmount', () => {
     const { unmount } = render(<SectionNav items={items} />)
     unmount()

@@ -1,14 +1,29 @@
 import { notFound, redirect } from 'next/navigation'
-import Image from 'next/image'
-import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
+import {
+  computeStats,
+  deriveMilestones,
+  deriveSuccession,
+  groupByGeneration,
+  toChronicleSim,
+} from './lib/derive'
+import type { ChronicleSim, FetchedLegacy } from './lib/types'
+import { SectionNav } from './_components/section-nav/section-nav'
+import { ChronicleSections } from './_components/chronicle-sections/chronicle-sections'
+import { ViewTree } from './_components/view-tree/view-tree'
 import styles from './page.module.css'
-import { LegacyTree } from './legacy-tree'
 
 interface Props {
   params: Promise<{ slug: string }>
 }
+
+const NAV_ITEMS = [
+  { id: 'hero', label: 'Chronicle' },
+  { id: 'succession', label: 'Succession' },
+  { id: 'milestones', label: 'Milestones' },
+  { id: 'sims', label: 'Family' },
+]
 
 export default async function LegacyDetailPage({ params }: Props) {
   const { slug } = await params
@@ -17,14 +32,31 @@ export default async function LegacyDetailPage({ params }: Props) {
 
   const legacy = await db.legacy.findFirst({
     where: { slug, userId: session.user.id },
-    include: {
-      founderSim: {
-        include: {
-          personalityTraits: { include: { personalityTrait: { select: { name: true } } } },
-        },
-      },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      founderSimId: true,
+      households: { select: { id: true } },
       sims: {
-        select: { id: true, firstName: true, lastName: true, imageUrl: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          imageUrl: true,
+          generationNumber: true,
+          isHeir: true,
+          lifeStage: true,
+          createdAt: true,
+          aspirations: {
+            select: {
+              id: true,
+              completedAt: true,
+              createdAt: true,
+              aspiration: { select: { name: true } },
+            },
+          },
+        },
         orderBy: { createdAt: 'asc' },
       },
     },
@@ -32,123 +64,82 @@ export default async function LegacyDetailPage({ params }: Props) {
 
   if (!legacy) notFound()
 
+  // Social relationships for sims in this legacy — only MARRIED rows are used
+  // by milestone derivation, but we fetch all and let derive.ts filter so the
+  // fetched shape stays a faithful FetchedSocialRelationship[].
+  const socialRelationships = await db.socialRelationship.findMany({
+    where: { simA: { legacyId: legacy.id } },
+    select: {
+      id: true,
+      simAId: true,
+      simBId: true,
+      romanticStatus: true,
+      createdAt: true,
+    },
+  })
+
+  // Build a well-typed FetchedLegacy. The select above already matches the
+  // FetchedSim/FetchedHousehold shapes; this assignment makes the contract
+  // explicit and would fail to compile if either side drifted.
+  const fetched: FetchedLegacy = {
+    id: legacy.id,
+    name: legacy.name,
+    description: legacy.description,
+    founderSimId: legacy.founderSimId,
+    sims: legacy.sims,
+    households: legacy.households,
+    socialRelationships,
+  }
+
+  const chronicleSims = fetched.sims.map((s) =>
+    toChronicleSim(s, fetched.founderSimId),
+  )
+  const milestones = deriveMilestones(fetched)
+  const succession = deriveSuccession(chronicleSims, fetched.founderSimId)
+  const groups = groupByGeneration(chronicleSims)
+  const stats = computeStats(fetched, milestones)
+  const simsById = Object.fromEntries(chronicleSims.map((s) => [s.id, s]))
+
+  const founder = chronicleSims.find((s) => s.isFounder) ?? null
+
+  // Current heir = the heir with the highest generationNumber (nulls last).
+  const currentHeir =
+    chronicleSims
+      .filter((s) => s.isHeir)
+      .reduce<ChronicleSim | null>((best, sim) => {
+        if (best === null) return sim
+        const bestGen = best.generationNumber
+        const simGen = sim.generationNumber
+        if (simGen === null) return best
+        if (bestGen === null) return sim
+        return simGen > bestGen ? sim : best
+      }, null) ?? null
+
   return (
-    <div className={styles.page}>
-      {legacy.imageUrl ? (
-        <div className={styles.hero}>
-          <Image
-            src={legacy.imageUrl}
-            alt={legacy.name}
-            fill
-            className={styles.heroImage}
-            sizes="(max-width: 800px) 100vw, 800px"
+    <div className={styles.grid}>
+      <SectionNav items={NAV_ITEMS} />
+      <ChronicleSections
+        name={fetched.name}
+        description={fetched.description}
+        slug={slug}
+        stats={stats}
+        founder={founder}
+        currentHeir={currentHeir}
+        succession={succession}
+        milestones={milestones}
+        simsById={simsById}
+        groups={groups}
+        treeSlot={
+          <ViewTree
+            legacySlug={slug}
+            legacyName={fetched.name}
+            founderSimId={fetched.founderSimId ?? undefined}
+            name={session.user.name ?? null}
+            email={session.user.email ?? null}
+            image={session.user.image ?? null}
           />
-          <div className={styles.heroOverlay} />
-          <div className={styles.heroText}>
-            <p className={styles.eyebrow}>Legacy</p>
-            <h1 className={styles.title}>{legacy.name}</h1>
-            {legacy.description && <p className={styles.description}>{legacy.description}</p>}
-          </div>
-        </div>
-      ) : (
-        <header className={styles.heroPlain}>
-          <p className={styles.eyebrow}>Legacy</p>
-          <h1 className={styles.title}>{legacy.name}</h1>
-          {legacy.description && <p className={styles.description}>{legacy.description}</p>}
-        </header>
-      )}
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Founder</h2>
-        </div>
-        {legacy.founderSim ? (
-          <div className={styles.founderCard}>
-            {legacy.founderSim.imageUrl && (
-              <div className={styles.founderAvatarWrap}>
-                <Image
-                  src={legacy.founderSim.imageUrl}
-                  alt={legacy.founderSim.firstName}
-                  fill
-                  className={styles.founderAvatar}
-                  sizes="88px"
-                />
-              </div>
-            )}
-            <div className={styles.founderInfo}>
-              <p className={styles.founderEyebrow}>Founder</p>
-              <div className={styles.founderMeta}>
-                <span className={styles.founderName}>
-                  {legacy.founderSim.firstName} {legacy.founderSim.lastName}
-                </span>
-                <span className={styles.generationBadge}>Gen I</span>
-              </div>
-              {legacy.founderSim.personalityTraits.length > 0 && (
-                <div className={styles.traitList}>
-                  {legacy.founderSim.personalityTraits.map(({ personalityTrait }) => (
-                    <span key={personalityTrait.name} className={styles.traitChip}>
-                      {personalityTrait.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className={styles.empty}>No founder set.</p>
-        )}
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Sims</h2>
-          <Link href={`/app/legacies/${slug}/sims/new`} className={styles.addSimLink}>
-            Add sim
-          </Link>
-        </div>
-        {legacy.sims.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={styles.empty}>No sims yet.</p>
-            <Link href={`/app/legacies/${slug}/sims/new`} className={styles.emptyAction}>
-              Add your first sim →
-            </Link>
-          </div>
-        ) : (
-          <ul className={styles.simList} role="list">
-            {legacy.sims.map((sim) => (
-              <li key={sim.id} className={styles.simCard}>
-                <Link href={`/app/legacies/${slug}/sims/${sim.id}`} className={styles.simCardLink}>
-                  <div className={styles.simPortraitWrap}>
-                    {sim.imageUrl ? (
-                      <Image
-                        src={sim.imageUrl}
-                        alt={sim.firstName}
-                        fill
-                        className={styles.simPortrait}
-                        sizes="200px"
-                      />
-                    ) : (
-                      <span className={styles.simInitials} aria-hidden="true">
-                        {sim.firstName[0]}{sim.lastName[0]}
-                      </span>
-                    )}
-                  </div>
-                  <span className={styles.simName}>
-                    {sim.firstName} {sim.lastName}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Family Tree</h2>
-        </div>
-        <LegacyTree legacySlug={slug} />
-      </section>
+        }
+      />
     </div>
   )
 }

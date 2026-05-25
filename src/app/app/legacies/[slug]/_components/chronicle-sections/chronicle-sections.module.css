@@ -1,0 +1,38 @@
+.column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Shared centered content wrapper for every section. */
+.inner {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* HERO — parchment base + decorative dot-grid.
+   The dot-grid gradient uses a literal low-alpha rgba: it is a purely
+   decorative texture with no design token, so it is the one permitted
+   raw color value on this page. */
+.heroSection {
+  padding: 56px 64px 36px;
+  background: var(--bg);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(60, 50, 30, 0.06) 1px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+}
+
+/* SUCCESSION + MILESTONES — white card surface. */
+.cardSection {
+  padding: 40px 64px;
+  background: var(--bg-card);
+}
+
+/* ROSTER — parchment base again, with extra bottom breathing room. */
+.rosterSection {
+  padding: 40px 64px 72px;
+  background: var(--bg);
+}

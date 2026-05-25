@@ -1,0 +1,39 @@
+.rail {
+  position: sticky;
+  top: 48px;
+  align-self: start;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 52px 16px 32px;
+}
+
+.item {
+  padding: 8px 14px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base),
+    color var(--transition-base);
+}
+
+.item:hover {
+  background: var(--bg-card-hover);
+  color: var(--text);
+}
+
+.itemActive,
+.itemActive:hover {
+  background: var(--green-glow);
+  border-left: 2px solid var(--green);
+  color: var(--green);
+}

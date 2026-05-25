@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { trpc } from '@/trpc/client'
 import { AppNav } from '@/app/app/components/app-nav'
 import { LineageTree } from '@/components/lineage-tree/lineage-tree'
+import { splitLegacyName } from '../../lib/legacy-title'
 import styles from './tree-overlay.module.css'
 
 export interface TreeOverlayProps {
@@ -17,17 +18,16 @@ export interface TreeOverlayProps {
 }
 
 function LegacyTitle({ name }: { name: string }) {
-  const trailingLegacy = /^(.*)\s(Legacy)$/
-  const match = name.match(trailingLegacy)
-  if (match) {
+  const parts = splitLegacyName(name)
+  if (parts) {
     return (
-      <span className={styles.headerTitle}>
-        {match[1]}{' '}
-        <em className={styles.titleAccent}>{match[2]}</em>
-      </span>
+      <h2 className={styles.headerTitle}>
+        {parts.before}{' '}
+        <em className={styles.titleAccent}>{parts.legacy}</em>
+      </h2>
     )
   }
-  return <span className={styles.headerTitle}>{name}</span>
+  return <h2 className={styles.headerTitle}>{name}</h2>
 }
 
 export function TreeOverlay({

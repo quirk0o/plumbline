@@ -157,6 +157,38 @@ describe('TreeOverlay (via ViewTree)', () => {
     expect(screen.getByText(/loading the family tree/i)).toBeInTheDocument()
   })
 
+  it('shows an error message (and keeps the back button) when the query errors', async () => {
+    mockUseQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    })
+    const user = userEvent.setup()
+    render(<ViewTree {...defaultProps} />)
+    await user.click(screen.getByRole('button', { name: /view family tree/i }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(
+      screen.getByText(/could not load the family tree/i),
+    ).toBeInTheDocument()
+    // The user can still escape the overlay
+    expect(
+      screen.getByRole('button', { name: /back to legacy/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows an empty message when the legacy has no sims', async () => {
+    mockUseQuery.mockReturnValue({
+      data: { sims: [], familyEdges: [], partnerEdges: [] },
+      isLoading: false,
+      isError: false,
+    })
+    const user = userEvent.setup()
+    render(<ViewTree {...defaultProps} />)
+    await user.click(screen.getByRole('button', { name: /view family tree/i }))
+    expect(screen.getByText(/no sims to chart yet/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('lineage-tree')).not.toBeInTheDocument()
+  })
+
   it('shows the LineageTree stub when data resolves', async () => {
     mockUseQuery.mockReturnValue({
       data: {

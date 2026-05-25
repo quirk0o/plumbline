@@ -6,6 +6,7 @@ import {
 } from '@/components/ui'
 import { roman } from '@/lib/legacy-format'
 import type { ChronicleSim, LegacyStats } from '../../lib/types'
+import { splitLegacyName } from '../../lib/legacy-title'
 import styles from './hero.module.css'
 
 // ---------------------------------------------------------------------------
@@ -60,12 +61,11 @@ export interface HeroProps {
  * Renders the name with the trailing word "Legacy" in amber `<em>` if present.
  */
 function LegacyTitle({ name }: { name: string }) {
-  const trailingLegacy = /^(.*)\s(Legacy)$/
-  const match = name.match(trailingLegacy)
-  if (match) {
+  const parts = splitLegacyName(name)
+  if (parts) {
     return (
       <h1 className={styles.title}>
-        {match[1]} <em className={styles.titleAccent}>{match[2]}</em>
+        {parts.before} <em className={styles.titleAccent}>{parts.legacy}</em>
       </h1>
     )
   }

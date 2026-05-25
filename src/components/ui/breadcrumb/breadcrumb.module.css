@@ -27,6 +27,12 @@
   text-decoration: underline;
 }
 
+.link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 2px;
+}
+
 .separator {
   color: var(--text-subtle);
   padding: 0 var(--space-2);

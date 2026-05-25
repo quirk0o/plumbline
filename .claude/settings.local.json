@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test *)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(npm run *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(npx eslint *)",
+      "Skill(playwright-cli)",
+      "Bash(/Users/beatka/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/scripts/start-server.sh *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git -C /Users/beatka/Projects/simstrack-526 add src/server/routers/sims.ts src/server/routers/sims.test.ts)",
+      "Bash(git -C /Users/beatka/Projects/simstrack-526 commit -m ' *)",
+      "Bash(npx prisma *)",
+      "Bash(lsof -ti:3737)",
+      "Bash(PLAYWRIGHT_BASE_URL=http://localhost:3737 npm run test:e2e -- e2e/sim-detail.spec.ts)",
+      "Bash(git *)",
+      "Bash(playwright-cli open *)",
+      "Bash(playwright-cli screenshot *)",
+      "Bash(playwright-cli goto *)",
+      "Bash(playwright-cli fill *)",
+      "Bash(playwright-cli click *)",
+      "Bash(playwright-cli snapshot *)",
+      "Read(//Users/beatka/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/**)",
+      "Bash(PLAYWRIGHT_BASE_URL=http://localhost:3737 npm run *)",
+      "Bash(playwright-cli mousewheel *)",
+      "Bash(playwright-cli resize *)",
+      "Bash(playwright-cli hover *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Skill(superpowers:brainstorming)",
+      "Bash(find *)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:requesting-code-review)",
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Bash(gh api *)",
+      "Bash(npx vitest *)",
+      "Skill(superpowers:test-driven-development)"
+    ]
+  }
+}

@@ -4,6 +4,7 @@ import styles from './stat-block.module.css'
 export interface StatBlockProps {
   value: string | number
   label: string
+  /** Overrides the numeral color. Pass a `var(--token)` (e.g. amber), never a raw hex. */
   accent?: string
   className?: string
 }

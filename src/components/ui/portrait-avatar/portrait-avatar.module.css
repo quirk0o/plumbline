@@ -1,0 +1,40 @@
+/* Photo variant */
+.photoContainer {
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg);
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Monogram (Crest medallion) variant */
+.monogram {
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.accentMonogram {
+  border-color: var(--amber);
+  color: var(--color-amber-700);
+}
+
+.innerRing {
+  position: absolute;
+  border-radius: 50%;
+  border: 0.75px solid var(--border-bright);
+  pointer-events: none;
+}
+
+.accentInnerRing {
+  border-color: var(--amber);
+}

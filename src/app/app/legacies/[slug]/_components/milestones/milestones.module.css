@@ -1,0 +1,26 @@
+/* Milestones section — inner content container */
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ── Rows list ──────────────────────────────────────────────────── */
+
+.rows {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Empty state ────────────────────────────────────────────────── */
+
+.emptyState {
+  margin-top: 24px;
+  padding: 24px 28px;
+  border: 1px dashed var(--border-bright);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  color: var(--text-muted);
+  font-style: italic;
+}

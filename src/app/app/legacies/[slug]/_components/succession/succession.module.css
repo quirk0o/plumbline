@@ -1,0 +1,74 @@
+/* Succession section — inner content container */
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ── Step line ──────────────────────────────────────────────────── */
+
+.line {
+  margin-top: 24px;
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+/* stepWrapper holds the step block + optional connector side-by-side */
+.stepWrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.step {
+  flex: 0 0 auto;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.stepName {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.15;
+}
+
+.stepRole {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* Connector between steps */
+.connector {
+  flex: 0 0 60px;
+  height: 1px;
+  background: var(--amber);
+  margin: 0 -2px;
+  align-self: center;
+  /* Push the connector to align with the center of the 72px avatar.
+     The avatar center sits at: 10px (gap) + 72/2 = 46px from top of .step.
+     We don't need to adjust margin-top here because align-items: center
+     on .line already centers the connector with the step block. */
+}
+
+/* ── Empty state ────────────────────────────────────────────────── */
+
+.emptyState {
+  margin-top: 24px;
+  padding: 24px 28px;
+  border: 1px dashed var(--border-bright);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  color: var(--text-muted);
+  font-style: italic;
+}

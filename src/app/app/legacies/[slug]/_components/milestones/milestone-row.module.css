@@ -1,0 +1,92 @@
+/* MilestoneRow — 4-column grid row */
+
+.row {
+  display: grid;
+  grid-template-columns: 120px 40px 1fr auto;
+  gap: 24px;
+  align-items: center;
+  padding: 18px 0;
+}
+
+/* ── Col 1: meta ────────────────────────────────────────────────── */
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kind {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.gen {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  opacity: 0.7;
+}
+
+/* ── Col 2: marker ──────────────────────────────────────────────── */
+
+.marker {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Open amber circle for user-authored milestones */
+.authoredMarker {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--amber);
+  background: var(--bg);
+}
+
+/* ── Col 3: body ────────────────────────────────────────────────── */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  font-style: normal;
+}
+
+.rowTitleItalic {
+  font-style: italic;
+}
+
+.rowBlurb {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Col 4: avatars ─────────────────────────────────────────────── */
+
+.avatars {
+  display: flex;
+  align-items: center;
+}
+
+.avatarWrapper {
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  /* negative margin-left is applied inline for all-but-first */
+}

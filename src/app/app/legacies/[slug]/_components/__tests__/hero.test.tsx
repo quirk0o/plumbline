@@ -148,6 +148,20 @@ describe('Hero', () => {
     expect(screen.getByText('Current heir · Gen III')).toBeInTheDocument()
   })
 
+  it('drops the generation suffix for an heir with a null generationNumber', () => {
+    render(
+      <Hero
+        name="Test Legacy"
+        description={null}
+        stats={stats}
+        founder={null}
+        currentHeir={{ ...heir, generationNumber: null }}
+      />,
+    )
+    expect(screen.getByText('Current heir')).toBeInTheDocument()
+    expect(screen.queryByText(/Current heir · Gen/)).not.toBeInTheDocument()
+  })
+
   it('renders the treeSlot when provided', () => {
     render(
       <Hero

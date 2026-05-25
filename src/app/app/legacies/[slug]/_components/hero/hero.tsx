@@ -125,7 +125,11 @@ export function Hero({
             )}
             {currentHeir && (
               <NowThenColumn
-                label={`Current heir · Gen ${roman(currentHeir.generationNumber ?? 1)}`}
+                label={
+                  currentHeir.generationNumber !== null
+                    ? `Current heir · Gen ${roman(currentHeir.generationNumber)}`
+                    : 'Current heir'
+                }
                 sim={currentHeir}
                 ring="heir"
               />

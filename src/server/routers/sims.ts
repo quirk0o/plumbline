@@ -179,6 +179,8 @@ export const simsRouter = router({
             lastName: true,
             imageUrl: true,
             generationNumber: true,
+            lifeStage: true,
+            isHeir: true,
           },
           orderBy: { id: 'asc' },
         }),

@@ -1,0 +1,15 @@
+.tree {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Node click targets are <g role="button"> — keep the focus ring on-brand. */
+.tree :global(g[role='button']:focus-visible) {
+  outline: none;
+}
+
+.tree :global(g[role='button']:focus-visible) circle:first-of-type {
+  stroke: var(--green);
+  stroke-width: 2.5;
+}

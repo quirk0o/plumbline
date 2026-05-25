@@ -25,6 +25,11 @@
   transform: translateY(-1px);
 }
 
+.card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* ── Name column ────────────────────────────────────────────────── */
 
 .nameBlock {
@@ -44,6 +49,6 @@
 
 .meta {
   font-size: 11px;
-  color: var(--text-subtle);
+  color: var(--text-muted);
   letter-spacing: 0.04em;
 }

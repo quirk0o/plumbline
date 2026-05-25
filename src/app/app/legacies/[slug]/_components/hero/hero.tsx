@@ -115,7 +115,11 @@ export function Hero({
           <div className={styles.nowThenCard}>
             {founder && (
               <NowThenColumn
-                label="Founder · Gen I"
+                label={
+                  founder.generationNumber !== null
+                    ? `Founder · Gen ${roman(founder.generationNumber)}`
+                    : 'Founder'
+                }
                 sim={founder}
                 ring="founder"
               />

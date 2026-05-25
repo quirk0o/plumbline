@@ -70,7 +70,8 @@ describe('Hero', () => {
     )
     const heading = screen.getByRole('heading', { level: 1 })
     expect(heading).toBeInTheDocument()
-    // The <em> element should hold the word "Legacy"
+    // Asserting the semantic <em> here is intentional: the amber accent on
+    // the trailing "Legacy" is a markup choice (an <em>), not a CSS class.
     const em = heading.querySelector('em')
     expect(em).not.toBeNull()
     expect(em?.textContent).toBe('Legacy')
@@ -178,8 +179,8 @@ describe('Hero', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders description when provided', () => {
-    render(
+  it('shows the description when provided and hides it when null', () => {
+    const { rerender } = render(
       <Hero
         name="Test Legacy"
         description="A great family story."
@@ -189,10 +190,8 @@ describe('Hero', () => {
       />,
     )
     expect(screen.getByText('A great family story.')).toBeInTheDocument()
-  })
 
-  it('omits description paragraph when description is null', () => {
-    const { container } = render(
+    rerender(
       <Hero
         name="Test Legacy"
         description={null}
@@ -201,12 +200,9 @@ describe('Hero', () => {
         currentHeir={null}
       />,
     )
-    // Should not have a <p> with blurb class
-    const blurbs = container.querySelectorAll('p')
-    // The only <p> elements come from Eyebrow — no blurb paragraph
     expect(
-      Array.from(blurbs).find((p) => p.textContent === ''),
-    ).toBeUndefined()
+      screen.queryByText('A great family story.'),
+    ).not.toBeInTheDocument()
   })
 
   it('renders both founder and heir columns with a divider when both are provided', () => {

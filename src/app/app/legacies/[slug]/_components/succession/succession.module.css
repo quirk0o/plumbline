@@ -48,7 +48,8 @@
   color: var(--text-subtle);
 }
 
-/* Connector between steps */
+/* Connector between steps. Amber is intentional here — it is the brand's
+   heir/lineage accent, and the succession chain is a lineage callout. */
 .connector {
   flex: 0 0 60px;
   height: 1px;

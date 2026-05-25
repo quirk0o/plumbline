@@ -11,6 +11,10 @@
 
 /* ── Left column ────────────────────────────────────────────────── */
 
+.left {
+  min-width: 0;
+}
+
 .breadcrumb {
   margin-bottom: 32px;
 }
@@ -40,6 +44,7 @@
 
 .statRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 32px;
   margin-top: 28px;
 }

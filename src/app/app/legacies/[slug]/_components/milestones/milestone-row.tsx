@@ -20,7 +20,7 @@ export function MilestoneRow({ milestone, simsById }: MilestoneRowProps) {
     .filter((s): s is ChronicleSim => s !== undefined)
 
   return (
-    <div className={styles.row}>
+    <li className={styles.row}>
       {/* Col 1 — meta: kind + generation */}
       <div className={styles.meta}>
         <span className={styles.kind}>{kind}</span>
@@ -32,7 +32,11 @@ export function MilestoneRow({ milestone, simsById }: MilestoneRowProps) {
       {/* Col 2 — marker (plumbob for derived; open amber circle for user-authored) */}
       <div className={styles.marker}>
         {userAuthored ? (
-          <span className={styles.authoredMarker} aria-hidden="true" />
+          <span
+            className={styles.authoredMarker}
+            data-testid="milestone-authored-marker"
+            aria-hidden="true"
+          />
         ) : (
           <Plumbob size={10} />
         )}
@@ -66,6 +70,6 @@ export function MilestoneRow({ milestone, simsById }: MilestoneRowProps) {
           </div>
         ))}
       </div>
-    </div>
+    </li>
   )
 }

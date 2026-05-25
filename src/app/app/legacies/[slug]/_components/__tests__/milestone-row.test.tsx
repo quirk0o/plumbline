@@ -63,16 +63,11 @@ describe('MilestoneRow', () => {
     expect(screen.getByTestId('plumbob')).toBeInTheDocument()
   })
 
-  it('does not render the amber circle for a derived row', () => {
-    const { container } = render(
-      <MilestoneRow milestone={derivedMilestone} simsById={simsById} />,
-    )
-    // The authored marker is a <span> without testid; check by absence of its border style
-    const spans = container.querySelectorAll('span')
-    const hasAuthoredMarker = Array.from(spans).some(
-      (s) => s.style.border && s.style.border.includes('amber'),
-    )
-    expect(hasAuthoredMarker).toBe(false)
+  it('does not render the authored marker for a derived row', () => {
+    render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} />)
+    expect(
+      screen.queryByTestId('milestone-authored-marker'),
+    ).not.toBeInTheDocument()
   })
 
   it('renders the milestone title', () => {

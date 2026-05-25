@@ -20,7 +20,7 @@ export function Milestones({ milestones, simsById }: MilestonesProps) {
       {milestones.length === 0 ? (
         <p className={styles.emptyState}>No milestones recorded yet.</p>
       ) : (
-        <div className={styles.rows}>
+        <ul className={styles.rows}>
           {milestones.map((milestone) => (
             <MilestoneRow
               key={milestone.id}
@@ -28,7 +28,7 @@ export function Milestones({ milestones, simsById }: MilestonesProps) {
               simsById={simsById}
             />
           ))}
-        </div>
+        </ul>
       )}
     </div>
   )

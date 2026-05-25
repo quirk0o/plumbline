@@ -29,7 +29,7 @@ export function PortraitAvatar({
   if (imageUrl) {
     return (
       <div
-        className={cn(styles.photoContainer, isAccent && styles.accent, className)}
+        className={cn(styles.photoContainer, className)}
         style={{ width: size, height: size, ...accentRingStyle }}
       >
         <Image

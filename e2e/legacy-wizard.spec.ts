@@ -16,7 +16,8 @@ test('user can create a legacy with a founder sim', async ({ page }) => {
 
   await page.getByPlaceholder('First name').fill('Alice')
   await page.getByPlaceholder('Last name').fill('Sim')
-  await page.getByLabel('Gender').selectOption('FEMALE')
+  await page.getByLabel('Gender').click()
+  await page.getByRole('option', { name: 'Female' }).click()
 
   await page.getByRole('button', { name: 'Create legacy →' }).click()
 

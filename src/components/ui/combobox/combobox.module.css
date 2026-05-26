@@ -119,7 +119,7 @@
   overflow: hidden;
   width: var(--radix-popover-trigger-width);
   min-width: 200px;
-  z-index: 50;
+  z-index: 200;
 }
 
 /* forceMount keeps content in DOM; hide it when closed via the HTML hidden attribute */

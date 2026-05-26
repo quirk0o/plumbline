@@ -472,6 +472,74 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
       await cleanupUser(other.id)
     }
   })
+
+  it('derives child generationNumber from parent when child has no generationNumber', async () => {
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
+    await authedCaller(userId).sims.addFamilyRelationship({
+      parentId,
+      childId,
+      type: FamilyRelationshipType.BIOLOGICAL,
+    })
+    const record = await db.sim.findUnique({ where: { id: childId } })
+    expect(record?.generationNumber).toBe(2)
+  })
+
+  it('does not override child generationNumber if already set', async () => {
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
+    await db.sim.update({ where: { id: childId }, data: { generationNumber: 5 } })
+    await authedCaller(userId).sims.addFamilyRelationship({
+      parentId,
+      childId,
+      type: FamilyRelationshipType.BIOLOGICAL,
+    })
+    const record = await db.sim.findUnique({ where: { id: childId } })
+    expect(record?.generationNumber).toBe(5)
+  })
+
+  it('uses minimum parent gen when multiple parents already exist', async () => {
+    const { legacyId } = await db.sim.findUniqueOrThrow({ where: { id: parentId }, select: { legacyId: true } })
+    const existingParent = await createTestSim(legacyId, { firstName: 'OtherParent' })
+    await db.sim.update({ where: { id: existingParent.id }, data: { generationNumber: 3 } })
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 2 } })
+    await db.familyRelationship.create({
+      data: { parentId: existingParent.id, childId, type: FamilyRelationshipType.BIOLOGICAL },
+    })
+    await authedCaller(userId).sims.addFamilyRelationship({
+      parentId,
+      childId,
+      type: FamilyRelationshipType.BIOLOGICAL,
+    })
+    const record = await db.sim.findUnique({ where: { id: childId } })
+    expect(record?.generationNumber).toBe(3)
+  })
+
+  it('updates child generationNumber after removing one parent when another remains', async () => {
+    const { legacyId } = await db.sim.findUniqueOrThrow({ where: { id: parentId }, select: { legacyId: true } })
+    const parent2 = await createTestSim(legacyId, { firstName: 'Parent2' })
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
+    await db.sim.update({ where: { id: parent2.id }, data: { generationNumber: 3 } })
+    await db.sim.update({ where: { id: childId }, data: { generationNumber: 2 } })
+    await db.familyRelationship.createMany({
+      data: [
+        { parentId, childId, type: FamilyRelationshipType.BIOLOGICAL },
+        { parentId: parent2.id, childId, type: FamilyRelationshipType.BIOLOGICAL },
+      ],
+    })
+    await authedCaller(userId).sims.removeFamilyRelationship({ parentId, childId })
+    const record = await db.sim.findUnique({ where: { id: childId } })
+    expect(record?.generationNumber).toBe(4)
+  })
+
+  it('clears child generationNumber when all parents are removed', async () => {
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
+    await db.sim.update({ where: { id: childId }, data: { generationNumber: 2 } })
+    await db.familyRelationship.create({
+      data: { parentId, childId, type: FamilyRelationshipType.BIOLOGICAL },
+    })
+    await authedCaller(userId).sims.removeFamilyRelationship({ parentId, childId })
+    const record = await db.sim.findUnique({ where: { id: childId } })
+    expect(record?.generationNumber).toBeNull()
+  })
 })
 
 describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.removeSocialRelationship', () => {

@@ -501,9 +501,26 @@ export const simsRouter = router({
       if (parent.legacyId !== child.legacyId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
       }
-      return ctx.db.familyRelationship.create({
+      const created = await ctx.db.familyRelationship.create({
         data: { parentId: input.parentId, childId: input.childId, type: input.type },
       })
+      if (child.generationNumber === null) {
+        const allParents = await ctx.db.familyRelationship.findMany({
+          where: { childId: input.childId },
+          select: { parent: { select: { generationNumber: true } } },
+        })
+        const parentGens = allParents
+          .map((r) => r.parent.generationNumber)
+          .filter((g): g is number => g !== null)
+        if (parentGens.length > 0) {
+          await ctx.db.sim.update({
+            where: { id: input.childId },
+            data: { generationNumber: Math.min(...parentGens) + 1 },
+          })
+          void recomputeLegacyTrackers(ctx.db, child.legacyId)
+        }
+      }
+      return created
     }),
 
   removeFamilyRelationship: protectedProcedure
@@ -515,9 +532,29 @@ export const simsRouter = router({
         ctx.db.sim.findFirst({ where: { id: input.childId, legacy: { userId } } }),
       ])
       if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
-      return ctx.db.familyRelationship.delete({
+      const deleted = await ctx.db.familyRelationship.delete({
         where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
       })
+      const remainingParents = await ctx.db.familyRelationship.findMany({
+        where: { childId: input.childId },
+        select: { parent: { select: { generationNumber: true } } },
+      })
+      const parentGens = remainingParents
+        .map((r) => r.parent.generationNumber)
+        .filter((g): g is number => g !== null)
+      let newGen: number | null
+      if (parentGens.length > 0) {
+        newGen = Math.min(...parentGens) + 1
+      } else if (remainingParents.length === 0) {
+        newGen = null
+      } else {
+        return deleted
+      }
+      if (newGen !== child.generationNumber) {
+        await ctx.db.sim.update({ where: { id: input.childId }, data: { generationNumber: newGen } })
+        void recomputeLegacyTrackers(ctx.db, child.legacyId)
+      }
+      return deleted
     }),
 
   addSocialRelationship: protectedProcedure

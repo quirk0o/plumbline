@@ -1,24 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 import { config } from 'dotenv'
-import * as fs from 'fs'
-import * as path from 'path'
 
 config({ path: '.env.test' })
 
-// Read the Next.js dev lock file to find the URL of any already-running dev server in this
-// directory. This avoids the Next.js 16 single-server-per-directory restriction — if a server
-// is already running (on any port), reuseExistingServer: true will reuse it instead of trying
-// to start a second one.
-function detectRunningDevServer(): string | undefined {
-  try {
-    const lock = JSON.parse(fs.readFileSync(path.join(__dirname, '.next/dev/lock'), 'utf-8'))
-    return lock.appUrl as string
-  } catch {
-    return undefined
-  }
-}
-
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? detectRunningDevServer() ?? 'http://localhost:3737'
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3737'
 
 export default defineConfig({
   testDir: './e2e',
@@ -52,6 +37,7 @@ export default defineConfig({
     env: {
       DATABASE_URL: process.env.DATABASE_URL!,
       AUTH_TEST_MODE: 'true',
+      NEXT_DIST_DIR: '.next-test',
     },
   },
 })

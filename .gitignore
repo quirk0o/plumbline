@@ -47,6 +47,7 @@ next-env.d.ts
 .worktrees/
 .claude/worktrees/
 .superpowers/
+docs/superpowers/screenshots
 .playwright-cli/
 e2e/.auth/
 .playwright-mcp/

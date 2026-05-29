@@ -1,6 +1,6 @@
 # Legacy Chronicle redesign — status
 
-**Branch:** `worktree-legacy-chronicle-redesign` (16 commits off `master`)
+**Branch:** `worktree-legacy-chronicle-redesign` (includes a merge of `master` through `5f69445`)
 **Last updated:** 2026-05-29
 **Source design:** `design_handoff_legacy_redesign/` (handoff README + JSX prototypes)
 
@@ -9,6 +9,30 @@ short hero + founder card + flat sim list + inline ReactFlow tree into a
 **journal-style long-scroll "chronicle"** with an on-demand fullscreen family-tree
 overlay. This document records what shipped, what was intentionally cut, and what
 remains open.
+
+---
+
+## 🔀 Merged from `master` — 2026-05-29
+
+`master` advanced 3 commits since this branch diverged; merged in cleanly
+(auto-merged `src/server/routers/sims.ts`, no conflicts). What it brought:
+
+- **Generation auto-assignment** (`88fff3f`, `5f69445`) — addresses deferred item
+  #2 (see below). Founder is now created with `generationNumber: 1`
+  (`legacies.ts`); `addFamilyRelationship` derives a child's gen = min(parent
+  gens)+1 (and recomputes on delete); `addSocialRelationship` gives a no-gen
+  partner their spouse's gen. Plus a **`prisma/backfill-generations.ts`** script
+  for existing data.
+- **E2E / combobox repair** (`8fae11e`) — fixes the combobox and updates the
+  Playwright suite (add-sims-to-legacy, legacy-wizard, sim-detail) + adds
+  `e2e/add-relationship-modal.spec.ts`. Resolves the pre-existing combobox
+  `selectOption` E2E drift previously flagged here.
+
+Post-merge check: `tsc --noEmit` clean, `lint` clean, **384/385 tests pass**. The
+one failure — `add-relationship-modal.test.tsx › "pre-selects the new sim in the
+combobox after creation"` — is a **pre-existing master-side failure** (verified
+failing on `master`@`5f69445` in the main checkout); it is unrelated to this
+branch.
 
 ---
 
@@ -89,14 +113,16 @@ the tree on a plain background. The `AtlasLegacy` mock (`combined.jsx`) has a
 + "N sims · M generations"), drop-shadow ("lift") nodes, and a bottom legend**
 (Heir / Sim / Marriage / Lineage). Not yet implemented.
 
-### 2. Sim generation auto-assignment + backfill (deferred)
-Generations are **not** auto-assigned, so existing sims show as **"Unassigned"**:
-- `sims.create` only derives a generation when `parentIds` are passed (the UI
-  never passes them); the **founder is never set to Gen 1**.
-- `sims.addFamilyRelationship` does **not** recompute a child's generation.
-- No backfill for existing null-generation sims.
-Per the domain model, founder should be Gen 1 and children min(parents)+1. Fixing
-this is a backend change (routers + a data migration) — deferred.
+### 2. Sim generation auto-assignment + backfill — ✅ DONE via `master` merge (2026-05-29)
+Resolved by the merged master commits: founder is created at Gen 1; child gens are
+derived on `addFamilyRelationship`; a no-gen spouse inherits gen on
+`addSocialRelationship`; and `prisma/backfill-generations.ts` backfills existing
+data. Remaining nuance (by design, not bugs):
+- A standalone sim created with no parents and no relationships still starts with a
+  null generation until a relationship links it (founder excepted).
+- **Existing legacies need the backfill script run once** to clear "Unassigned".
+  The Lemons demo legacy has no family edges, so backfill sets only its founder to
+  Gen I; the other two sims stay null until relationships are added.
 
 ### 3. Tree accessibility (open; belongs with the deferred tree work)
 Full QA flagged three **Critical** a11y gaps, all in the tree overlay:
@@ -126,10 +152,12 @@ sub-44px tap targets on the rail buttons (still pass the AA 24px minimum).
 - **Italic monogram:** PortraitAvatar/Crest initials are italic per the handoff,
   which tensions with the "no italic for entity names" brand note. (The title's
   "Legacy" accent is upright.)
-- **Pre-existing E2E failures (NOT from this branch):** 12 Playwright tests fail
-  at `getByLabel('Gender').selectOption(...)` because Gender became a Combobox in
-  earlier master work; those specs were never updated. Verified failing at the
-  base commit; this branch touches none of those paths.
+- **E2E combobox drift — repaired via the `master` merge** (`8fae11e`). The 12
+  Playwright tests that previously failed at `getByLabel('Gender').selectOption(...)`
+  (Gender became a Combobox) now have updated specs. One **unit** test remains red
+  on master itself — `add-relationship-modal.test.tsx › "pre-selects the new sim
+  in the combobox after creation"` — independent of this branch (see the merge
+  note above); worth a fix on master.
 - **Local env gap:** the worktree's `public/uploads/` is empty, so the one
   uploaded portrait (Lana/Julia Lemons) 404s locally — resolves in environments
   that have the uploads.

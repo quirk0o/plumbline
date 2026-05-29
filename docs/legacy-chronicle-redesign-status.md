@@ -1,6 +1,6 @@
 # Legacy Chronicle redesign — status
 
-**Branch:** `worktree-legacy-chronicle-redesign` (includes a merge of `master` through `15bd1ce`)
+**Branch:** `worktree-legacy-chronicle-redesign` (includes a merge of `master` through `e942af7`)
 **Last updated:** 2026-05-29
 **Source design:** `design_handoff_legacy_redesign/` (handoff README + JSX prototypes)
 
@@ -30,12 +30,12 @@ remains open.
 - **E2E stability** (`ef72625`, `9e73afd`) — guards the legacy-wizard E2E against a
   hydration race and isolates the test-server build dir so dev + test servers can
   run concurrently.
+- **Combobox accessible-name fix** (`207b842`) — the combobox `aria-label` no
+  longer overrides the selected value's accessible name; this fixed the lingering
+  `add-relationship-modal` unit test.
 
-Post-merge check: `tsc --noEmit` clean, `lint` clean, **384/385 tests pass**. The
-one failure — `add-relationship-modal.test.tsx › "pre-selects the new sim in the
-combobox after creation"` — is a **pre-existing master-side _unit_ test failure**
-(a vitest component test, not Playwright; verified failing on `master`@`15bd1ce`);
-unrelated to this branch.
+Post-merge check: `tsc --noEmit` clean, `lint` clean, **385/385 tests pass** — the
+full suite is green.
 
 ---
 

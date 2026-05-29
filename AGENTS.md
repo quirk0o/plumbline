@@ -8,6 +8,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 In Next.js 16, `middleware.ts` was renamed to `proxy.ts`. The request-interception file in this project is **`src/proxy.ts`** and it exports a named `proxy` function (not `middleware`). Never suggest renaming it or creating a `middleware.ts`. See `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`.
 <!-- END:nextjs-agent-rules -->
 
+# Commits
+
+**Use conventional commits.** Follow the Conventional Commits spec for all commit messages. This ensures clear, consistent history and enables automated tooling.
+
+You must only include your specific changes in commits. Always list specific files to stage with `git add <file>`, never `git add .` or `git add -A`. This prevents accidental inclusion of unrelated changes.
+
 # Merge Conflicts
 
 Always resolve merge conflicts carefully using proper 3-way merge tooling. Never use `git checkout --ours` or `git checkout --theirs` — these silently discard the other side's changes entirely.

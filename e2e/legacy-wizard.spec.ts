@@ -69,6 +69,7 @@ test('step 2 shows validation errors when required sim fields are missing', asyn
 
 test('back button on step 2 returns to step 1 with legacy name intact', async ({ page }) => {
   await page.goto('/app/legacies/new')
+  await expect(page.getByRole('heading', { name: 'Your Legacy' })).toBeVisible()
 
   const legacyName = `Back Button Legacy ${Date.now()}`
   await page.getByPlaceholder('e.g. The Caliente Legacy').fill(legacyName)

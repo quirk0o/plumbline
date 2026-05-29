@@ -129,7 +129,7 @@ function ComboboxRoot({
             aria-haspopup="listbox"
             aria-expanded={open}
             aria-controls={open ? listboxId : undefined}
-            aria-label={ariaLabel ?? (selectedLabel ? undefined : placeholder)}
+            aria-label={selectedLabel ? undefined : (ariaLabel ?? placeholder)}
           >
             <span className={selectedLabel ? styles.triggerValue : styles.triggerPlaceholder}>
               {selectedLabel ?? placeholder}

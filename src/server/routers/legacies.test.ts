@@ -56,6 +56,17 @@ describe('legacies.create', () => {
     expect(sim?.lastName).toBe('Caliente')
   })
 
+  it('founder sim gets generationNumber 1', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.create({
+      name: 'Goth Legacy',
+      founder: { firstName: 'Mortimer', lastName: 'Goth', gender: Gender.MALE },
+    })
+    const legacy = await db.legacy.findUnique({ where: { id: result.legacy.id } })
+    const sim = await db.sim.findUnique({ where: { id: legacy!.founderSimId! } })
+    expect(sim?.generationNumber).toBe(1)
+  })
+
   it('throws BAD_REQUEST when the founder has conflicting personality traits', async () => {
     const { traitA, traitB } = await getConflictingTraits()
     const caller = authedCaller(userId)

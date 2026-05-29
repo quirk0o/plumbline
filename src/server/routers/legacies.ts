@@ -76,6 +76,7 @@ export const legaciesRouter = router({
               pronounPossessive: simFields.pronounPossessive ?? null,
               imageUrl: simFields.imageUrl ?? null,
               occultType: simFields.occultType ?? null,
+              generationNumber: 1,
               ...(personalityTraitIds?.length
                 ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
                 : {}),

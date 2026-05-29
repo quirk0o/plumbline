@@ -9,7 +9,8 @@ async function createLegacyWithSim(page: import('@playwright/test').Page) {
 
   await page.getByPlaceholder('First name').fill('Bella')
   await page.getByPlaceholder('Last name').fill('Goth')
-  await page.getByLabel('Gender').selectOption('FEMALE')
+  await page.getByLabel('Gender').click()
+  await page.getByRole('option', { name: 'Female' }).click()
   await page.getByRole('button', { name: 'Create legacy →' }).click()
 
   // Wait for the legacy detail page — exclude /new to avoid matching the wizard URL
@@ -48,10 +49,11 @@ test('life stage dropdown saves on change', async ({ page }) => {
   await page.getByRole('link', { name: 'Bella Goth' }).click()
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
 
-  await page.getByLabel('Life stage').selectOption('ELDER')
+  await page.getByLabel('Life stage').click()
+  await page.getByRole('option', { name: 'Elder' }).click()
   await page.waitForTimeout(500)
   await page.reload()
-  await expect(page.getByLabel('Life stage')).toHaveValue('ELDER')
+  await expect(page.getByLabel('Life stage')).toContainText('Elder')
 })
 
 test('mark as deceased shows death section', async ({ page }) => {
@@ -61,10 +63,7 @@ test('mark as deceased shows death section', async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
 
   await page.getByRole('button', { name: '+ Mark as deceased' }).click()
-  // The death section is rendered server-side based on causeOfDeath; reload after mutation
-  await page.waitForTimeout(500)
-  await page.reload()
-  await expect(page.getByRole('combobox', { name: 'Cause of death' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cause of death' })).toBeVisible()
 })
 
 test('breadcrumb links back to legacy page', async ({ page }) => {
@@ -88,8 +87,8 @@ test('section titles are h2 headings', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Personality Traits', level: 2 })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Goals & Career', level: 2 })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Skills', level: 2 })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Family', level: 2 })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Social Relationships', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Relationships', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Family Tree', level: 2 })).toBeVisible()
 })
 
 test('breadcrumb is a navigation landmark', async ({ page }) => {

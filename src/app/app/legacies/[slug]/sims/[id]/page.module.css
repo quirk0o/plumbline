@@ -436,6 +436,7 @@
 .relTabRow {
   display: flex;
   gap: var(--space-1);
+  margin-bottom: 0.75rem;
 }
 
 .relTab {

@@ -576,7 +576,7 @@ export const simsRouter = router({
       ])
       if (!simA || !simB) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
-      return ctx.db.socialRelationship.create({
+      const created = await ctx.db.socialRelationship.create({
         data: {
           simAId: normalA,
           simBId: normalB,
@@ -585,6 +585,16 @@ export const simsRouter = router({
           romanceScore: 0,
         },
       })
+      const noGenSim =
+        simA.generationNumber === null && simB.generationNumber !== null ? simA
+        : simB.generationNumber === null && simA.generationNumber !== null ? simB
+        : null
+      if (noGenSim !== null) {
+        const gen = (noGenSim === simA ? simB : simA).generationNumber!
+        await ctx.db.sim.update({ where: { id: noGenSim.id }, data: { generationNumber: gen } })
+        void recomputeLegacyTrackers(ctx.db, noGenSim.legacyId)
+      }
+      return created
     }),
 
   updateSocialRelationship: protectedProcedure

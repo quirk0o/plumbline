@@ -637,6 +637,38 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
       })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
+
+  it('assigns generationNumber to partner with no gen when one sim has a gen', async () => {
+    await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
+    const record = await db.sim.findUnique({ where: { id: simBId } })
+    expect(record?.generationNumber).toBe(2)
+  })
+
+  it('assigns generation regardless of which partner has it', async () => {
+    await db.sim.update({ where: { id: simBId }, data: { generationNumber: 3 } })
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
+    const record = await db.sim.findUnique({ where: { id: simAId } })
+    expect(record?.generationNumber).toBe(3)
+  })
+
+  it('does not override partner generationNumber if already set', async () => {
+    await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
+    await db.sim.update({ where: { id: simBId }, data: { generationNumber: 5 } })
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
+    const record = await db.sim.findUnique({ where: { id: simBId } })
+    expect(record?.generationNumber).toBe(5)
+  })
+
+  it('does not assign generationNumber when both sims have no generation', async () => {
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
+    const [recordA, recordB] = await Promise.all([
+      db.sim.findUnique({ where: { id: simAId } }),
+      db.sim.findUnique({ where: { id: simBId } }),
+    ])
+    expect(recordA?.generationNumber).toBeNull()
+    expect(recordB?.generationNumber).toBeNull()
+  })
 })
 
 describe('sims — generationNumber population', () => {

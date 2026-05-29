@@ -1,6 +1,6 @@
 # Legacy Chronicle redesign — status
 
-**Branch:** `worktree-legacy-chronicle-redesign` (includes a merge of `master` through `5f69445`)
+**Branch:** `worktree-legacy-chronicle-redesign` (includes a merge of `master` through `15bd1ce`)
 **Last updated:** 2026-05-29
 **Source design:** `design_handoff_legacy_redesign/` (handoff README + JSX prototypes)
 
@@ -14,8 +14,8 @@ remains open.
 
 ## 🔀 Merged from `master` — 2026-05-29
 
-`master` advanced 3 commits since this branch diverged; merged in cleanly
-(auto-merged `src/server/routers/sims.ts`, no conflicts). What it brought:
+`master` advanced several commits since this branch diverged; all merged cleanly
+(no conflicts). What it brought:
 
 - **Generation auto-assignment** (`88fff3f`, `5f69445`) — founder is now created
   with `generationNumber: 1` (`legacies.ts`); `addFamilyRelationship` derives a
@@ -27,12 +27,15 @@ remains open.
   Playwright suite (add-sims-to-legacy, legacy-wizard, sim-detail) + adds
   `e2e/add-relationship-modal.spec.ts`. Resolves the pre-existing combobox
   `selectOption` E2E drift previously flagged here.
+- **E2E stability** (`ef72625`, `9e73afd`) — guards the legacy-wizard E2E against a
+  hydration race and isolates the test-server build dir so dev + test servers can
+  run concurrently.
 
 Post-merge check: `tsc --noEmit` clean, `lint` clean, **384/385 tests pass**. The
 one failure — `add-relationship-modal.test.tsx › "pre-selects the new sim in the
-combobox after creation"` — is a **pre-existing master-side failure** (verified
-failing on `master`@`5f69445` in the main checkout); it is unrelated to this
-branch.
+combobox after creation"` — is a **pre-existing master-side _unit_ test failure**
+(a vitest component test, not Playwright; verified failing on `master`@`15bd1ce`);
+unrelated to this branch.
 
 ---
 

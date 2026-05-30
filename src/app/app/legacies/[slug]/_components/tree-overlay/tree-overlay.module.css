@@ -16,6 +16,9 @@
   background: var(--bg);
   display: flex;
   flex-direction: column;
+}
+
+.overlay[data-state='open'] {
   animation: legacy-tree-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -25,69 +28,10 @@
   }
 }
 
-.header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.backButton {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.backButton:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-bright);
-}
-
-.backButton:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-.headerTitle {
-  margin: 0;
-  flex: 1 1 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-normal);
-  color: var(--text);
-  font-style: normal;
-}
-
-.titleAccent {
-  color: var(--color-amber-700);
-  font-style: normal;
-}
-
 .body {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
 }
 
 .message {
@@ -102,13 +46,9 @@
    tracks the theme automatically (dark forest gets a faint warm dot, parchment
    a faint brown dot) without touching globals.css. */
 .canvas {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8);
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
   background: var(--bg);
   background-image: radial-gradient(
     circle at 1px 1px,
@@ -118,12 +58,23 @@
   background-size: 20px 20px;
 }
 
-.treeContainer {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.surface {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+.surface:active {
+  cursor: grabbing;
+}
+
+.viewport {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* ─── Floating glass capsule (top-left legacy identity) ─────────── */
@@ -131,7 +82,7 @@
   position: absolute;
   top: 16px;
   left: 16px;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -141,6 +92,34 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
+}
+
+.capsuleBack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.capsuleBack:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-bright);
+  color: var(--text);
+}
+
+.capsuleBack:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .capsuleText {
@@ -177,21 +156,105 @@
   color: var(--text-muted);
 }
 
-/* ─── Bottom legend pill ───────────────────────────────────────── */
-.legend {
+/* ─── Bottom bar (legend pill + zoom controls) ──────────────────── */
+.bottomBar {
   position: absolute;
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1;
+  z-index: 2;
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 14px;
   padding: 8px 14px;
   background: color-mix(in srgb, var(--bg-card) 92%, transparent);
   backdrop-filter: blur(14px);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-md);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+}
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoomButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.zoomButton:hover {
+  background: var(--bg-card-hover);
+  color: var(--text);
+}
+
+.zoomFit {
+  padding: 4px 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.zoomFit:hover {
+  background: var(--bg-card-hover);
+  color: var(--text);
+}
+
+.zoomButton:focus-visible,
+.zoomFit:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.zoomReadout {
+  min-width: 44px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.emptyFilter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 14px;
 }
 
 .legendItem {

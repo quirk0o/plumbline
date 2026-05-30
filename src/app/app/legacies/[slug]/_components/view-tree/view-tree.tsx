@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
-import { Button } from '@/components/ui'
-import { TreeIcon } from '@/components/ui'
+import { useRef, useState } from 'react'
+import * as RadixDialog from '@radix-ui/react-dialog'
+import { Button, TreeIcon } from '@/components/ui'
 import { TreeOverlay } from '../tree-overlay/tree-overlay'
 
 export interface ViewTreeProps {
@@ -22,10 +22,17 @@ export function ViewTree({
   image,
 }: ViewTreeProps) {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
 
   return (
-    <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+    <RadixDialog.Root open={open} onOpenChange={setOpen}>
+      <Button
+        variant="outline"
+        onClick={(e) => {
+          triggerRef.current = e.currentTarget
+          setOpen(true)
+        }}
+      >
         <TreeIcon />
         View family tree
       </Button>
@@ -38,8 +45,9 @@ export function ViewTree({
           email={email}
           image={image}
           onClose={() => setOpen(false)}
+          returnFocusRef={triggerRef}
         />
       )}
-    </>
+    </RadixDialog.Root>
   )
 }

@@ -21,9 +21,6 @@ npm test
 # Watch mode
 npm run test:watch
 
-# With coverage report
-npm run test:coverage
-
 # E2E tests (requires dev server + DB + seeded data)
 npm run test:e2e
 

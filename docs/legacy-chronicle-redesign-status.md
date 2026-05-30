@@ -107,32 +107,58 @@ These were in the original handoff but deliberately removed for this pass:
 
 ---
 
-## ⛔ Not completed / deferred
+## ✅ Completed in the 2026-05-29 completion pass
 
-### 1. Tree overlay visual match to the design (deferred)
-The shipped overlay is functional but simplified: app nav + a plain header bar +
-the tree on a plain background. The `AtlasLegacy` mock (`combined.jsx`) has a
-**parchment dot-grid canvas, a floating glass title/back capsule (plumbob + title
-+ "N sims · M generations"), drop-shadow ("lift") nodes, and a bottom legend**
-(Heir / Sim / Marriage / Lineage). Not yet implemented.
+The four deferred items below were all addressed (plan:
+`docs/superpowers/plans/2026-05-29-legacy-chronicle-redesign-completion.md`).
+Three parallel workstreams; `tsc` + `lint` clean; unit/integration suite
+**411/411 green**; full browser QA (light + dark, keyboard-only) passed.
 
-### 2. Tree accessibility (open; belongs with the deferred tree work)
-Full QA flagged three **Critical** a11y gaps, all in the tree overlay:
-- Focus is **not trapped** in the dialog (shipped v1 without a full focus-trap).
-- Tree nodes (`<g role="button">`) have **no visible focus ring** (CSS `outline`
-  doesn't render on SVG groups — needs an SVG-native focus stroke).
-- The `<svg role="img">` wrapper makes the tree **one opaque image to screen
-  readers**, hiding the interactive nodes.
+### 1. Tree overlay visual match — DONE
+The Atlas chrome now ships: **dot-grid parchment canvas** (theme-tracking),
+**top-left floating glass capsule** (plumbob + `LEGACY` eyebrow + title with
+upright amber "Legacy" + "N sims · M generations"), **lift drop-shadow** on the
+Crest medallions (SVG filter), and the **bottom legend pill** (Heir / Sim /
+Marriage / Lineage). Lives in `tree-overlay.tsx` + `.module.css`.
 
-### 3. Contrast (token-level; app-wide decision)
-`--text-subtle` labels (~2.18:1) and `--text-muted` blurbs (~3.88:1) fail WCAG AA
-in both themes, pervasively. These are the exact tokens the handoff mandated;
-remediation is a brand-token decision affecting the whole app, not the chronicle.
+### 2. Tree accessibility — DONE (all three Criticals fixed)
+- Focus is now **trapped** in the dialog; Esc closes and restores focus to the
+  "View family tree" trigger.
+- Nodes have a **visible green SVG focus ring** on `:focus-visible` (module CSS;
+  works around `outline` not rendering on `<g>`).
+- The tree `<svg>` is now `role="group"` with a label (was `role="img"`); each
+  sim node is a keyboard-activatable button with name + life stage.
 
-### 4. Smaller a11y polish (not yet done)
-Skip-to-content link; `aria-label` on the top app nav; a few decorative bits
-(`aria-hidden` on the succession connector / milestone marker / roster monogram);
-sub-44px tap targets on the rail buttons (still pass the AA 24px minimum).
+### 3. Contrast — DONE (app-wide)
+`--text-muted` and `--text-subtle` darkened in both themes to meet WCAG AA
+(now ≥4.66:1 light, ≥7.24:1 dark across every surface). Locked by
+`src/app/__tests__/contrast.test.ts`, which parses `globals.css`.
+
+### 4. Smaller a11y polish — DONE
+Skip-to-content link + labelled top nav (`app-shell.tsx`); rail buttons bumped
+to ≥44px; portrait/crest monograms now **upright** (brand: no italic for entity
+names). Decorative-mark `aria-hidden` audit found no remaining gaps.
+
+## 🔭 Follow-ups (tracked, not blocking — surfaced by completion-pass QA)
+
+- **AppNav rendered inside the tree dialog.** The focus trap works, but it
+  cycles through a duplicate top nav (Dashboard / Settings / Sign out), so
+  keyboard users hit links that route away from the overlay, and there are two
+  "Main navigation" landmarks while the tree is open. Consider excluding the nav
+  from the dialog / trap.
+- **Tree initial scroll + focus-into-view.** On open, the Gen I row can be
+  cropped at the top (user must scroll up), and focusing an off-screen node does
+  not scroll it into view.
+- **Skip-link focus management.** The link appears on Tab and scrolls to
+  `#main-content`, but `<main>` lacks `tabindex="-1"`, so focus lands on `<body>`
+  rather than moving into main (WCAG 2.4.1 met via anchor scroll, but focus
+  management is incomplete).
+- **E2E specs stale vs. the chronicle redesign (pre-existing).** 16 Playwright
+  tests in `add-relationship-modal`, `add-sims-to-legacy`, `legacy-wizard`, and
+  `sim-detail` assert against the *old* legacy page (e.g. a `"Sims"` heading now
+  renamed "All sims"; a single `"Bella Goth"` link that now resolves to the
+  hero/succession/milestone portrait links + roster card). These predate and are
+  independent of this pass; the unit/integration suite is fully green.
 
 ---
 

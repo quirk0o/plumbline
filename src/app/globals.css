@@ -30,10 +30,11 @@
   --border:        #e8dfc8;
   --border-bright: #c8b896;
 
-  /* Text hierarchy */
+  /* Text hierarchy — muted/subtle darkened to meet WCAG AA (>=4.5:1) on every
+     surface while keeping the warm parchment brown. See contrast.test.ts. */
   --text:        #2a1f0e;
-  --text-muted:  #8c7a5e;
-  --text-subtle: #b8a88a;
+  --text-muted:  #5c5446;
+  --text-subtle: #6f6657;
 
   /* Green accent (interactive only) */
   --green:        var(--color-green-800);
@@ -144,8 +145,10 @@
   --border-bright: rgba(255, 255, 255, 0.15);
 
   --text:        #f0ede8;
+  /* --text-muted already clears AA (>=4.5:1) on every dark surface; only
+     --text-subtle needed lightening to meet AA while staying warm-neutral. */
   --text-muted:  #a09488;
-  --text-subtle: #6e6258;
+  --text-subtle: #a89e8a;
 
   --green:        #4aaf72;
   --green-bright: #6dc98e;
@@ -212,4 +215,30 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* ─── Skip-to-content link ────────────────────────────────────── */
+/* `.sr-only` is provided by Tailwind v4 (imported in the root layout), so it
+   is not redefined here. The skip link parks itself off-screen and slides into
+   view only when focused, so keyboard users can jump straight to <main>. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-md);
+  transition: top var(--transition-fast) ease;
+}
+.skip-link:focus {
+  top: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
 }

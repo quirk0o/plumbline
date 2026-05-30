@@ -23,7 +23,7 @@ export function AppNav({ name, email, image }: AppNavProps) {
     href === '/app' ? pathname === '/app' : pathname.startsWith(href)
 
   return (
-    <nav className={styles.nav}>
+    <nav className={styles.nav} aria-label="Main navigation">
       <Link href="/app" className={styles.logo}>
         <Plumbob size={12} />
         SimTrack

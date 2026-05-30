@@ -114,22 +114,10 @@ describe('ViewTree', () => {
     const user = userEvent.setup()
     render(<ViewTree {...defaultProps} />)
     await user.click(screen.getByRole('button', { name: /view family tree/i }))
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'The Caliente Legacy' })).toBeInTheDocument()
   })
 
   it('closes the overlay when "Back to legacy" button is clicked', async () => {
-    // The Back button lives inside the canvas capsule, only shown when data is loaded.
-    mockUseQuery.mockReturnValue({
-      data: {
-        sims: [
-          { id: 's1', firstName: 'Dina', lastName: 'Caliente', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/caliente/sims/s1' },
-        ],
-        familyEdges: [],
-        partnerEdges: [],
-      },
-      isLoading: false,
-      isError: false,
-    })
     const user = userEvent.setup()
     render(<ViewTree {...defaultProps} />)
     await user.click(screen.getByRole('button', { name: /view family tree/i }))
@@ -168,7 +156,7 @@ describe('TreeOverlay (via ViewTree)', () => {
     expect(screen.getByText(/loading the family tree/i)).toBeInTheDocument()
   })
 
-  it('shows an error message when the query errors', async () => {
+  it('shows an error message (and keeps the back button) when the query errors', async () => {
     mockUseQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -180,6 +168,10 @@ describe('TreeOverlay (via ViewTree)', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(
       screen.getByText(/could not load the family tree/i),
+    ).toBeInTheDocument()
+    // The user can still escape the overlay via the always-present back button
+    expect(
+      screen.getByRole('button', { name: /back to legacy/i }),
     ).toBeInTheDocument()
   })
 

@@ -78,9 +78,11 @@ function LegacyCapsule({
             name
           )}
         </RadixDialog.Title>
-        <span className={styles.capsuleMeta} aria-hidden="true">
-          {simLabel} · {genLabel}
-        </span>
+        {simCount > 0 && (
+          <span className={styles.capsuleMeta} aria-hidden="true">
+            {simLabel} · {genLabel}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -225,71 +227,74 @@ export function TreeOverlay({
         <AppNav name={name} email={email} image={image} />
 
         <div className={styles.body}>
-          {isLoading && (
-            <div role="status" aria-live="polite" className={styles.message}>
-              Loading the family tree…
-            </div>
-          )}
-          {isError && (
-            <div role="alert" className={styles.message}>
-              Could not load the family tree.
-            </div>
-          )}
-          {!isLoading && !isError && allSims.length === 0 && (
-            <p className={styles.message}>No sims to chart yet.</p>
-          )}
+          <div className={styles.canvas}>
+            <LegacyCapsule
+              name={legacyName}
+              simCount={simCount}
+              generationCount={generationCount}
+              backButtonRef={backButtonRef}
+              onClose={onClose}
+            />
 
-          {!isLoading && !isError && allSims.length > 0 && (
-            <div className={styles.canvas}>
-              <LegacyCapsule
-                name={legacyName}
-                simCount={simCount}
-                generationCount={generationCount}
-                backButtonRef={backButtonRef}
-                onClose={onClose}
-              />
-              <AtlasToolbar
-                legacySlug={legacySlug}
-                generations={generations}
-                genFilter={genFilter}
-                query={query}
-                onGenChange={setGenFilter}
-                onQueryChange={setQuery}
-              />
-
-              <div ref={surfaceRef} className={styles.surface} {...surfaceProps}>
-                <div
-                  className={styles.viewport}
-                  style={{
-                    transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-                  }}
-                >
-                  {visibleSims.length > 0 ? (
-                    <LineageTree
-                      sims={visibleSims}
-                      familyEdges={familyEdges}
-                      partnerEdges={partnerEdges}
-                      founderSimId={founderSimId}
-                      legacyName={legacyName}
-                      dimmedIds={dimmedIds}
-                      onSelectSim={handleSelectSim}
-                    />
-                  ) : null}
-                </div>
+            {isLoading && (
+              <div role="status" aria-live="polite" className={styles.message}>
+                Loading the family tree…
               </div>
+            )}
+            {isError && (
+              <div role="alert" className={styles.message}>
+                Could not load the family tree.
+              </div>
+            )}
+            {!isLoading && !isError && allSims.length === 0 && (
+              <p className={styles.message}>No sims to chart yet.</p>
+            )}
 
-              {visibleSims.length === 0 && (
-                <p className={styles.emptyFilter}>No sims in this generation.</p>
-              )}
+            {!isLoading && !isError && allSims.length > 0 && (
+              <>
+                <AtlasToolbar
+                  legacySlug={legacySlug}
+                  generations={generations}
+                  genFilter={genFilter}
+                  query={query}
+                  onGenChange={setGenFilter}
+                  onQueryChange={setQuery}
+                />
 
-              <AtlasBottomBar
-                zoomPercent={zoomPercent}
-                onZoomIn={zoomIn}
-                onZoomOut={zoomOut}
-                onFit={fit}
-              />
-            </div>
-          )}
+                <div ref={surfaceRef} className={styles.surface} {...surfaceProps}>
+                  <div
+                    className={styles.viewport}
+                    style={{
+                      transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+                    }}
+                  >
+                    {visibleSims.length > 0 ? (
+                      <LineageTree
+                        sims={visibleSims}
+                        familyEdges={familyEdges}
+                        partnerEdges={partnerEdges}
+                        founderSimId={founderSimId}
+                        legacyName={legacyName}
+                        dimmedIds={dimmedIds}
+                        onSelectSim={handleSelectSim}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+
+                {visibleSims.length === 0 && (
+                  <p className={styles.emptyFilter}>No sims in this generation.</p>
+                )}
+
+                <AtlasBottomBar
+                  zoomPercent={zoomPercent}
+                  onZoomIn={zoomIn}
+                  onZoomOut={zoomOut}
+                  onFit={fit}
+                />
+              </>
+            )}
+          </div>
         </div>
       </RadixDialog.Content>
     </RadixDialog.Portal>

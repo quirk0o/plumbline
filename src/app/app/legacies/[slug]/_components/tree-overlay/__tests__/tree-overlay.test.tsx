@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('next/image', () => ({
@@ -8,18 +8,8 @@ vi.mock('next/image', () => ({
 }))
 
 vi.mock('next/link', () => ({
-  default: ({
-    href,
-    children,
-    className,
-  }: {
-    href: string
-    children: React.ReactNode
-    className?: string
-  }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
+  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <a href={href}>{children}</a>
   ),
 }))
 
@@ -77,14 +67,14 @@ async function openOverlay() {
   return user
 }
 
-describe('TreeOverlay focus trap', () => {
+describe('TreeOverlay (Radix modal atlas)', () => {
   beforeEach(() => {
     mockPush.mockReset()
     mockUseQuery.mockReturnValue({
       data: {
         sims: [
-          { id: 's1', generationNumber: 1 },
-          { id: 's2', generationNumber: 2 },
+          { id: 's1', firstName: 'Dina', lastName: 'Caliente', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/caliente/sims/s1' },
+          { id: 's2', firstName: 'Reed', lastName: 'Caliente', imageUrl: null, generationNumber: 2, lifeStage: 'TEEN', isHeir: true, href: '/app/legacies/caliente/sims/s2' },
         ],
         familyEdges: [],
         partnerEdges: [],
@@ -94,46 +84,52 @@ describe('TreeOverlay focus trap', () => {
     })
   })
 
-  it('exposes a modal dialog with an accessible name', async () => {
+  it('exposes a modal dialog named by its visible legacy title', async () => {
     await openOverlay()
     const dialog = screen.getByRole('dialog')
-    expect(dialog.getAttribute('aria-modal')).toBe('true')
-    expect(dialog).toHaveAccessibleName('The Caliente Legacy family tree')
+    expect(dialog.getAttribute('data-state')).toBe('open')
+    expect(dialog).toHaveAccessibleName('The Caliente Legacy')
   })
 
-  it('keeps Tab focus within the dialog when tabbing forward off the last element', async () => {
-    const user = await openOverlay()
-    const dialog = screen.getByRole('dialog')
-    const focusables = dialog.querySelectorAll<HTMLElement>(
-      'a[href], button, [tabindex]:not([tabindex="-1"])',
+  it('keeps the atlas AppNav inside the dialog', async () => {
+    await openOverlay()
+    expect(within(screen.getByRole('dialog')).getByTestId('app-nav')).toBeInTheDocument()
+  })
+
+  it('hides the rest of the page from assistive tech while open', async () => {
+    const user = userEvent.setup()
+    render(
+      <div>
+        <nav aria-label="Main navigation" data-testid="page-nav">
+          <a href="/app">Home</a>
+        </nav>
+        <ViewTree {...defaultProps} />
+      </div>,
     )
-    const last = focusables[focusables.length - 1]
-    last.focus()
-    await user.tab()
-    expect(dialog.contains(document.activeElement)).toBe(true)
+    await user.click(screen.getByRole('button', { name: /view family tree/i }))
+    expect(screen.getByTestId('page-nav').closest('[aria-hidden="true"]')).not.toBeNull()
   })
 
-  it('wraps to the last element on Shift+Tab from the first', async () => {
-    const user = await openOverlay()
-    const dialog = screen.getByRole('dialog')
-    const focusables = dialog.querySelectorAll<HTMLElement>(
-      'a[href], button, [tabindex]:not([tabindex="-1"])',
-    )
-    const first = focusables[0]
-    first.focus()
-    await user.tab({ shift: true })
-    expect(dialog.contains(document.activeElement)).toBe(true)
-  })
-
-  it('closes on Escape', async () => {
-    const user = await openOverlay()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    await user.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  it('renders the floating legacy capsule with sim + generation counts', async () => {
+  it('renders the floating capsule with sim + generation counts', async () => {
     await openOverlay()
     expect(screen.getByText(/2 sims · 2 generations/i)).toBeInTheDocument()
+  })
+
+  it('renders the generation filter pills and the Add sim link', async () => {
+    await openOverlay()
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(dialog).getByRole('button', { name: 'Gen I' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('link', { name: /add sim/i })).toHaveAttribute(
+      'href',
+      '/app/legacies/caliente/sims/new',
+    )
+  })
+
+  it('closes via the capsule back button', async () => {
+    const user = await openOverlay()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /back to legacy/i }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

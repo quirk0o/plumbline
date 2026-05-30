@@ -45,6 +45,7 @@ vi.mock('@/components/lineage-tree/lineage-tree', () => ({
     sims: unknown[]
     familyEdges: unknown[]
     partnerEdges: unknown[]
+    dimmedIds?: Set<string>
     onSelectSim?: (id: string) => void
   }) => (
     <div
@@ -113,12 +114,22 @@ describe('ViewTree', () => {
     const user = userEvent.setup()
     render(<ViewTree {...defaultProps} />)
     await user.click(screen.getByRole('button', { name: /view family tree/i }))
-    expect(
-      screen.getByRole('dialog', { name: 'The Caliente Legacy family tree' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
   it('closes the overlay when "Back to legacy" button is clicked', async () => {
+    // The Back button lives inside the canvas capsule, only shown when data is loaded.
+    mockUseQuery.mockReturnValue({
+      data: {
+        sims: [
+          { id: 's1', firstName: 'Dina', lastName: 'Caliente', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/caliente/sims/s1' },
+        ],
+        familyEdges: [],
+        partnerEdges: [],
+      },
+      isLoading: false,
+      isError: false,
+    })
     const user = userEvent.setup()
     render(<ViewTree {...defaultProps} />)
     await user.click(screen.getByRole('button', { name: /view family tree/i }))
@@ -134,7 +145,7 @@ describe('ViewTree', () => {
     await user.click(screen.getByRole('button', { name: /view family tree/i }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
 
-    fireEvent.keyDown(window, { key: 'Escape' })
+    await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
@@ -157,7 +168,7 @@ describe('TreeOverlay (via ViewTree)', () => {
     expect(screen.getByText(/loading the family tree/i)).toBeInTheDocument()
   })
 
-  it('shows an error message (and keeps the back button) when the query errors', async () => {
+  it('shows an error message when the query errors', async () => {
     mockUseQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -169,10 +180,6 @@ describe('TreeOverlay (via ViewTree)', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(
       screen.getByText(/could not load the family tree/i),
-    ).toBeInTheDocument()
-    // The user can still escape the overlay
-    expect(
-      screen.getByRole('button', { name: /back to legacy/i }),
     ).toBeInTheDocument()
   })
 
@@ -192,7 +199,7 @@ describe('TreeOverlay (via ViewTree)', () => {
   it('shows the LineageTree stub when data resolves', async () => {
     mockUseQuery.mockReturnValue({
       data: {
-        sims: [{ id: 'sim-1' }],
+        sims: [{ id: 'sim-1', firstName: 'Dina', lastName: 'Caliente', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/caliente/sims/sim-1' }],
         familyEdges: [],
         partnerEdges: [],
       },
@@ -205,41 +212,46 @@ describe('TreeOverlay (via ViewTree)', () => {
     expect(screen.getByTestId('lineage-tree')).toBeInTheDocument()
   })
 
-  it('renders the legacy title with an amber <em> on a trailing "Legacy"', async () => {
+  it('renders the legacy title as the dialog accessible name when name ends in "Legacy"', async () => {
     mockUseQuery.mockReturnValue({
-      data: undefined,
-      isLoading: true,
+      data: {
+        sims: [{ id: 's1', firstName: 'Dina', lastName: 'Caliente', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/caliente/sims/s1' }],
+        familyEdges: [],
+        partnerEdges: [],
+      },
+      isLoading: false,
       isError: false,
     })
     const user = userEvent.setup()
     render(<ViewTree {...defaultProps} legacyName="The Caliente Legacy" />)
     await user.click(screen.getByRole('button', { name: /view family tree/i }))
 
-    // The <em> element wraps the trailing "Legacy" word
-    const dialog = screen.getByRole('dialog')
-    const em = dialog.querySelector('em')
-    expect(em).not.toBeNull()
-    expect(em?.textContent).toBe('Legacy')
+    // The RadixDialog.Title provides the accessible name; the trailing word
+    // "Legacy" is rendered as a span accent — not an <em>
+    expect(screen.getByRole('dialog', { name: 'The Caliente Legacy' })).toBeInTheDocument()
   })
 
-  it('does not render amber <em> when name does not end in "Legacy"', async () => {
+  it('renders the full dialog title when name does not end in "Legacy"', async () => {
     mockUseQuery.mockReturnValue({
-      data: undefined,
-      isLoading: true,
+      data: {
+        sims: [{ id: 's1', firstName: 'Dina', lastName: 'Caliente', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/caliente/sims/s1' }],
+        familyEdges: [],
+        partnerEdges: [],
+      },
+      isLoading: false,
       isError: false,
     })
     const user = userEvent.setup()
     render(<ViewTree {...defaultProps} legacyName="The Caliente Chronicle" />)
     await user.click(screen.getByRole('button', { name: /view family tree/i }))
 
-    const dialog = screen.getByRole('dialog')
-    expect(dialog.querySelector('em')).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'The Caliente Chronicle' })).toBeInTheDocument()
   })
 
   it('navigates to sim detail route when a tree node is selected', async () => {
     mockUseQuery.mockReturnValue({
       data: {
-        sims: [{ id: 'sim-abc' }],
+        sims: [{ id: 'sim-abc', firstName: 'Dina', lastName: 'Caliente', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/caliente/sims/sim-abc' }],
         familyEdges: [],
         partnerEdges: [],
       },

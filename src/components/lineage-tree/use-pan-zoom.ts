@@ -45,7 +45,6 @@ export function zoomAtPoint(t: Transform, nextScaleRaw: number, px: number, py: 
  */
 export function usePanZoom(contentWidth: number, contentHeight: number) {
   const [t, setT] = useState<Transform>({ x: 0, y: 0, scale: 1 })
-  const [isPanning, setIsPanning] = useState(false)
   const [surface, setSurface] = useState<HTMLDivElement | null>(null)
   const drag = useRef<{ x: number; y: number } | null>(null)
 
@@ -107,7 +106,6 @@ export function usePanZoom(contentWidth: number, contentHeight: number) {
     if ((e.target as HTMLElement).closest('[data-tree-node]')) return
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     drag.current = { x: e.clientX, y: e.clientY }
-    setIsPanning(true)
   }, [])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
@@ -121,7 +119,6 @@ export function usePanZoom(contentWidth: number, contentHeight: number) {
   const endDrag = useCallback((e: React.PointerEvent) => {
     if (!drag.current) return
     drag.current = null
-    setIsPanning(false)
     try {
       ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
     } catch {
@@ -135,7 +132,6 @@ export function usePanZoom(contentWidth: number, contentHeight: number) {
     fit,
     zoomIn,
     zoomOut,
-    isPanning,
     surfaceProps: {
       ref: registerSurface,
       onPointerDown,

@@ -33,9 +33,9 @@ const familyEdges = [
 const partnerEdges = [{ simAId: 'founder', simBId: 'partner' }]
 
 describe('LineageTree', () => {
-  it('renders an <svg> with role="img" and an aria-label', () => {
+  it('renders an <svg> as a labelled group (not an opaque image)', () => {
     render(<LineageTree sims={sims} familyEdges={familyEdges} partnerEdges={partnerEdges} />)
-    const svg = screen.getByRole('img', { name: 'Family tree' })
+    const svg = screen.getByRole('group', { name: /Family tree —/ })
     expect(svg.tagName.toLowerCase()).toBe('svg')
   })
 
@@ -82,7 +82,7 @@ describe('LineageTree', () => {
         onSelectSim={onSelectSim}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Reed Caliente' }))
+    fireEvent.click(screen.getByRole('button', { name: /Reed Caliente/ }))
     expect(onSelectSim).toHaveBeenCalledWith('heir')
   })
 

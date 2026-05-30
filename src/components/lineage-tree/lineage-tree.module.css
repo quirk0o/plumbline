@@ -4,12 +4,19 @@
   height: auto;
 }
 
-/* Node click targets are <g role="button"> — keep the focus ring on-brand. */
-.tree :global(g[role='button']:focus-visible) {
+/* Node click target <g>. SVG groups don't render a CSS outline, so we draw a
+   dedicated focus halo and toggle it on :focus-visible instead. */
+.node {
   outline: none;
 }
 
-.tree :global(g[role='button']:focus-visible) circle:first-of-type {
-  stroke: var(--green);
-  stroke-width: 2.5;
+/* Focus halo: present in the DOM but invisible until the node is keyboard
+   focused. Never intercepts pointer events. */
+.focusRing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.node:focus-visible .focusRing {
+  opacity: 1;
 }

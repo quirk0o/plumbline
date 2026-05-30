@@ -3,6 +3,7 @@ import { useId } from 'react'
 import type { LifeStage } from '@prisma/client'
 import { formatLifeStage } from '@/lib/legacy-format'
 import { CREST_ANCHORS } from './layout'
+import styles from './lineage-tree.module.css'
 
 const { cx, cy } = CREST_ANCHORS
 const RING_RADIUS = 22
@@ -27,6 +28,8 @@ type CrestNodeProps = {
   isSelected?: boolean
   /** Def id for the plumbob gradient (from the parent SVG's TreeDefs). */
   plumbobGradientId: string
+  /** Def id for the medallion lift-shadow filter (from the parent's TreeDefs). */
+  liftFilterId?: string
   onSelect?: (id: string) => void
 }
 
@@ -38,6 +41,7 @@ export function CrestNode({
   isFounder = false,
   isSelected = false,
   plumbobGradientId,
+  liftFilterId,
   onSelect,
 }: CrestNodeProps) {
   // Unique per-node clip id so portraits never bleed across instances.
@@ -48,6 +52,8 @@ export function CrestNode({
     `${sim.firstName[0] ?? ''}${sim.lastName[0] ?? ''}`.toUpperCase() || '?'
   const fullName = `${sim.firstName} ${sim.lastName}`.trim()
   const lifeStageLabel = formatLifeStage(sim.lifeStage)
+  // Accessible name pairs the sim with their life stage, e.g. "Reed Caliente, Teen".
+  const accessibleName = `${fullName}, ${lifeStageLabel}`
 
   // Amber ring marks heir / founder (legacy callouts); otherwise neutral text.
   const ringColor = isFounder || isHeir ? 'var(--amber)' : 'var(--text)'
@@ -58,9 +64,10 @@ export function CrestNode({
   return (
     <g
       transform={`translate(${x}, ${y})`}
+      className={onSelect ? styles.node : undefined}
       role={onSelect ? 'button' : undefined}
       tabIndex={onSelect ? 0 : undefined}
-      aria-label={fullName}
+      aria-label={accessibleName}
       style={onSelect ? { cursor: 'pointer' } : undefined}
       onClick={onSelect ? handleActivate : undefined}
       onKeyDown={
@@ -74,6 +81,21 @@ export function CrestNode({
           : undefined
       }
     >
+      {/* Keyboard focus halo — hidden until :focus-visible (see CSS module).
+          SVG <g> cannot render a CSS outline, so we draw our own ring. */}
+      {onSelect && (
+        <circle
+          data-focus-ring
+          className={styles.focusRing}
+          cx={cx}
+          cy={cy}
+          r={RING_RADIUS + 6}
+          fill="none"
+          stroke="var(--green)"
+          strokeWidth="3"
+        />
+      )}
+
       {/* Selection halo */}
       {isSelected && (
         <circle
@@ -94,6 +116,7 @@ export function CrestNode({
         fill="var(--bg)"
         stroke={ringColor}
         strokeWidth="1.5"
+        filter={liftFilterId ? `url(#${liftFilterId})` : undefined}
       />
 
       {sim.imageUrl ? (
@@ -139,7 +162,6 @@ export function CrestNode({
             textAnchor="middle"
             fill={isHeir ? 'var(--color-amber-700)' : 'var(--text)'}
             fontSize="16"
-            fontStyle="italic"
             fontWeight="600"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}
             data-testid="crest-monogram"

@@ -88,7 +88,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-8);
 }
 
 .message {
@@ -96,6 +95,27 @@
   font-family: var(--font-body);
   font-size: var(--text-base);
   text-align: center;
+  padding: var(--space-8);
+}
+
+/* Dot-grid canvas behind the tree. The dot colour is derived from --text so it
+   tracks the theme automatically (dark forest gets a faint warm dot, parchment
+   a faint brown dot) without touching globals.css. */
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  background: var(--bg);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--text) 8%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 20px 20px;
 }
 
 .treeContainer {
@@ -104,4 +124,111 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ─── Floating glass capsule (top-left legacy identity) ─────────── */
+.capsule {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.capsuleText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.capsuleEyebrow {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.capsuleTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  font-style: normal;
+  color: var(--text);
+}
+
+.capsuleAccent {
+  color: var(--color-amber-700);
+  font-style: normal;
+}
+
+.capsuleMeta {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ─── Bottom legend pill ───────────────────────────────────────── */
+.legend {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  gap: 16px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.legendDotHeir,
+.legendDotSim {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legendDotHeir {
+  background: var(--amber);
+}
+
+.legendDotSim {
+  background: var(--green);
+}
+
+.legendLineMarriage,
+.legendLineLineage {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.legendLineMarriage {
+  background: var(--amber);
+}
+
+.legendLineLineage {
+  background: var(--border-bright);
 }

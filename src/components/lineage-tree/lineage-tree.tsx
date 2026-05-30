@@ -21,6 +21,8 @@ export type LineageTreeProps = {
   founderSimId?: string
   selectedId?: string
   onSelectSim?: (id: string) => void
+  /** Legacy name for the tree's accessible group label (defaults to "Family"). */
+  legacyName?: string
   className?: string
 }
 
@@ -31,6 +33,7 @@ export function LineageTree({
   founderSimId,
   selectedId,
   onSelectSim,
+  legacyName,
   className,
 }: LineageTreeProps) {
   const rawId = useId()
@@ -76,8 +79,8 @@ export function LineageTree({
       className={cn(styles.tree, className)}
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="xMidYMid meet"
-      role="img"
-      aria-label="Family tree"
+      role="group"
+      aria-label={`${legacyName ?? 'Family'} tree — ${sims.length} sims`}
     >
       <TreeDefs idPrefix={idPrefix} />
 
@@ -144,6 +147,7 @@ export function LineageTree({
             isFounder={founderSimId === sim.id}
             isSelected={selectedId === sim.id}
             plumbobGradientId={defIds.plumbobGradient}
+            liftFilterId={defIds.liftShadow}
             onSelect={onSelectSim}
           />
         )

@@ -14,8 +14,8 @@ test('legacy with a founder shows the founder in the sims section', async ({ pag
   await page.getByRole('button', { name: 'Create legacy →' }).click()
 
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
-  await expect(page.getByRole('heading', { name: 'Sims', exact: true })).toBeVisible()
-  await expect(page.getByRole('listitem').getByText('Bella Goth')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'All sims', exact: true })).toBeVisible()
+  await expect(page.getByTestId('roster').getByRole('listitem').getByText('Bella Goth')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Add sim' })).toBeVisible()
 })
 
@@ -29,10 +29,8 @@ test('legacy with no sims shows empty state with a CTA link', async ({ page }) =
   await page.getByRole('button', { name: 'Skip →' }).click()
 
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
-  await expect(page.getByRole('heading', { name: 'Sims', exact: true })).toBeVisible()
-  await expect(
-    page.locator('section', { has: page.getByRole('heading', { name: 'Sims', exact: true }) }).getByText('No sims yet.')
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'All sims', exact: true })).toBeVisible()
+  await expect(page.getByTestId('roster').getByText('No sims yet.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Add your first sim →' })).toBeVisible()
 })
 
@@ -54,5 +52,5 @@ test('user can add a sim to an existing legacy and see it in the list', async ({
   await page.getByRole('button', { name: 'Add sim' }).click()
 
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
-  await expect(page.getByRole('link', { name: 'Don Lothario' })).toBeVisible()
+  await expect(page.getByTestId('roster').getByRole('link', { name: /Don Lothario/ })).toBeVisible()
 })

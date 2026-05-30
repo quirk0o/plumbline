@@ -81,7 +81,12 @@ export function ChronicleSections({
         </div>
       </section>
 
-      <section id="sims" data-section="sims" className={styles.rosterSection}>
+      <section
+        id="sims"
+        data-section="sims"
+        data-testid="roster"
+        className={styles.rosterSection}
+      >
         <div className={styles.inner}>
           <Roster groups={groups} slug={slug} />
         </div>

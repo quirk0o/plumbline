@@ -26,7 +26,7 @@ async function createLegacyWithTwoSims(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Add sim' }).click()
 
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
-  await page.getByRole('link', { name: 'Bella Goth' }).click()
+  await page.getByTestId('roster').getByRole('link', { name: /Bella Goth/ }).click()
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
 }
 

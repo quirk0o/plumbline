@@ -31,24 +31,37 @@ export function Roster({ groups, slug }: RosterProps) {
         </ButtonLink>
       </div>
 
-      {/* One group per generation */}
-      {groups.map((group) => (
-        <div key={group.gen ?? 'unassigned'} className={styles.group}>
-          <div className={styles.groupHeader}>
-            <GenerationBadge>
-              {group.gen !== null ? `Gen ${roman(group.gen)}` : 'Unassigned'}
-            </GenerationBadge>
-            <span className={styles.groupCount}>
-              {group.sims.length} {group.sims.length === 1 ? 'sim' : 'sims'}
-            </span>
-          </div>
-          <ul className={styles.grid}>
-            {group.sims.map((sim) => (
-              <RosterCard key={sim.id} sim={sim} slug={slug} />
-            ))}
-          </ul>
+      {groups.length === 0 ? (
+        <div className={styles.emptyState}>
+          <p className={styles.emptyText}>No sims yet.</p>
+          <ButtonLink
+            variant="outline"
+            size="sm"
+            href={`/app/legacies/${slug}/sims/new`}
+          >
+            Add your first sim →
+          </ButtonLink>
         </div>
-      ))}
+      ) : (
+        /* One group per generation */
+        groups.map((group) => (
+          <div key={group.gen ?? 'unassigned'} className={styles.group}>
+            <div className={styles.groupHeader}>
+              <GenerationBadge>
+                {group.gen !== null ? `Gen ${roman(group.gen)}` : 'Unassigned'}
+              </GenerationBadge>
+              <span className={styles.groupCount}>
+                {group.sims.length} {group.sims.length === 1 ? 'sim' : 'sims'}
+              </span>
+            </div>
+            <ul className={styles.grid}>
+              {group.sims.map((sim) => (
+                <RosterCard key={sim.id} sim={sim} slug={slug} />
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
     </div>
   )
 }

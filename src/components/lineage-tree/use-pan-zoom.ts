@@ -36,29 +36,37 @@ export function zoomAtPoint(t: Transform, nextScaleRaw: number, px: number, py: 
 
 /**
  * Drag-to-pan + wheel-zoom + fit/step controls for an absolutely-sized content
- * box inside `surfaceRef`. Re-fits on mount, on content-size change, and on
- * window resize. Panning is suppressed when the press starts on a tree node
- * (`[data-tree-node]`) so node clicks still navigate.
+ * box. The pan surface is tracked in state via the `ref` returned in
+ * `surfaceProps`, so the wheel + resize listeners (re)attach when the surface
+ * element actually mounts — the surface is rendered only after data loads, so a
+ * plain ref + mount-only effect would never wire up. Panning is suppressed when
+ * the press starts on a tree node (`[data-tree-node]`) so node clicks still
+ * navigate.
  */
-export function usePanZoom(
-  surfaceRef: React.RefObject<HTMLElement | null>,
-  contentWidth: number,
-  contentHeight: number,
-) {
+export function usePanZoom(contentWidth: number, contentHeight: number) {
   const [t, setT] = useState<Transform>({ x: 0, y: 0, scale: 1 })
   const [isPanning, setIsPanning] = useState(false)
+  const [surface, setSurface] = useState<HTMLDivElement | null>(null)
   const drag = useRef<{ x: number; y: number } | null>(null)
 
-  // Use ResizeObserver to react to both the initial mount (fires as a callback
-  // when the element first gets its size) and any subsequent viewport resize.
-  // setState inside a ResizeObserver callback is event-driven, satisfying
-  // react-hooks/set-state-in-effect.
-  // The observer is re-created whenever content dimensions change so that it
-  // fires once with the current viewport size and the updated content size,
-  // producing a fresh fit.
+  const registerSurface = useCallback((node: HTMLDivElement | null) => {
+    setSurface(node)
+  }, [])
+
+  const fit = useCallback(() => {
+    if (!surface) return
+    setT(
+      computeFit(
+        { width: surface.clientWidth, height: surface.clientHeight },
+        { width: contentWidth, height: contentHeight },
+      ),
+    )
+  }, [surface, contentWidth, contentHeight])
+
+  // Fit on (and refit when) the surface mounts or content size changes. The
+  // ResizeObserver's initial callback fires once the element has a measured size.
   useEffect(() => {
-    const el = surfaceRef.current
-    if (!el) return
+    if (!surface) return
     const content = { width: contentWidth, height: contentHeight }
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0]
@@ -66,40 +74,32 @@ export function usePanZoom(
       const { width, height } = entry.contentRect
       setT(computeFit({ width, height }, content))
     })
-    observer.observe(el)
+    observer.observe(surface)
     return () => observer.disconnect()
-  }, [surfaceRef, contentWidth, contentHeight])
+  }, [surface, contentWidth, contentHeight])
 
-  // Native non-passive wheel listener so preventDefault works.
+  // Native non-passive wheel listener so preventDefault works; re-attaches when
+  // the surface element changes.
   useEffect(() => {
-    const el = surfaceRef.current
-    if (!el) return
+    if (!surface) return
     const handler = (e: WheelEvent) => {
       e.preventDefault()
-      const rect = el.getBoundingClientRect()
+      const rect = surface.getBoundingClientRect()
       const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1
       setT((cur) => zoomAtPoint(cur, cur.scale * factor, e.clientX - rect.left, e.clientY - rect.top))
     }
-    el.addEventListener('wheel', handler, { passive: false })
-    return () => el.removeEventListener('wheel', handler)
-  }, [surfaceRef])
-
-  const fit = useCallback(() => {
-    const el = surfaceRef.current
-    if (!el) return
-    setT(computeFit({ width: el.clientWidth, height: el.clientHeight }, { width: contentWidth, height: contentHeight }))
-  }, [surfaceRef, contentWidth, contentHeight])
+    surface.addEventListener('wheel', handler, { passive: false })
+    return () => surface.removeEventListener('wheel', handler)
+  }, [surface])
 
   const zoomBy = useCallback(
     (factor: number) => {
-      const el = surfaceRef.current
-      const width = el?.clientWidth ?? 0
-      const height = el?.clientHeight ?? 0
+      const width = surface?.clientWidth ?? 0
+      const height = surface?.clientHeight ?? 0
       setT((cur) => zoomAtPoint(cur, cur.scale * factor, width / 2, height / 2))
     },
-    [surfaceRef],
+    [surface],
   )
-
   const zoomIn = useCallback(() => zoomBy(1.2), [zoomBy])
   const zoomOut = useCallback(() => zoomBy(1 / 1.2), [zoomBy])
 
@@ -137,6 +137,7 @@ export function usePanZoom(
     zoomOut,
     isPanning,
     surfaceProps: {
+      ref: registerSurface,
       onPointerDown,
       onPointerMove,
       onPointerUp: endDrag,

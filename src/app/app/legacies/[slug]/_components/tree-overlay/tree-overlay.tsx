@@ -151,7 +151,6 @@ export function TreeOverlay({
 }: TreeOverlayProps) {
   const router = useRouter()
   const backButtonRef = useRef<HTMLButtonElement>(null)
-  const surfaceRef = useRef<HTMLDivElement>(null)
 
   const { data, isLoading, isError } = trpc.sims.getTreeData.useQuery({ legacySlug })
 
@@ -196,7 +195,6 @@ export function TreeOverlay({
     [visibleSims, familyEdges, partnerEdges],
   )
   const { transform, zoomPercent, fit, zoomIn, zoomOut, surfaceProps } = usePanZoom(
-    surfaceRef,
     layout.viewBox.width,
     layout.viewBox.height,
   )
@@ -261,7 +259,7 @@ export function TreeOverlay({
                   onQueryChange={setQuery}
                 />
 
-                <div ref={surfaceRef} className={styles.surface} {...surfaceProps}>
+                <div className={styles.surface} {...surfaceProps}>
                   <div
                     className={styles.viewport}
                     style={{
@@ -284,6 +282,10 @@ export function TreeOverlay({
 
                 {visibleSims.length === 0 && (
                   <p className={styles.emptyFilter}>No sims in this generation.</p>
+                )}
+
+                {dimmedIds && visibleSims.length > 0 && dimmedIds.size === visibleSims.length && (
+                  <p className={styles.searchEmpty}>No sims match your search.</p>
                 )}
 
                 <AtlasBottomBar

@@ -139,16 +139,53 @@ Skip-to-content link + labelled top nav (`app-shell.tsx`); rail buttons bumped
 to ≥44px; portrait/crest monograms now **upright** (brand: no italic for entity
 names). Decorative-mark `aria-hidden` audit found no remaining gaps.
 
-## 🔭 Follow-ups (tracked, not blocking — surfaced by completion-pass QA)
+## ✅ Completed in the 2026-05-30 Tree Atlas completion pass
 
-- **AppNav rendered inside the tree dialog.** The focus trap works, but it
-  cycles through a duplicate top nav (Dashboard / Settings / Sign out), so
-  keyboard users hit links that route away from the overlay, and there are two
-  "Main navigation" landmarks while the tree is open. Consider excluding the nav
-  from the dialog / trap.
-- **Tree initial scroll + focus-into-view.** On open, the Gen I row can be
-  cropped at the top (user must scroll up), and focusing an off-screen node does
-  not scroll it into view.
+The tree overlay was promoted from a static, over-zoomed chart into the full
+**interactive Atlas** from the handoff mock (plans:
+`docs/superpowers/plans/2026-05-30-legacy-tree-rendering-engine.md` +
+`…-legacy-tree-atlas-overlay.md`). Executed subagent-driven with per-task
+spec + code-quality review; `tsc` + `lint` clean; unit/integration suite
+**424/424 green**; full live browser QA (light + dark, keyboard-only, axe: 0
+violations) passed.
+
+- **Correct scale + interactive pan/zoom.** The SVG now renders at intrinsic
+  size; a hand-rolled `usePanZoom` hook (`src/components/lineage-tree/use-pan-zoom.ts`)
+  drives drag-to-pan, wheel-zoom-toward-cursor, `−`/`+`/`Fit`, and a live %
+  readout. Opens fit-to-viewport capped at 100% (small legacies ~1:1, large
+  scale down) — the old "way too zoomed in" bug and the Gen I initial-crop are
+  both resolved. The wheel listener attaches via a callback ref so it wires up
+  when the surface mounts (after data loads).
+- **Functional top-right toolbar** (`atlas-toolbar.tsx`): search ("Search this
+  lineage…") that dims non-matching medallions (with a "No sims match your
+  search." pill on zero matches), generation filter pills (All / Gen I / …)
+  that filter the rendered tree and re-fit, and an **Add sim** link to
+  `…/sims/new`. (Per the locked scope, **+ Milestone is intentionally omitted** —
+  no milestone backend.)
+- **No header bar.** The "Back to legacy" bar was removed to match the mock; the
+  back affordance now lives in the floating capsule and the dialog closes on Esc.
+  The capsule (with the `Dialog.Title` and back button) renders in every state,
+  so the dialog is always named and closable.
+- **AppNav duplication resolved.** The overlay is rebuilt on the Radix `Dialog`
+  primitive (portal + focus trap + scroll-lock + `aria-hidden` on the
+  background), so there is now exactly **one** "Main navigation" landmark while
+  the tree is open and keyboard focus can't reach the page behind. The bespoke
+  focus-trap/Escape/scroll-lock/focus-restore code was deleted.
+- Drag no longer selects SVG text (`user-select: none` on the pan surface).
+
+## 🔭 Follow-ups (tracked, not blocking)
+
+- **Sim portraits with a stale/missing `imageUrl` show a broken image** rather
+  than falling back to the monogram (the Crest fallback only triggers on a
+  *null* `imageUrl`). Surfaced by a Lemons-legacy sim whose DB `imageUrl` points
+  at a file absent from the worktree's `public/uploads/`. Data/env issue, but a
+  `<image onError>` → monogram fallback would harden it.
+- **Keyboard focus on an off-screen tree node does not pan it into view.** The
+  zoom controls are keyboard-operable, but focusing a node that's currently
+  panned/zoomed out of frame won't bring it on-screen (SVG `<g>` has no
+  `scrollIntoView`). A future enhancement could pan the viewport to a focused node.
+- **No filter pill for null-generation ("GEN —") sims.** Sims without a
+  generation appear in a trailing row but can't be isolated via the pills.
 - **Skip-link focus management.** The link appears on Tab and scrolls to
   `#main-content`, but `<main>` lacks `tabindex="-1"`, so focus lands on `<body>`
   rather than moving into main (WCAG 2.4.1 met via anchor scroll, but focus

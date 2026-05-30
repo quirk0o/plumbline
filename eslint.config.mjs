@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // Test build dir (NEXT_DIST_DIR=.next-test, used by dev:test / Playwright):
+    ".next-test/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

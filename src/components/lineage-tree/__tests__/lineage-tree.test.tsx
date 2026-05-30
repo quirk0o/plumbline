@@ -92,4 +92,27 @@ describe('LineageTree', () => {
     )
     expect(container.querySelector('svg')).toBeNull()
   })
+
+  it('sizes the <svg> to its intrinsic viewBox (pan/zoom scales it, CSS does not stretch it)', () => {
+    render(<LineageTree sims={sims} familyEdges={familyEdges} partnerEdges={partnerEdges} />)
+    const svg = screen.getByRole('group', { name: /Family tree —/ })
+    const viewBox = svg.getAttribute('viewBox')!.split(' ')
+    expect(svg.getAttribute('width')).toBe(viewBox[2])
+    expect(svg.getAttribute('height')).toBe(viewBox[3])
+  })
+
+  it('fades nodes whose id is in dimmedIds (search highlight)', () => {
+    render(
+      <LineageTree
+        sims={sims}
+        familyEdges={familyEdges}
+        partnerEdges={partnerEdges}
+        dimmedIds={new Set(['founder'])}
+      />,
+    )
+    const dina = screen.getByText('Dina Caliente').closest('[data-tree-node]') as HTMLElement
+    const reed = screen.getByText('Reed Caliente').closest('[data-tree-node]') as HTMLElement
+    expect(dina.style.opacity).toBe('0.25')
+    expect(reed.style.opacity).toBe('')
+  })
 })

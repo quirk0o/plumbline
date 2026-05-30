@@ -26,6 +26,8 @@ type CrestNodeProps = {
   isHeir?: boolean
   isFounder?: boolean
   isSelected?: boolean
+  /** When true, fades the node to 0.25 opacity (search highlight dimming). */
+  isDimmed?: boolean
   /** Def id for the plumbob gradient (from the parent SVG's TreeDefs). */
   plumbobGradientId: string
   /** Def id for the medallion lift-shadow filter (from the parent's TreeDefs). */
@@ -40,6 +42,7 @@ export function CrestNode({
   isHeir = false,
   isFounder = false,
   isSelected = false,
+  isDimmed = false,
   plumbobGradientId,
   liftFilterId,
   onSelect,
@@ -63,12 +66,19 @@ export function CrestNode({
 
   return (
     <g
+      data-tree-node
       transform={`translate(${x}, ${y})`}
       className={onSelect ? styles.node : undefined}
       role={onSelect ? 'button' : undefined}
       tabIndex={onSelect ? 0 : undefined}
       aria-label={accessibleName}
-      style={onSelect ? { cursor: 'pointer' } : undefined}
+      style={
+        isDimmed
+          ? { ...(onSelect ? { cursor: 'pointer' } : {}), opacity: 0.25 }
+          : onSelect
+            ? { cursor: 'pointer' }
+            : undefined
+      }
       onClick={onSelect ? handleActivate : undefined}
       onKeyDown={
         onSelect

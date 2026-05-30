@@ -21,6 +21,8 @@ export type LineageTreeProps = {
   founderSimId?: string
   selectedId?: string
   onSelectSim?: (id: string) => void
+  /** Ids to fade (search highlight). Undefined = nothing dimmed. */
+  dimmedIds?: Set<string>
   /** Legacy name for the tree's accessible group label (defaults to "Family"). */
   legacyName?: string
   className?: string
@@ -33,6 +35,7 @@ export function LineageTree({
   founderSimId,
   selectedId,
   onSelectSim,
+  dimmedIds,
   legacyName,
   className,
 }: LineageTreeProps) {
@@ -78,6 +81,8 @@ export function LineageTree({
     <svg
       className={cn(styles.tree, className)}
       viewBox={`0 0 ${width} ${height}`}
+      width={width}
+      height={height}
       preserveAspectRatio="xMidYMid meet"
       role="group"
       aria-label={`${legacyName ?? 'Family'} tree — ${sims.length} sims`}
@@ -146,6 +151,7 @@ export function LineageTree({
             isHeir={sim.isHeir}
             isFounder={founderSimId === sim.id}
             isSelected={selectedId === sim.id}
+            isDimmed={dimmedIds?.has(sim.id) ?? false}
             plumbobGradientId={defIds.plumbobGradient}
             liftFilterId={defIds.liftShadow}
             onSelect={onSelectSim}

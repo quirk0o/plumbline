@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { SectionNav } from '../section-nav/section-nav'
 import type { SectionNavItem } from '../section-nav/section-nav'
+import navStyles from '../section-nav/section-nav.module.css'
 
 // ---------------------------------------------------------------------------
 // IntersectionObserver mock — captures the callback so the test can drive it.
@@ -183,5 +186,31 @@ describe('SectionNav', () => {
     const { unmount } = render(<SectionNav items={items} />)
     unmount()
     expect(disconnectSpy).toHaveBeenCalled()
+  })
+
+  // Each rail item is a touch target — it needs a comfortable >=44px height,
+  // not just the AA 24px minimum. The height lives on the `.item` rule in the
+  // CSS module; jsdom doesn't apply module CSS, so we (1) assert every rail
+  // button actually carries that styled class, then (2) read the rule's
+  // min-height from the module source to confirm it clears 44px.
+  it('gives each rail item a >=44px tap target', () => {
+    render(<SectionNav items={items} />)
+    for (const item of items) {
+      const button = screen.getByRole('button', { name: item.label })
+      expect(button.className.split(/\s+/)).toContain(navStyles.item)
+    }
+
+    const moduleCss = readFileSync(
+      join(
+        process.cwd(),
+        'src/app/app/legacies/[slug]/_components/section-nav/section-nav.module.css',
+      ),
+      'utf8',
+    )
+    const itemBlock = moduleCss.match(/\.item\s*\{([^}]*)\}/)
+    expect(itemBlock, '.item rule missing from module CSS').not.toBeNull()
+    const minHeight = itemBlock![1].match(/min-height:\s*(\d+)px/)
+    expect(minHeight, '.item is missing a min-height').not.toBeNull()
+    expect(Number(minHeight![1])).toBeGreaterThanOrEqual(44)
   })
 })

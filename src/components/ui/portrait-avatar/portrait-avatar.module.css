@@ -29,7 +29,6 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-style: italic;
   font-weight: var(--weight-semibold);
   color: var(--text);
   flex-shrink: 0;

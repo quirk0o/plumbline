@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react'
 import { RomanticStatus } from '@prisma/client'
 import { trpc } from '@/trpc/client'
-import { ButtonLink, Eyebrow, PortraitAvatar, Badge } from '@/components/ui'
+import { Button, ButtonLink, Eyebrow, PortraitAvatar, Badge } from '@/components/ui'
 import { formatLifeStage, roman } from '@/lib/legacy-format'
 import styles from './sim-inspector.module.css'
 
@@ -72,15 +72,16 @@ export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimIn
     >
       <div className={styles.header}>
         <Eyebrow color={isHeir ? 'var(--amber-text)' : undefined}>{role}</Eyebrow>
-        <button
+        <Button
           ref={closeRef}
-          type="button"
-          className={styles.close}
+          size="icon"
+          variant="ghost"
+          className={styles.closeSlot}
           onClick={onClose}
           aria-label="Close sim details"
         >
           ✕
-        </button>
+        </Button>
       </div>
 
       {isLoading && (

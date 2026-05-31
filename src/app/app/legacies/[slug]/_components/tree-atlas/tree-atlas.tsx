@@ -1,7 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
 import { trpc } from '@/trpc/client'
+import { Button, ButtonLink } from '@/components/ui'
 import { LineageTree } from '@/components/lineage-tree/lineage-tree'
 import { computeLineageLayout } from '@/components/lineage-tree/layout'
 import { usePanZoom } from '@/components/lineage-tree/use-pan-zoom'
@@ -34,9 +34,10 @@ function LegacyCapsule({
   const genLabel = `${generationCount} ${generationCount === 1 ? 'generation' : 'generations'}`
   return (
     <div className={styles.capsule}>
-      <Link
+      <ButtonLink
         href={`/app/legacies/${legacySlug}`}
-        className={styles.capsuleBack}
+        size="icon"
+        variant="ghost"
         aria-label="Back to legacy"
       >
         <svg
@@ -52,7 +53,7 @@ function LegacyCapsule({
         >
           <path d="M10 3L5 8l5 5" />
         </svg>
-      </Link>
+      </ButtonLink>
       <Plumbob size={12} />
       <div className={styles.capsuleText}>
         <span className={styles.capsuleEyebrow} aria-hidden="true">
@@ -115,18 +116,18 @@ function AtlasBottomBar({
       </div>
       <span className={styles.divider} aria-hidden="true" />
       <div className={styles.zoomControls}>
-        <button type="button" className={styles.zoomButton} onClick={onZoomOut} aria-label="Zoom out">
+        <Button size="icon" variant="ghost" onClick={onZoomOut} aria-label="Zoom out">
           −
-        </button>
+        </Button>
         <span className={styles.zoomReadout} aria-live="polite">
           {zoomPercent}%
         </span>
-        <button type="button" className={styles.zoomButton} onClick={onZoomIn} aria-label="Zoom in">
+        <Button size="icon" variant="ghost" onClick={onZoomIn} aria-label="Zoom in">
           +
-        </button>
-        <button type="button" className={styles.zoomFit} onClick={onFit} aria-label="Fit tree to view">
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onFit} aria-label="Fit tree to view">
           Fit
-        </button>
+        </Button>
       </div>
     </div>
   )

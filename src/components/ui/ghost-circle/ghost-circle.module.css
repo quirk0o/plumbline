@@ -1,0 +1,16 @@
+.circle {
+  border-radius: 50%;
+  border: 1.5px dashed var(--border-bright);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+/* Amber treatment for founder / heir slots. */
+.accent {
+  border-color: var(--amber);
+  color: var(--amber-text);
+}

@@ -952,36 +952,36 @@ async function migrateRow(
 export async function runBackfill(options: BackfillOptions): Promise<BackfillSummary> {
   const summary: BackfillSummary = { migrated: 0, skipped: 0, unrecoverable: [] }
 
-  const legacies = await prisma.legacy.findMany({
+  const legacies = await db.legacy.findMany({
     where: { imageUrl: { startsWith: OLD_PREFIX } },
     select: { id: true, imageUrl: true, userId: true },
   })
   for (const row of legacies) {
     const newUrl = await migrateRow(row.imageUrl!, row.userId, options, summary)
     if (newUrl) {
-      await prisma.legacy.update({ where: { id: row.id }, data: { imageUrl: newUrl } })
+      await db.legacy.update({ where: { id: row.id }, data: { imageUrl: newUrl } })
     }
   }
 
-  const sims = await prisma.sim.findMany({
+  const sims = await db.sim.findMany({
     where: { imageUrl: { startsWith: OLD_PREFIX } },
     select: { id: true, imageUrl: true, legacy: { select: { userId: true } } },
   })
   for (const row of sims) {
     const newUrl = await migrateRow(row.imageUrl!, row.legacy.userId, options, summary)
     if (newUrl) {
-      await prisma.sim.update({ where: { id: row.id }, data: { imageUrl: newUrl } })
+      await db.sim.update({ where: { id: row.id }, data: { imageUrl: newUrl } })
     }
   }
 
-  const packs = await prisma.pack.findMany({
+  const packs = await db.pack.findMany({
     where: { imageUrl: { startsWith: OLD_PREFIX } },
     select: { id: true, imageUrl: true },
   })
   for (const row of packs) {
     const newUrl = await migrateRow(row.imageUrl!, 'unknown', options, summary)
     if (newUrl) {
-      await prisma.pack.update({ where: { id: row.id }, data: { imageUrl: newUrl } })
+      await db.pack.update({ where: { id: row.id }, data: { imageUrl: newUrl } })
     }
   }
 
@@ -1000,7 +1000,7 @@ async function main() {
     console.log('Unrecoverable (no source file found):')
     for (const url of summary.unrecoverable) console.log(`  ${url}`)
   }
-  await prisma.$disconnect()
+  await db.$disconnect()
 }
 
 const isDirectRun = process.argv[1]?.includes('backfill-uploads-to-s3')

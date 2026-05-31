@@ -1,5 +1,5 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { RomanticStatus } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import { ButtonLink, Eyebrow, PortraitAvatar, Badge } from '@/components/ui'
@@ -23,6 +23,7 @@ export interface SimInspectorProps {
 
 export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimInspectorProps) {
   const { data: sim, isLoading, isError } = trpc.sims.getById.useQuery({ id: simId })
+  const closeRef = useRef<HTMLButtonElement>(null)
 
   // Esc closes the inspector. (Adds a listener only — no setState in the effect body.)
   useEffect(() => {
@@ -32,6 +33,12 @@ export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimIn
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  // Move focus into the panel when it opens (and when the selection changes) so
+  // keyboard users land on the inspector instead of tabbing through the tree.
+  useEffect(() => {
+    closeRef.current?.focus()
+  }, [simId])
 
   const isHeir = sim?.isHeir ?? false
   const isFounder = !!sim && sim.id === founderSimId
@@ -66,6 +73,7 @@ export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimIn
       <div className={styles.header}>
         <Eyebrow color={isHeir ? 'var(--color-amber-700)' : undefined}>{role}</Eyebrow>
         <button
+          ref={closeRef}
           type="button"
           className={styles.close}
           onClick={onClose}
@@ -149,7 +157,7 @@ export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimIn
             size="sm"
             fullWidth
           >
-            Open profile →
+            Open profile <span aria-hidden="true">→</span>
           </ButtonLink>
         </div>
       )}

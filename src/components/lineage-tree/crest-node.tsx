@@ -106,16 +106,27 @@ export function CrestNode({
         />
       )}
 
-      {/* Selection halo */}
+      {/* Selection halo: a soft outer glow plus a crisp green ring so the
+          selected node is clearly distinguishable on parchment and forest. */}
       {isSelected && (
-        <circle
-          cx={cx}
-          cy={cy}
-          r={RING_RADIUS + 6}
-          fill="none"
-          stroke="var(--green-glow)"
-          strokeWidth="6"
-        />
+        <>
+          <circle
+            cx={cx}
+            cy={cy}
+            r={RING_RADIUS + 7}
+            fill="none"
+            stroke="var(--green-glow)"
+            strokeWidth="6"
+          />
+          <circle
+            cx={cx}
+            cy={cy}
+            r={RING_RADIUS + 4}
+            fill="none"
+            stroke="var(--green)"
+            strokeWidth="2"
+          />
+        </>
       )}
 
       {/* Outer ring medallion on a parchment surface */}

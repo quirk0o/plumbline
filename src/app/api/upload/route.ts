@@ -1,9 +1,7 @@
-import { put } from '@vercel/blob'
-import { writeFile } from 'fs/promises'
-import { join } from 'path'
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { fileTypeFromBuffer } from 'file-type'
+import { putObject } from '@/lib/storage'
 
 const BLOCKED_TYPES = ['image/svg+xml', 'image/svg', 'text/html', 'image/x-icon']
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -33,16 +31,9 @@ export async function POST(request: Request) {
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const key = `uploads/${session.user.id}/${Date.now()}-${safeName}`
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    const filename = `${Date.now()}-${safeName}`
-    await writeFile(join(process.cwd(), 'public', 'uploads', filename), Buffer.from(bytes))
-    return NextResponse.json({ url: `/uploads/${filename}` })
-  }
+  await putObject(key, Buffer.from(bytes), detected.mime)
 
-  const blob = await put(`uploads/${session.user.id}/${Date.now()}-${safeName}`, file, {
-    access: 'public',
-  })
-
-  return NextResponse.json({ url: blob.url })
+  return NextResponse.json({ url: `/media/${key}` })
 }

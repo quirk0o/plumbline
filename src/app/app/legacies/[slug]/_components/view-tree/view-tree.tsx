@@ -1,53 +1,15 @@
-'use client'
-import { useRef, useState } from 'react'
-import * as RadixDialog from '@radix-ui/react-dialog'
-import { Button, TreeIcon } from '@/components/ui'
-import { TreeOverlay } from '../tree-overlay/tree-overlay'
+import { ButtonLink, TreeIcon } from '@/components/ui'
 
 export interface ViewTreeProps {
   legacySlug: string
-  legacyName: string
-  founderSimId?: string
-  name: string | null
-  email: string | null
-  image: string | null
 }
 
-export function ViewTree({
-  legacySlug,
-  legacyName,
-  founderSimId,
-  name,
-  email,
-  image,
-}: ViewTreeProps) {
-  const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement | null>(null)
-
+/** Hero CTA that links to the full-page family-tree Atlas route. */
+export function ViewTree({ legacySlug }: ViewTreeProps) {
   return (
-    <RadixDialog.Root open={open} onOpenChange={setOpen}>
-      <Button
-        variant="outline"
-        onClick={(e) => {
-          triggerRef.current = e.currentTarget
-          setOpen(true)
-        }}
-      >
-        <TreeIcon />
-        View family tree
-      </Button>
-      {open && (
-        <TreeOverlay
-          legacySlug={legacySlug}
-          legacyName={legacyName}
-          founderSimId={founderSimId}
-          name={name}
-          email={email}
-          image={image}
-          onClose={() => setOpen(false)}
-          returnFocusRef={triggerRef}
-        />
-      )}
-    </RadixDialog.Root>
+    <ButtonLink href={`/app/legacies/${legacySlug}/tree`} variant="outline">
+      <TreeIcon />
+      View family tree
+    </ButtonLink>
   )
 }

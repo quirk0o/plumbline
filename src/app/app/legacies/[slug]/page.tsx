@@ -129,16 +129,7 @@ export default async function LegacyDetailPage({ params }: Props) {
         milestones={milestones}
         simsById={simsById}
         groups={groups}
-        treeSlot={
-          <ViewTree
-            legacySlug={slug}
-            legacyName={fetched.name}
-            founderSimId={fetched.founderSimId ?? undefined}
-            name={session.user.name ?? null}
-            email={session.user.email ?? null}
-            image={session.user.image ?? null}
-          />
-        }
+        treeSlot={<ViewTree legacySlug={slug} />}
       />
     </div>
   )

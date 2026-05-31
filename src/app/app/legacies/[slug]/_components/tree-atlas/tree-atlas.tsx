@@ -1,52 +1,42 @@
 'use client'
-import { useMemo, useRef, useState, type RefObject } from 'react'
-import * as RadixDialog from '@radix-ui/react-dialog'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { trpc } from '@/trpc/client'
-import { AppNav } from '@/app/app/components/app-nav'
 import { LineageTree } from '@/components/lineage-tree/lineage-tree'
 import { computeLineageLayout } from '@/components/lineage-tree/layout'
 import { usePanZoom } from '@/components/lineage-tree/use-pan-zoom'
 import { Plumbob } from '@/components/plumbob'
 import { splitLegacyName } from '../../lib/legacy-title'
 import { AtlasToolbar, type GenFilter } from './atlas-toolbar'
-import styles from './tree-overlay.module.css'
+import styles from './tree-atlas.module.css'
 
-export interface TreeOverlayProps {
+export interface TreeAtlasProps {
   legacySlug: string
   legacyName: string
   founderSimId?: string
-  name: string | null
-  email: string | null
-  image: string | null
-  onClose: () => void
-  returnFocusRef?: RefObject<HTMLButtonElement | null>
 }
 
-/** Top-left glass capsule: an accessible back button + the legacy identity. */
+/** Top-left glass capsule: a back link to the chronicle + the legacy identity. */
 function LegacyCapsule({
+  legacySlug,
   name,
   simCount,
   generationCount,
-  backButtonRef,
-  onClose,
 }: {
+  legacySlug: string
   name: string
   simCount: number
   generationCount: number
-  backButtonRef: RefObject<HTMLButtonElement | null>
-  onClose: () => void
 }) {
   const parts = splitLegacyName(name)
   const simLabel = `${simCount} ${simCount === 1 ? 'sim' : 'sims'}`
   const genLabel = `${generationCount} ${generationCount === 1 ? 'generation' : 'generations'}`
   return (
     <div className={styles.capsule}>
-      <button
-        ref={backButtonRef}
-        type="button"
+      <Link
+        href={`/app/legacies/${legacySlug}`}
         className={styles.capsuleBack}
-        onClick={onClose}
         aria-label="Back to legacy"
       >
         <svg
@@ -62,13 +52,13 @@ function LegacyCapsule({
         >
           <path d="M10 3L5 8l5 5" />
         </svg>
-      </button>
+      </Link>
       <Plumbob size={12} />
       <div className={styles.capsuleText}>
         <span className={styles.capsuleEyebrow} aria-hidden="true">
           Legacy
         </span>
-        <RadixDialog.Title className={styles.capsuleTitle}>
+        <h1 className={styles.capsuleTitle}>
           {parts ? (
             <>
               {parts.before}{' '}
@@ -77,7 +67,7 @@ function LegacyCapsule({
           ) : (
             name
           )}
-        </RadixDialog.Title>
+        </h1>
       </div>
       {simCount > 0 && (
         <>
@@ -142,18 +132,14 @@ function AtlasBottomBar({
   )
 }
 
-export function TreeOverlay({
-  legacySlug,
-  legacyName,
-  founderSimId,
-  name,
-  email,
-  image,
-  onClose,
-  returnFocusRef,
-}: TreeOverlayProps) {
+/**
+ * Full-page family-tree Atlas (a route, not a modal): a dot-grid canvas hosting
+ * the pan/zoom lineage tree, a floating legacy capsule, the search + filter
+ * toolbar, and the legend + zoom controls. Rendered inside the app shell, so the
+ * global AppNav is provided by the layout — this component does not render its own.
+ */
+export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasProps) {
   const router = useRouter()
-  const backButtonRef = useRef<HTMLButtonElement>(null)
 
   const { data, isLoading, isError } = trpc.sims.getTreeData.useQuery({ legacySlug })
 
@@ -210,98 +196,78 @@ export function TreeOverlay({
   }
 
   return (
-    <RadixDialog.Portal>
-      <RadixDialog.Content
-        className={styles.overlay}
-        aria-describedby={undefined}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault()
-          backButtonRef.current?.focus()
-        }}
-        onCloseAutoFocus={(e) => {
-          if (returnFocusRef?.current) {
-            e.preventDefault()
-            returnFocusRef.current.focus()
-          }
-        }}
-      >
-        <AppNav name={name} email={email} image={image} />
+    <div className={styles.atlas}>
+      <div className={styles.canvas}>
+        <LegacyCapsule
+          legacySlug={legacySlug}
+          name={legacyName}
+          simCount={simCount}
+          generationCount={generationCount}
+        />
 
-        <div className={styles.body}>
-          <div className={styles.canvas}>
-            <LegacyCapsule
-              name={legacyName}
-              simCount={simCount}
-              generationCount={generationCount}
-              backButtonRef={backButtonRef}
-              onClose={onClose}
+        {isLoading && (
+          <div role="status" aria-live="polite" className={styles.message}>
+            Loading the family tree…
+          </div>
+        )}
+        {isError && (
+          <div role="alert" className={styles.message}>
+            Could not load the family tree.
+          </div>
+        )}
+        {!isLoading && !isError && allSims.length === 0 && (
+          <p className={styles.message}>No sims to chart yet.</p>
+        )}
+
+        {!isLoading && !isError && allSims.length > 0 && (
+          <>
+            <AtlasToolbar
+              legacySlug={legacySlug}
+              generations={generations}
+              genFilter={genFilter}
+              query={query}
+              onGenChange={setGenFilter}
+              onQueryChange={setQuery}
             />
 
-            {isLoading && (
-              <div role="status" aria-live="polite" className={styles.message}>
-                Loading the family tree…
+            <div className={styles.surface} {...surfaceProps}>
+              <div
+                className={styles.viewport}
+                style={{
+                  transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+                }}
+              >
+                {visibleSims.length > 0 ? (
+                  <LineageTree
+                    sims={visibleSims}
+                    familyEdges={familyEdges}
+                    partnerEdges={partnerEdges}
+                    founderSimId={founderSimId}
+                    legacyName={legacyName}
+                    dimmedIds={dimmedIds}
+                    onSelectSim={handleSelectSim}
+                  />
+                ) : null}
               </div>
-            )}
-            {isError && (
-              <div role="alert" className={styles.message}>
-                Could not load the family tree.
-              </div>
-            )}
-            {!isLoading && !isError && allSims.length === 0 && (
-              <p className={styles.message}>No sims to chart yet.</p>
+            </div>
+
+            {visibleSims.length === 0 && (
+              <p className={styles.emptyFilter}>No sims in this generation.</p>
             )}
 
-            {!isLoading && !isError && allSims.length > 0 && (
-              <>
-                <AtlasToolbar
-                  legacySlug={legacySlug}
-                  generations={generations}
-                  genFilter={genFilter}
-                  query={query}
-                  onGenChange={setGenFilter}
-                  onQueryChange={setQuery}
-                />
-
-                <div className={styles.surface} {...surfaceProps}>
-                  <div
-                    className={styles.viewport}
-                    style={{
-                      transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-                    }}
-                  >
-                    {visibleSims.length > 0 ? (
-                      <LineageTree
-                        sims={visibleSims}
-                        familyEdges={familyEdges}
-                        partnerEdges={partnerEdges}
-                        founderSimId={founderSimId}
-                        legacyName={legacyName}
-                        dimmedIds={dimmedIds}
-                        onSelectSim={handleSelectSim}
-                      />
-                    ) : null}
-                  </div>
-                </div>
-
-                {visibleSims.length === 0 && (
-                  <p className={styles.emptyFilter}>No sims in this generation.</p>
-                )}
-
-                {dimmedIds && visibleSims.length > 0 && dimmedIds.size === visibleSims.length && (
-                  <p className={styles.searchEmpty}>No sims match your search.</p>
-                )}
-
-                <AtlasBottomBar
-                  zoomPercent={zoomPercent}
-                  onZoomIn={zoomIn}
-                  onZoomOut={zoomOut}
-                  onFit={fit}
-                />
-              </>
+            {dimmedIds && visibleSims.length > 0 && dimmedIds.size === visibleSims.length && (
+              <p className={styles.searchEmpty}>No sims match your search.</p>
             )}
-          </div>
-        </div>
-      </RadixDialog.Content>
-    </RadixDialog.Portal>
+
+            <AtlasBottomBar
+              zoomPercent={zoomPercent}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              onFit={fit}
+            />
+          </>
+        )}
+      </div>
+    </div>
   )
 }

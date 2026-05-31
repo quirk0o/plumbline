@@ -21,7 +21,7 @@ describe('empty-state icons', () => {
     const svg = container.querySelector('svg')
     expect(svg).not.toBeNull()
     expect(svg).toHaveAttribute('aria-hidden', 'true')
-    expect(svg?.querySelector('stroke') ?? svg).toBeTruthy()
+    expect(svg).toHaveAttribute('stroke', 'currentColor')
   })
 
   it.each(icons)('%s honors the size prop', (_name, Icon) => {

@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises'
 import { basename, join } from 'path'
+import { fileURLToPath } from 'url'
 import { fileTypeFromBuffer } from 'file-type'
 import { db } from '../src/server/db'
 import { putObject } from '../src/lib/storage'
@@ -42,7 +43,7 @@ async function migrateRow(
 
   if (options.dryRun) {
     console.log(`[dry-run] would migrate ${imageUrl} -> ${newUrl}`)
-    summary.migrated += 1
+    summary.migrated += 1 // in dry-run, 'migrated' means "would migrate"; nothing is written
     return null
   }
 
@@ -79,6 +80,9 @@ export async function runBackfill(options: BackfillOptions): Promise<BackfillSum
     }
   }
 
+  // Pack is a seeded catalog entity with no owning user (Pack images normally come
+  // from EA, not user uploads). We still scan it defensively; any matched row has no
+  // userId to copy, so it is namespaced under 'unknown'.
   const packs = await db.pack.findMany({
     where: { imageUrl: { startsWith: OLD_PREFIX } },
     select: { id: true, imageUrl: true },
@@ -109,7 +113,7 @@ async function main() {
   await db.$disconnect()
 }
 
-const isDirectRun = process.argv[1]?.includes('backfill-uploads-to-s3')
+const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url)
 if (isDirectRun) {
   main().catch((err) => {
     console.error(err)

@@ -18,6 +18,7 @@ const PNG_BYTES = Buffer.from(
 let sourceDir: string
 
 async function cleanupDb() {
+  await db.pack.deleteMany({ where: { code: 'TESTPACK' } })
   await db.sim.deleteMany({ where: { legacy: { userId: USER_ID } } })
   await db.legacy.deleteMany({ where: { userId: USER_ID } })
   await db.user.deleteMany({ where: { id: USER_ID } })
@@ -108,5 +109,19 @@ describe('runBackfill', () => {
     expect(s3Mock.commandCalls(PutObjectCommand)).toHaveLength(0)
     const unchanged = await db.legacy.findUnique({ where: { id: legacy.id } })
     expect(unchanged?.imageUrl).toBe('/uploads/dry.png')
+  })
+
+  it('migrates a Pack image under the unknown namespace', async () => {
+    writeFileSync(join(sourceDir, 'pack.png'), PNG_BYTES)
+    const pack = await db.pack.create({
+      data: { name: 'Test Pack', type: 'EXPANSION', code: 'TESTPACK', imageUrl: '/uploads/pack.png' },
+    })
+
+    await runBackfill({ sourceDir, dryRun: false })
+
+    const calls = s3Mock.commandCalls(PutObjectCommand)
+    expect(calls.some((c) => c.args[0].input.Key === 'uploads/unknown/pack.png')).toBe(true)
+    const updated = await db.pack.findUnique({ where: { id: pack.id } })
+    expect(updated?.imageUrl).toBe('/media/uploads/unknown/pack.png')
   })
 })

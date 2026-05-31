@@ -89,4 +89,22 @@ describe('computeLineageLayout', () => {
       }
     }
   })
+
+  it('emits one couple per adjacent pair, not one per partner edge', () => {
+    const sims = [
+      { id: 'a', generationNumber: 1 },
+      { id: 'b', generationNumber: 1 },
+      { id: 'c', generationNumber: 1 },
+    ]
+    // 'a' has two partner edges in the same generation. Only one partner can be
+    // placed adjacent, so the layout must expose exactly one couple — never two.
+    const partnerEdges = [
+      { simAId: 'a', simBId: 'b' },
+      { simAId: 'a', simBId: 'c' },
+    ]
+    const layout = computeLineageLayout(sims, [], partnerEdges)
+    expect(layout.couples).toHaveLength(1)
+    const [couple] = layout.couples
+    expect(layout.byId[couple.a].y).toBe(layout.byId[couple.b].y)
+  })
 })

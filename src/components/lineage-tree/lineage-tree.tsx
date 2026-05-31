@@ -58,13 +58,14 @@ export function LineageTree({
 
   const { width, height } = layout.viewBox
 
-  // Marriage bonds: only render when both partners are positioned in the same
-  // row of the layout.
-  const bonds = partnerEdges.flatMap(({ simAId, simBId }) => {
-    const a = layout.byId[simAId]
-    const b = layout.byId[simBId]
-    if (!a || !b || a.y !== b.y) return []
-    return [{ key: `${simAId}-${simBId}`, a, b }]
+  // Marriage bonds: render only for couples the layout actually placed adjacently
+  // (layout.couples). Deriving from partnerEdges directly would draw a bond across
+  // the row for a sim's second same-generation partner, who is not placed adjacent.
+  const bonds = layout.couples.flatMap(({ a: aId, b: bId }) => {
+    const a = layout.byId[aId]
+    const b = layout.byId[bId]
+    if (!a || !b) return []
+    return [{ key: `${aId}-${bId}`, a, b }]
   })
 
   // Parent-child connectors: group family edges by child so a child gets a

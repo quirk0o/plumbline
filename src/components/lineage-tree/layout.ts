@@ -74,6 +74,13 @@ export type LineageLayout = {
   rowYs: number[]
   /** Generation number for each rendered row (null-gen sims live in a trailing row). */
   rowGenerations: (number | null)[]
+  /**
+   * Partner pairs that were actually placed adjacently (one node-width + bond
+   * gap apart, same row). Consumers render marriage bonds ONLY from this list —
+   * a sim with multiple partner edges yields at most one couple here, so bonds
+   * never span non-adjacent medallions.
+   */
+  couples: { a: string; b: string }[]
   viewBox: { width: number; height: number }
 }
 
@@ -158,6 +165,7 @@ export function computeLineageLayout(
   const byId: Record<string, PositionedNode> = {}
   const nodes: PositionedNode[] = []
   const rowYs: number[] = []
+  const couples: { a: string; b: string }[] = []
   let maxRowWidth = 0
 
   // First pass: place every row left-to-right at its natural position so we know
@@ -176,6 +184,7 @@ export function computeLineageLayout(
         // Couple: order the two members by id for determinism.
         const members = [sim.id, partner].sort()
         clusters.push({ members, key: members.join('|') })
+        couples.push({ a: members[0], b: members[1] })
         placedInRow.add(sim.id)
         placedInRow.add(partner)
       } else {
@@ -230,6 +239,7 @@ export function computeLineageLayout(
     byId,
     rowYs,
     rowGenerations,
+    couples,
     viewBox: { width: viewBoxWidth, height: viewBoxHeight },
   }
 }

@@ -173,8 +173,37 @@ violations) passed.
   focus-trap/Escape/scroll-lock/focus-restore code was deleted.
 - Drag no longer selects SVG text (`user-select: none` on the pan surface).
 
+## ✅ Completed in the 2026-05-31 route + inspector pass
+
+Driven by the design bundle (`Legacy Redesign Pages.html` → `combined.jsx`) and the
+target screenshot. `tsc`+`lint` clean; suite **424/424**; live browser QA (light +
+dark, keyboard) passed.
+
+- **Atlas is now a route, not a dialog.** New page `…/legacies/[slug]/tree`
+  renders `TreeAtlas` full-bleed below the app-shell nav. Radix Dialog removed
+  entirely (no second AppNav, no focus trap); "View family tree" is a `ButtonLink`
+  to the route; the capsule's back arrow is a `Link` to the chronicle; browser
+  back works. Folder renamed `tree-overlay/` → `tree-atlas/`.
+- **Capsule matches the design:** the sim · generation counts sit to the right of
+  the title behind a vertical divider (was stacked below).
+- **Selected-sim inspector** (the design's `FloatingSimInspector`): clicking a
+  node selects it (visible green selection halo) and floats in a card —
+  portrait, name, life-stage · aspiration, traits, parents, partner, and
+  "Open profile →" (the navigation affordance). Lazy-fetches via `sims.getById`.
+  Esc / ✕ close; focus moves into the panel on open. New `sim-inspector.tsx`.
+- **Node click no longer navigates** — selection drives the inspector; the
+  inspector's "Open profile →" navigates.
+
 ## 🔭 Follow-ups (tracked, not blocking)
 
+- **Inspector focus is not returned to the activating node on close.** Focus
+  moves *into* the panel on open (fixed), but on ✕/Esc it lands on `<body>`
+  rather than the tree node that opened it (returning focus to a specific SVG
+  `<g>` needs node-ref tracking). Non-modal panel, so not a blocker.
+- **Inspector "Parents" lists every parent edge** (incl. non-biological/odd data
+  — e.g. a Lemons sim shows 3 parents, one of them an unassigned-generation sim).
+  `sims.getById.childOf` returns all parent relationships without type filtering;
+  consider filtering to BIOLOGICAL/ADOPTIVE if that proves to be a data issue.
 - **Sim portraits with a stale/missing `imageUrl` show a broken image** rather
   than falling back to the monogram (the Crest fallback only triggers on a
   *null* `imageUrl`). Surfaced by a Lemons-legacy sim whose DB `imageUrl` points

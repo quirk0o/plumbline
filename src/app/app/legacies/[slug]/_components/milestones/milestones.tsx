@@ -1,4 +1,10 @@
-import { SectionHeading, EmptyState } from '@/components/ui'
+import {
+  SectionHeading,
+  EmptyState,
+  Button,
+  FeatherIcon,
+  ArrowRightIcon,
+} from '@/components/ui'
 import type { Milestone, ChronicleSim } from '../../lib/types'
 import { MilestoneRow } from './milestone-row'
 import styles from './milestones.module.css'
@@ -19,7 +25,23 @@ export function Milestones({ milestones, simsById, slug }: MilestonesProps) {
       />
 
       {milestones.length === 0 ? (
-        <EmptyState>No milestones recorded yet.</EmptyState>
+        <EmptyState
+          icon={<FeatherIcon size={24} />}
+          title={
+            <>
+              No moments{' '}
+              <em style={{ color: 'var(--green)' }}>recorded</em> yet.
+            </>
+          }
+          action={
+            <Button variant="primary" size="sm" type="button">
+              Record a moment <ArrowRightIcon size={16} />
+            </Button>
+          }
+        >
+          Births and weddings log themselves. Everything else — the scandals,
+          the first kisses, the houses lost — is yours to write.
+        </EmptyState>
       ) : (
         <ul className={styles.rows}>
           {milestones.map((milestone) => (

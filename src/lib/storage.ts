@@ -37,8 +37,14 @@ export async function objectExists(key: string): Promise<boolean> {
   try {
     await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
     return true
-  } catch {
-    return false
+  } catch (err) {
+    const name = (err as { name?: string })?.name
+    const status = (err as { $metadata?: { httpStatusCode?: number } })
+      ?.$metadata?.httpStatusCode
+    if (name === 'NotFound' || name === 'NoSuchKey' || status === 404) {
+      return false
+    }
+    throw err
   }
 }
 

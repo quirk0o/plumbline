@@ -25,6 +25,7 @@ describe('putObject', () => {
     expect(calls[0].args[0].input).toMatchObject({
       Bucket: 'simtrack-test',
       Key: 'uploads/user-1/file.png',
+      Body: Buffer.from('bytes'),
       ContentType: 'image/png',
     })
   })
@@ -40,6 +41,13 @@ describe('objectExists', () => {
     s3Mock.on(HeadObjectCommand).rejects({ name: 'NotFound' })
     expect(await objectExists('uploads/user-1/missing.png')).toBe(false)
   })
+
+  it('rethrows non-404 errors instead of reporting the object missing', async () => {
+    s3Mock
+      .on(HeadObjectCommand)
+      .rejects({ name: 'InternalError', $metadata: { httpStatusCode: 500 } })
+    await expect(objectExists('uploads/user-1/boom.png')).rejects.toBeTruthy()
+  })
 })
 
 describe('presignGetUrl', () => {
@@ -47,5 +55,8 @@ describe('presignGetUrl', () => {
     const url = await presignGetUrl('uploads/user-1/file.png', 300)
     expect(url).toBe('https://signed.example/url')
     expect(getSignedUrl).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(getSignedUrl).mock.calls[0][2]).toMatchObject({
+      expiresIn: 300,
+    })
   })
 })

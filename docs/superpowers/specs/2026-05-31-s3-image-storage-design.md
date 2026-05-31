@@ -167,13 +167,19 @@ Algorithm:
    different worktree.
 2. For each of the three columns, select rows whose `imageUrl` begins with
    `/uploads/`.
-3. For each such row:
+3. For each such row, resolve the owning user id so migrated keys match the
+   fresh-upload layout (`uploads/<userId>/...`):
+   - `Legacy` rows use `Legacy.userId` directly.
+   - `Sim` rows resolve via the `legacy` relation → `legacy.userId`.
+   - `Pack` rows have no owner (Pack images are seeded, never user uploads); on
+     the off chance one matches, fall back to the literal segment `unknown`.
+4. For each such row:
    - `filename = basename(imageUrl)`; look for `<sourceDir>/<filename>`.
    - If found: read the bytes, sniff the content type with `file-type`, upload via
-     `storage.putObject` under key `uploads/backfill/<filename>`, then update the
-     row's `imageUrl` to `/media/uploads/backfill/<filename>`.
+     `storage.putObject` under key `uploads/<userId>/<filename>`, then update the
+     row's `imageUrl` to `/media/uploads/<userId>/<filename>`.
    - If not found: leave the row unchanged and record it as unrecoverable.
-4. Print a summary: counts migrated, skipped (already `/media/...`), and
+5. Print a summary: counts migrated, skipped (already `/media/...`), and
    unrecoverable (with the offending URLs).
 
 Properties:

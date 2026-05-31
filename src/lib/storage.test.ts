@@ -1,19 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mockClient } from 'aws-sdk-client-mock'
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
-
-vi.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: vi.fn(async () => 'https://signed.example/url'),
-}))
-
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { putObject, objectExists, presignGetUrl } from './storage'
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { putObject, getObject } from './storage'
 
 const s3Mock = mockClient(S3Client)
 
 beforeEach(() => {
   s3Mock.reset()
-  vi.clearAllMocks()
 })
 
 describe('putObject', () => {
@@ -31,32 +24,45 @@ describe('putObject', () => {
   })
 })
 
-describe('objectExists', () => {
-  it('returns true when HeadObject resolves', async () => {
-    s3Mock.on(HeadObjectCommand).resolves({})
-    expect(await objectExists('uploads/user-1/file.png')).toBe(true)
+describe('getObject', () => {
+  it('returns the bytes and content type for an existing object', async () => {
+    const bytes = Buffer.from('image-bytes')
+    s3Mock.on(GetObjectCommand).resolves({
+      Body: { transformToByteArray: async () => new Uint8Array(bytes) } as never,
+      ContentType: 'image/png',
+    })
+
+    const result = await getObject('uploads/user-1/file.png')
+
+    expect(result).not.toBeNull()
+    expect(result?.contentType).toBe('image/png')
+    expect(Buffer.from(result!.body)).toEqual(bytes)
+    const calls = s3Mock.commandCalls(GetObjectCommand)
+    expect(calls[0].args[0].input).toMatchObject({
+      Bucket: 'simtrack-test',
+      Key: 'uploads/user-1/file.png',
+    })
   })
 
-  it('returns false when HeadObject rejects with NotFound', async () => {
-    s3Mock.on(HeadObjectCommand).rejects({ name: 'NotFound' })
-    expect(await objectExists('uploads/user-1/missing.png')).toBe(false)
+  it('falls back to application/octet-stream when no content type is present', async () => {
+    s3Mock.on(GetObjectCommand).resolves({
+      Body: { transformToByteArray: async () => new Uint8Array() } as never,
+    })
+
+    const result = await getObject('uploads/user-1/file.bin')
+
+    expect(result?.contentType).toBe('application/octet-stream')
+  })
+
+  it('returns null when the object does not exist', async () => {
+    s3Mock.on(GetObjectCommand).rejects({ name: 'NoSuchKey' })
+    expect(await getObject('uploads/user-1/missing.png')).toBeNull()
   })
 
   it('rethrows non-404 errors instead of reporting the object missing', async () => {
     s3Mock
-      .on(HeadObjectCommand)
+      .on(GetObjectCommand)
       .rejects({ name: 'InternalError', $metadata: { httpStatusCode: 500 } })
-    await expect(objectExists('uploads/user-1/boom.png')).rejects.toBeTruthy()
-  })
-})
-
-describe('presignGetUrl', () => {
-  it('returns a presigned URL for the key', async () => {
-    const url = await presignGetUrl('uploads/user-1/file.png', 300)
-    expect(url).toBe('https://signed.example/url')
-    expect(getSignedUrl).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(getSignedUrl).mock.calls[0][2]).toMatchObject({
-      expiresIn: 300,
-    })
+    await expect(getObject('uploads/user-1/boom.png')).rejects.toBeTruthy()
   })
 })

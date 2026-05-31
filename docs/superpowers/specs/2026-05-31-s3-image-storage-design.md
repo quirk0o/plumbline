@@ -153,15 +153,19 @@ A one-off, idempotent script (`scripts/backfill-uploads-to-s3.ts`, run via `tsx`
 matching the existing seed tooling) migrates existing development data from the
 old filesystem paths to S3.
 
-Three models store image URLs and must all be covered: **`Sim.imageUrl`**,
-**`Legacy.imageUrl`**, and **`SimEvent.imageUrl`**.
+Three columns can hold an uploaded image URL: **`Pack.imageUrl`**,
+**`Legacy.imageUrl`**, and **`Sim.imageUrl`**. In practice only `Sim` and
+`Legacy` receive user uploads (`Pack` images are seeded from EA, and
+`User.image` holds OAuth avatar URLs), but filtering by the `/uploads/` prefix
+scopes the backfill to user-uploaded rows correctly regardless of model, so all
+three columns are scanned for safety.
 
 Algorithm:
 
 1. Resolve a source directory for the legacy files. Default `./public/uploads`;
    overridable via `SOURCE_UPLOAD_DIR` for the case where the files live in a
    different worktree.
-2. For each of the three models, select rows whose `imageUrl` begins with
+2. For each of the three columns, select rows whose `imageUrl` begins with
    `/uploads/`.
 3. For each such row:
    - `filename = basename(imageUrl)`; look for `<sourceDir>/<filename>`.
@@ -203,7 +207,7 @@ CI), using a throwaway test bucket configured via `.env.test`.
 - **Media route (integration):** seed an object → `GET /media/<key>` returns
   `302` to a presigned URL whose host is the configured endpoint; `..` in key →
   `400`; unknown key → `404`.
-- **Backfill script (integration):** seed `Sim`/`Legacy`/`SimEvent` rows with
+- **Backfill script (integration):** seed `Sim`/`Legacy` rows with
   `/uploads/<file>` URLs and matching source files → run the script → assert the
   objects exist in S3 and the rows now point at `/media/uploads/backfill/<file>`;
   assert a row with a missing source file is reported and left unchanged; assert

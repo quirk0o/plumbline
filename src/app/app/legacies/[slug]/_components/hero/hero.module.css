@@ -109,3 +109,35 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
+
+/* Dashed variant of the Now & then card, for a brand-new legacy. */
+.nowThenCardEmpty {
+  background: var(--bg);
+  border: 1px dashed var(--border-bright);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+/* CTA wrapper inside an empty founder slot. */
+.nowThenCta {
+  margin-top: 2px;
+}
+
+/* "No heir yet" — italic display, muted (decorative accent only). */
+.nowThenNameEmpty {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.1;
+}
+
+.nowThenHint {
+  font-size: 11px;
+  color: var(--text-subtle);
+  line-height: 1.4;
+}

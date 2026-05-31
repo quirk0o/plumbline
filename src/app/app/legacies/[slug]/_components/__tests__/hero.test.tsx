@@ -101,7 +101,7 @@ describe('Hero', () => {
         description={null}
         stats={stats}
         slug="caliente"
-        founder={null}
+        founder={founder}
         currentHeir={null}
       />,
     )
@@ -111,18 +111,53 @@ describe('Hero', () => {
     expect(screen.getByText('47')).toBeInTheDocument()
   })
 
-  it('omits the Now & then card when both founder and heir are null', () => {
+  it('renders the brand-new card with founder and heir ghost slots when empty', () => {
     render(
       <Hero
         name="Test Legacy"
         description={null}
-        stats={stats}
+        stats={{ sims: 0, generations: 0, households: 0, milestones: 0 }}
         slug="caliente"
         founder={null}
         currentHeir={null}
       />,
     )
-    expect(screen.queryByText('Now & then')).not.toBeInTheDocument()
+    expect(screen.getByText('Now & then')).toBeInTheDocument()
+    expect(screen.getByText('Founder · Gen I')).toBeInTheDocument()
+    expect(screen.getByText('No heir yet')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /Add your founder/i }),
+    ).toHaveAttribute('href', '/app/legacies/caliente/sims/new')
+  })
+
+  it('renders em-dash muted stats for a brand-new legacy (no founder)', () => {
+    render(
+      <Hero
+        name="Test Legacy"
+        description={null}
+        stats={{ sims: 0, generations: 0, households: 0, milestones: 0 }}
+        slug="caliente"
+        founder={null}
+        currentHeir={null}
+      />,
+    )
+    expect(screen.getAllByText('—')).toHaveLength(4)
+    expect(screen.queryByText('0')).toBeNull()
+  })
+
+  it('shows a heir ghost slot when a founder exists but no heir', () => {
+    render(
+      <Hero
+        name="Test Legacy"
+        description={null}
+        stats={{ sims: 1, generations: 1, households: 1, milestones: 1 }}
+        slug="caliente"
+        founder={founder}
+        currentHeir={null}
+      />,
+    )
+    expect(screen.getByText('Dina Caliente')).toBeInTheDocument()
+    expect(screen.getByText('No heir yet')).toBeInTheDocument()
   })
 
   it('renders the Now & then card when founder is provided', () => {

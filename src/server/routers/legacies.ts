@@ -4,22 +4,7 @@ import { Gender, LifeStage, OccultType, EmploymentType, Prisma } from '@prisma/c
 import { router, protectedProcedure } from '../trpc'
 import { uniqueSlug } from '@/lib/slugify'
 import { assertNoTraitConflicts } from './validate-traits'
-
-const imageUrlSchema = z
-  .string()
-  .refine(
-    (url) => {
-      if (url.startsWith('/uploads/')) return true
-      try {
-        const { hostname } = new URL(url)
-        return hostname.endsWith('.vercel-storage.com') || hostname === 'localhost'
-      } catch {
-        return false
-      }
-    },
-    { message: 'Image must be hosted on an allowed domain' },
-  )
-  .optional()
+import { imageUrlSchema } from '../lib/image-url-schema'
 
 const founderInput = z.object({
   firstName: z.string().min(1).max(50),

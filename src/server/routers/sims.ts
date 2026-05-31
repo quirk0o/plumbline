@@ -4,22 +4,7 @@ import { Prisma, Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, Fa
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 import { recomputeLegacyTrackers } from '../lib/trackerComputation'
-
-const imageUrlSchema = z
-  .string()
-  .refine(
-    (url) => {
-      if (url.startsWith('/uploads/')) return true
-      try {
-        const { hostname } = new URL(url)
-        return hostname.endsWith('.vercel-storage.com') || hostname === 'localhost'
-      } catch {
-        return false
-      }
-    },
-    { message: 'Image must be hosted on an allowed domain' },
-  )
-  .optional()
+import { imageUrlSchema } from '../lib/image-url-schema'
 
 const miniTreeSimSelect = {
   id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,

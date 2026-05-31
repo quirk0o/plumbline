@@ -72,3 +72,26 @@ Use the **magic link** flow:
 5. You'll be redirected to `/app/onboarding/packs` on first sign-in
 
 Example grep: `grep "Magic link" .next/dev/logs/next-development.log`
+
+# Local Object Storage (image uploads)
+
+Image uploads use S3-compatible storage. Locally this is **MinIO**, run via Docker:
+
+```bash
+docker compose up -d
+```
+
+This starts MinIO (API `localhost:9000`, console `localhost:9001`, login
+`minioadmin`/`minioadmin`) and creates the `simtrack-dev` and `simtrack-test`
+buckets. The dev server reads `S3_*` vars from `.env`; see `.env.example`.
+
+Uploaded files are stored under `uploads/<userId>/<file>` and served via the
+`/media/<key>` route, which 302-redirects to a short-lived presigned URL.
+
+To migrate legacy `/uploads/...` rows from a previous local setup:
+
+```bash
+npm run backfill:uploads -- --dry-run   # preview
+npm run backfill:uploads                # apply
+# SOURCE_UPLOAD_DIR=/path/to/other/worktree/public/uploads npm run backfill:uploads
+```

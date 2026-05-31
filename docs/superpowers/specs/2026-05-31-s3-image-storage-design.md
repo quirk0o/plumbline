@@ -24,11 +24,11 @@ database that references it is global.
 - Keep the upload bucket private and keep infrastructure URLs out of the
   database.
 - Avoid streaming image bytes through serverless functions in production.
+- Backfill existing development data: reupload the physical files still present in
+  `public/uploads/` to S3 and rewrite the `/uploads/...` rows to `/media/...`.
 
 ## Non-goals
 
-- Migrating existing development `/uploads/...` rows (they are already broken
-  across worktrees; re-uploading is acceptable in dev).
 - Wiring up the Resend magic-link email sender (separate prod-readiness item).
 - Provisioning managed Postgres (e.g. Neon) for production (separate item).
 - Changing the production deploy target beyond storage (Vercel is the chosen
@@ -147,6 +147,43 @@ No `next.config.ts` change is required: `/media/<key>` is same-origin for
 `next/image`, and `localhost` is already in `images.remotePatterns` for the dev
 redirect target.
 
+## Data backfill
+
+A one-off, idempotent script (`scripts/backfill-uploads-to-s3.ts`, run via `tsx`,
+matching the existing seed tooling) migrates existing development data from the
+old filesystem paths to S3.
+
+Three models store image URLs and must all be covered: **`Sim.imageUrl`**,
+**`Legacy.imageUrl`**, and **`SimEvent.imageUrl`**.
+
+Algorithm:
+
+1. Resolve a source directory for the legacy files. Default `./public/uploads`;
+   overridable via `SOURCE_UPLOAD_DIR` for the case where the files live in a
+   different worktree.
+2. For each of the three models, select rows whose `imageUrl` begins with
+   `/uploads/`.
+3. For each such row:
+   - `filename = basename(imageUrl)`; look for `<sourceDir>/<filename>`.
+   - If found: read the bytes, sniff the content type with `file-type`, upload via
+     `storage.putObject` under key `uploads/backfill/<filename>`, then update the
+     row's `imageUrl` to `/media/uploads/backfill/<filename>`.
+   - If not found: leave the row unchanged and record it as unrecoverable.
+4. Print a summary: counts migrated, skipped (already `/media/...`), and
+   unrecoverable (with the offending URLs).
+
+Properties:
+
+- **Idempotent:** rows already starting with `/media/` are skipped, so the script
+  is safe to re-run.
+- **Dry-run:** a `--dry-run` flag reports the planned changes without writing to
+  S3 or the database.
+- **Reuses** `src/lib/storage.ts`, so it targets whatever S3 endpoint the `S3_*`
+  env points at (MinIO for dev). MinIO must be running.
+
+This is a development data migration. Files genuinely lost (present in no
+worktree) cannot be recovered and are reported for manual follow-up.
+
 ## Error handling
 
 - Upload validation failures return the existing status codes (401/400/413).
@@ -166,6 +203,11 @@ CI), using a throwaway test bucket configured via `.env.test`.
 - **Media route (integration):** seed an object → `GET /media/<key>` returns
   `302` to a presigned URL whose host is the configured endpoint; `..` in key →
   `400`; unknown key → `404`.
+- **Backfill script (integration):** seed `Sim`/`Legacy`/`SimEvent` rows with
+  `/uploads/<file>` URLs and matching source files → run the script → assert the
+  objects exist in S3 and the rows now point at `/media/uploads/backfill/<file>`;
+  assert a row with a missing source file is reported and left unchanged; assert
+  re-running is a no-op (idempotent).
 - Existing component tests (`create-sim-modal`, `sim-form`) mock
   `fetch('/api/upload')` and are unaffected.
 - E2E (`npm run test:e2e`): existing flow unchanged; requires MinIO running.
@@ -173,6 +215,8 @@ CI), using a throwaway test bucket configured via `.env.test`.
 ## Accepted trade-offs
 
 - Production storage moves from Vercel Blob to Cloudflare R2 (intended).
-- Existing development `/uploads/...` rows will `404`; no migration is provided.
+- Existing development `/uploads/...` rows are migrated by the backfill script;
+  any files present in no worktree are unrecoverable and reported for manual
+  follow-up.
 - One presign + redirect per image view (cheap; R2 egress is free).
 - The local dev workflow now requires Docker (MinIO) to be running.

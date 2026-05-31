@@ -1,8 +1,6 @@
-export interface TreeIconProps {
-  className?: string
-}
+export type TreeIconProps = React.SVGProps<SVGSVGElement>
 
-export function TreeIcon({ className }: TreeIconProps) {
+export function TreeIcon({ className, ...props }: TreeIconProps) {
   return (
     <svg
       width="14"
@@ -15,6 +13,7 @@ export function TreeIcon({ className }: TreeIconProps) {
       strokeLinejoin="round"
       className={className}
       aria-hidden="true"
+      {...props}
     >
       <circle cx="7" cy="2.5" r="1.5" />
       <circle cx="3" cy="11" r="1.5" />

@@ -106,6 +106,19 @@ describe('Roster', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders the designed empty state when no groups', () => {
+    render(<Roster groups={[]} slug="caliente" />)
+    // Designed empty state: headline + body + working CTA link.
+    expect(
+      screen.getByRole('heading', { name: /No Sims\s*named\s*yet\./i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Your founder is the first name in the register/i),
+    ).toBeInTheDocument()
+    const cta = screen.getByRole('link', { name: /Add your founder/i })
+    expect(cta).toHaveAttribute('href', '/app/legacies/caliente/sims/new')
+  })
+
   it('renders each sim card with correct link href', () => {
     render(<Roster groups={groups} slug="caliente" />)
     const dinaLink = screen.getByRole('link', { name: /Dina Caliente/ })

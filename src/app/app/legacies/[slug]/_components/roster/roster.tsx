@@ -1,4 +1,11 @@
-import { SectionHeading, GenerationBadge, ButtonLink, EmptyState } from '@/components/ui'
+import {
+  SectionHeading,
+  GenerationBadge,
+  ButtonLink,
+  EmptyState,
+  UsersIcon,
+  ArrowRightIcon,
+} from '@/components/ui'
 import { roman } from '@/lib/legacy-format'
 import type { RosterGroup } from '../../lib/types'
 import { RosterCard } from './roster-card'
@@ -33,17 +40,24 @@ export function Roster({ groups, slug }: RosterProps) {
 
       {groups.length === 0 ? (
         <EmptyState
+          icon={<UsersIcon size={24} />}
+          title={
+            <>
+              No Sims <em style={{ color: 'var(--green)' }}>named</em> yet.
+            </>
+          }
           action={
             <ButtonLink
-              variant="outline"
+              variant="primary"
               size="sm"
               href={`/app/legacies/${slug}/sims/new`}
             >
-              Add your first sim →
+              Add your founder <ArrowRightIcon size={16} />
             </ButtonLink>
           }
         >
-          No sims yet.
+          Your founder is the first name in the register. Everyone after
+          follows from them.
         </EmptyState>
       ) : (
         /* One group per generation */

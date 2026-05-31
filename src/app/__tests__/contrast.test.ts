@@ -55,6 +55,7 @@ const dark = tokensIn(/\[data-theme="dark"\]/)
 const AA = 4.5
 const surfaces = ['--bg', '--bg-surface', '--bg-card']
 const texts = ['--text-muted', '--text-subtle']
+const accents = ['--amber-text']
 
 describe.each([
   ['light', light],
@@ -62,8 +63,15 @@ describe.each([
 ])('WCAG AA — %s theme', (_name, tok) => {
   it('resolved the token set from globals.css', () => {
     expect(Object.keys(tok).length).toBeGreaterThan(0)
-    for (const t of [...texts, ...surfaces]) {
+    for (const t of [...texts, ...accents, ...surfaces]) {
       expect(tok[t], `${t} missing`).toBeTruthy()
+    }
+  })
+
+  it.each(accents)('%s meets 4.5:1 on every surface', (accent) => {
+    for (const surf of surfaces) {
+      const r = ratio(tok[accent], tok[surf])
+      expect(r, `${accent} on ${surf} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
     }
   })
 

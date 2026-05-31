@@ -43,6 +43,10 @@
 
   /* Amber accent (legacy/heir callouts only) */
   --amber:        var(--color-amber-600);
+  /* Amber TEXT — AA-legible heir/legacy text colour. Darker than --amber in
+     light mode; brightens in dark mode (see [data-theme="dark"] below).
+     Components must use this for amber text, never the raw --color-amber-* scale. */
+  --amber-text:   #b45309;
 
   /* Status colors */
   --error:   #b91c1c;
@@ -155,6 +159,7 @@
   --green-glow:   rgba(74, 175, 114, 0.15);
 
   --amber:        #fbbf24;
+  --amber-text:   #fbbf24;
 
   --error:   #fca5a5;
   --success: #86efac;

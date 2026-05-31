@@ -18,7 +18,7 @@ interface NowThenColumnProps {
 function NowThenColumn({ label, sim, ring, href }: NowThenColumnProps) {
   return (
     <div className={styles.nowThenColumn}>
-      <Eyebrow color={ring === 'heir' ? 'var(--color-amber-700)' : undefined}>
+      <Eyebrow color={ring === 'heir' ? 'var(--amber-text)' : undefined}>
         {label}
       </Eyebrow>
       <PortraitAvatar
@@ -94,7 +94,7 @@ export function Hero({
           <StatBlock
             value={stats.generations}
             label="Generations"
-            accent="var(--color-amber-700)"
+            accent="var(--amber-text)"
           />
           <StatBlock value={stats.households} label="Households" />
           <StatBlock value={stats.milestones} label="Milestones" />

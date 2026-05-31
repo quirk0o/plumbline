@@ -71,7 +71,7 @@ export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimIn
       aria-label={sim ? `${sim.firstName} ${sim.lastName} details` : 'Sim details'}
     >
       <div className={styles.header}>
-        <Eyebrow color={isHeir ? 'var(--color-amber-700)' : undefined}>{role}</Eyebrow>
+        <Eyebrow color={isHeir ? 'var(--amber-text)' : undefined}>{role}</Eyebrow>
         <button
           ref={closeRef}
           type="button"

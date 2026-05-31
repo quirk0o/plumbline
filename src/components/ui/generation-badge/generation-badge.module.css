@@ -9,9 +9,5 @@
   font-weight: var(--weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-amber-700);
-}
-
-[data-theme="dark"] .badge {
-  color: var(--color-amber-400);
+  color: var(--amber-text);
 }

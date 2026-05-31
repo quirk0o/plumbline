@@ -39,11 +39,7 @@
 
 .accentMonogram {
   border-color: var(--amber);
-  color: var(--color-amber-700);
-}
-
-[data-theme="dark"] .accentMonogram {
-  color: var(--color-amber-400);
+  color: var(--amber-text);
 }
 
 .innerRing {

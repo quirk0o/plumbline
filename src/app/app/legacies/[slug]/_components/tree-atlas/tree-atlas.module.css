@@ -144,7 +144,7 @@
 }
 
 .capsuleAccent {
-  color: var(--color-amber-700);
+  color: var(--amber-text);
   font-style: italic;
 }
 

@@ -181,7 +181,7 @@ export function CrestNode({
             x={cx}
             y={cy + 5}
             textAnchor="middle"
-            fill={isHeir ? 'var(--color-amber-700)' : 'var(--text)'}
+            fill={isHeir ? 'var(--amber-text)' : 'var(--text)'}
             fontSize="16"
             fontWeight="600"
             fontStyle="italic"

@@ -113,7 +113,7 @@ export function LineageTree({
               x="25"
               y="5"
               textAnchor="middle"
-              fill="var(--color-amber-700)"
+              fill="var(--amber-text)"
               fontSize="11"
               fontWeight="600"
               style={{ letterSpacing: '0.14em', fontFamily: 'var(--font-body)' }}

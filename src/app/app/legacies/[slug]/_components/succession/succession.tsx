@@ -41,7 +41,7 @@ export function Succession({ steps, slug }: SuccessionProps) {
                   className={styles.stepRole}
                   style={
                     step.isHeir
-                      ? { color: 'var(--color-amber-700)' }
+                      ? { color: 'var(--amber-text)' }
                       : undefined
                   }
                 >

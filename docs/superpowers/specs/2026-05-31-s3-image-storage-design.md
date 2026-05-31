@@ -197,24 +197,42 @@ worktree) cannot be recovered and are reported for manual follow-up.
 
 ## Testing (Testing Trophy — integration-first)
 
-Run against a MinIO instance (the compose service locally; a service container in
-CI), using a throwaway test bucket configured via `.env.test`.
+The S3 SDK is **mocked** in tests via `aws-sdk-client-mock` (dev dependency); the
+test suite does **not** require a running MinIO/Docker container. Mocking is
+confined to the network boundary — the `S3Client` and the presigner. Everything
+else stays real: tests run against the existing Postgres test database
+(`.env.test`, prepared by the `pretest` hook), and the route/DB/validation logic
+is exercised genuinely.
 
-- **Upload route (integration):** POST a valid image → assert response URL
-  matches `/media/...` and the object exists in S3. Assert validation paths
+Mocking strategy:
+
+- Intercept `PutObjectCommand` on the mocked `S3Client` to capture the key, body,
+  and content type, returning a success response.
+- Stub the presigner (`getSignedUrl`) to return a deterministic fake URL so
+  redirect assertions are stable.
+- `GetObjectCommand` resolves to a fixture stream for found keys and rejects with
+  a `NoSuchKey`-shaped error for missing keys.
+
+Tests:
+
+- **Upload route:** POST a valid image → assert the response URL matches
+  `/media/...` and that `PutObjectCommand` was called once with the expected key
+  prefix, byte length, and sniffed content type. Assert validation paths
   (unauthorized, disallowed MIME, oversize, magic-byte mismatch) still return
-  their status codes.
-- **Media route (integration):** seed an object → `GET /media/<key>` returns
-  `302` to a presigned URL whose host is the configured endpoint; `..` in key →
-  `400`; unknown key → `404`.
-- **Backfill script (integration):** seed `Sim`/`Legacy` rows with
-  `/uploads/<file>` URLs and matching source files → run the script → assert the
-  objects exist in S3 and the rows now point at `/media/uploads/backfill/<file>`;
-  assert a row with a missing source file is reported and left unchanged; assert
-  re-running is a no-op (idempotent).
+  their status codes and that no `PutObjectCommand` is issued on rejection.
+- **Media route:** `GET /media/<key>` returns `302` to the stubbed presigned URL;
+  `..` in the key → `400` (and no presign/SDK call); a key whose `GetObject`
+  rejects with `NoSuchKey` → `404`.
+- **Backfill script:** seed `Sim`/`Legacy` rows with `/uploads/<file>` URLs and
+  create matching temp source files on disk → run the script → assert
+  `PutObjectCommand` was called per file and the rows now point at
+  `/media/uploads/backfill/<file>`; assert a row whose source file is absent is
+  reported and left unchanged; assert re-running is a no-op (rows already at
+  `/media/...` are skipped, no further `PutObjectCommand`).
 - Existing component tests (`create-sim-modal`, `sim-form`) mock
   `fetch('/api/upload')` and are unaffected.
-- E2E (`npm run test:e2e`): existing flow unchanged; requires MinIO running.
+- E2E (`npm run test:e2e`): existing flow unchanged; runs against the real dev
+  stack and therefore requires MinIO running (`docker compose up -d`).
 
 ## Accepted trade-offs
 

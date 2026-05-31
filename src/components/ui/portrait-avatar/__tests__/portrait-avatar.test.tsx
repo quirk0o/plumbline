@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { PortraitAvatar } from '../portrait-avatar'
 
 vi.mock('next/image', () => ({
-  default: ({ alt }: { src: string; alt: string }) => (
-    <span data-testid="portrait-image" aria-label={alt} />
+  default: ({ alt, onError }: { src: string; alt: string; onError?: () => void }) => (
+    <img data-testid="portrait-image" aria-label={alt} onError={onError} alt={alt} />
   ),
 }))
 
@@ -79,5 +79,18 @@ describe('PortraitAvatar', () => {
   it('does not render a link when href is absent', () => {
     render(<PortraitAvatar imageUrl={null} firstName="Dina" lastName="Caliente" />)
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('falls back to the monogram when the image fails to load', () => {
+    render(
+      <PortraitAvatar
+        imageUrl="https://example.com/broken.jpg"
+        firstName="Dina"
+        lastName="Caliente"
+      />
+    )
+    fireEvent.error(screen.getByTestId('portrait-image'))
+    expect(screen.queryByTestId('portrait-image')).not.toBeInTheDocument()
+    expect(screen.getByText('DC')).toBeInTheDocument()
   })
 })

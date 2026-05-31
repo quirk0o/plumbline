@@ -10,6 +10,14 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // Test files legitimately use <img> in next/image mocks; the no-img-element
+    // rule exists to enforce next/image in production code, not test stubs.
+    files: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
+    rules: {
+      '@next/next/no-img-element': 'off',
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

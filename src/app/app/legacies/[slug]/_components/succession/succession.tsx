@@ -1,4 +1,11 @@
-import { SectionHeading, PortraitAvatar, EmptyState } from '@/components/ui'
+import {
+  SectionHeading,
+  PortraitAvatar,
+  EmptyState,
+  Button,
+  GitBranchIcon,
+  ArrowRightIcon,
+} from '@/components/ui'
 import { ringFor } from '../../lib/derive'
 import type { SuccessionStep } from '../../lib/types'
 import styles from './succession.module.css'
@@ -18,7 +25,24 @@ export function Succession({ steps, slug }: SuccessionProps) {
       />
 
       {steps.length === 0 ? (
-        <EmptyState>No succession line yet — name an heir to begin.</EmptyState>
+        <EmptyState
+          accent
+          icon={<GitBranchIcon size={24} />}
+          title={
+            <>
+              No succession to{' '}
+              <em style={{ color: 'var(--amber-text)' }}>trace</em> yet.
+            </>
+          }
+          action={
+            <Button variant="primary" size="sm" type="button">
+              Name an heir <ArrowRightIcon size={16} />
+            </Button>
+          }
+        >
+          Name an heir and the line draws itself — founder to heir, down the
+          generations.
+        </EmptyState>
       ) : (
         <div className={styles.line}>
           {steps.map((step, index) => (

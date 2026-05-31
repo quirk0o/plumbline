@@ -58,18 +58,26 @@ const heir: SuccessionStep = {
 }
 
 describe('Succession', () => {
-  it('renders the empty-state sentence when steps is empty', () => {
+  it('renders the designed empty state when steps is empty', () => {
     render(<Succession steps={[]} slug="caliente" />)
+    // Headline (the italic accent word "trace" is part of the heading text).
     expect(
-      screen.getByText('No succession line yet — name an heir to begin.'),
+      screen.getByRole('heading', { name: /No succession to\s*trace\s*yet\./i }),
+    ).toBeInTheDocument()
+    // Body copy.
+    expect(
+      screen.getByText(/Name an heir and the line draws itself/i),
+    ).toBeInTheDocument()
+    // CTA is present as a button (no action wired yet — see plan decision 2).
+    expect(
+      screen.getByRole('button', { name: /Name an heir/i }),
     ).toBeInTheDocument()
   })
 
   it('does not render the empty state when steps are present', () => {
     render(<Succession steps={[founder]} slug="caliente" />)
-    expect(
-      screen.queryByText('No succession line yet — name an heir to begin.'),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Name an heir/i })).toBeNull()
+    expect(screen.getByText('Dina Caliente')).toBeInTheDocument()
   })
 
   it('renders one role label per step', () => {

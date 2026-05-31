@@ -42,6 +42,32 @@ describe('POST /api/upload', () => {
     expect(calls).toHaveLength(1)
     expect(calls[0].args[0].input.Key).toMatch(/^uploads\/user-1\/\d+-My_Pic\.png$/)
     expect(calls[0].args[0].input.ContentType).toBe('image/png')
+    expect(calls[0].args[0].input.Body).toEqual(PNG_BYTES)
+  })
+
+  it('returns 502 when storage fails', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    s3Mock.on(PutObjectCommand).rejects(new Error('S3 down'))
+    const file = new File([PNG_BYTES], 'pic.png', { type: 'image/png' })
+    const res = await POST(makeRequest(file))
+    expect(res.status).toBe(502)
+  })
+
+  it('rejects an oversize file with 413 and does not store', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    // 6MB of zeros, declared as png; size check must trip before sniffing
+    const big = new File([new Uint8Array(6 * 1024 * 1024)], 'big.png', { type: 'image/png' })
+    const res = await POST(makeRequest(big))
+    expect(res.status).toBe(413)
+    expect(s3Mock.commandCalls(PutObjectCommand)).toHaveLength(0)
+  })
+
+  it('rejects a request with no file with 400 and does not store', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    const req = new Request('http://localhost/api/upload', { method: 'POST', body: new FormData() })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    expect(s3Mock.commandCalls(PutObjectCommand)).toHaveLength(0)
   })
 
   it('rejects unauthenticated requests with 401 and does not store', async () => {

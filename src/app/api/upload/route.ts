@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'File size must be under 5 MB' }, { status: 413 })
   }
 
-  const bytes = await file.arrayBuffer()
-  const detected = await fileTypeFromBuffer(bytes)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const detected = await fileTypeFromBuffer(buffer)
   if (!detected || !ALLOWED_MIME.includes(detected.mime)) {
     return NextResponse.json({ error: 'Unsupported image format' }, { status: 400 })
   }
@@ -33,7 +33,11 @@ export async function POST(request: Request) {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   const key = `uploads/${session.user.id}/${Date.now()}-${safeName}`
 
-  await putObject(key, Buffer.from(bytes), detected.mime)
+  try {
+    await putObject(key, buffer, detected.mime)
+  } catch {
+    return NextResponse.json({ error: 'Upload failed' }, { status: 502 })
+  }
 
   return NextResponse.json({ url: `/media/${key}` })
 }

@@ -30,6 +30,8 @@
   justify-content: center;
   font-family: var(--font-display);
   font-weight: var(--weight-semibold);
+  /* Italic display-serif monogram, matching the design's Crest medallion. */
+  font-style: italic;
   color: var(--text);
   flex-shrink: 0;
   position: relative;

@@ -50,16 +50,13 @@ describe('CrestNode', () => {
     expect(onSelect).toHaveBeenCalledWith('reed')
   })
 
-  it('renders the monogram fallback upright (no italic)', () => {
+  it('renders the monogram fallback in italic display-serif', () => {
     const { container } = renderNode({ imageUrl: null })
     const monogram = [...container.querySelectorAll('text')].find(
       (t) => t.textContent === 'RC',
     )
     expect(monogram).toBeTruthy()
-    expect(monogram?.getAttribute('font-style')).not.toBe('italic')
-    expect((monogram as SVGTextElement | undefined)?.style.fontStyle).not.toBe(
-      'italic',
-    )
+    expect(monogram?.getAttribute('font-style')).toBe('italic')
   })
 
   it('applies the lift-shadow filter to the medallion', () => {

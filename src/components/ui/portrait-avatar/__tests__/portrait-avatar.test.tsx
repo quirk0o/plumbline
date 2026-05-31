@@ -1,6 +1,4 @@
 // @vitest-environment jsdom
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { PortraitAvatar } from '../portrait-avatar'
@@ -81,17 +79,5 @@ describe('PortraitAvatar', () => {
   it('does not render a link when href is absent', () => {
     render(<PortraitAvatar imageUrl={null} firstName="Dina" lastName="Caliente" />)
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
-  })
-
-  // Entity initials must read upright, not italic — the monogram is a person's
-  // name, and the brand reserves italic for blockquotes and inline book titles.
-  it('renders the monogram fallback upright (no italic)', () => {
-    const moduleCss = readFileSync(
-      join(process.cwd(), 'src/components/ui/portrait-avatar/portrait-avatar.module.css'),
-      'utf8',
-    )
-    const monogramBlock = moduleCss.match(/\.monogram\s*\{([^}]*)\}/)
-    expect(monogramBlock, '.monogram rule missing from module CSS').not.toBeNull()
-    expect(monogramBlock![1]).not.toMatch(/font-style:\s*italic/)
   })
 })

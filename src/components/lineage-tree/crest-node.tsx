@@ -184,6 +184,7 @@ export function CrestNode({
             fill={isHeir ? 'var(--color-amber-700)' : 'var(--text)'}
             fontSize="16"
             fontWeight="600"
+            fontStyle="italic"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}
             data-testid="crest-monogram"
             aria-hidden="true"

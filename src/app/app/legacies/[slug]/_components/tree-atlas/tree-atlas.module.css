@@ -75,6 +75,7 @@
 
 /* ─── Floating glass capsule (top-left legacy identity) ─────────── */
 .capsule {
+  composes: glass from '../../../../../../components/ui/surfaces/surfaces.module.css';
   position: absolute;
   top: 16px;
   left: 16px;
@@ -83,11 +84,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
 }
 
 .capsuleBack {
@@ -164,6 +161,7 @@
 
 /* ─── Bottom bar (legend pill + zoom controls) ──────────────────── */
 .bottomBar {
+  composes: glass from '../../../../../../components/ui/surfaces/surfaces.module.css';
   position: absolute;
   bottom: 16px;
   left: 50%;
@@ -173,11 +171,7 @@
   align-items: center;
   gap: 14px;
   padding: 8px 14px;
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow-md);
 }
 
 .legend {
@@ -264,17 +258,14 @@
 }
 
 .searchEmpty {
+  composes: glass from '../../../../../../components/ui/surfaces/surfaces.module.css';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
   padding: 8px 16px;
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow-md);
   color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 13px;

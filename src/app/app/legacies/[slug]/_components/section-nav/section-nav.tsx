@@ -120,7 +120,7 @@ export function SectionNav({ items }: SectionNavProps) {
             key={item.id}
             type="button"
             onClick={() => handleClick(item.id)}
-            aria-current={isActive ? 'true' : undefined}
+            aria-current={isActive ? 'location' : undefined}
             className={cn(styles.item, isActive && styles.itemActive)}
           >
             {item.label}

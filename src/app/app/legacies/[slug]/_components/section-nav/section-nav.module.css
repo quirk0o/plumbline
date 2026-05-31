@@ -34,9 +34,38 @@
   color: var(--text);
 }
 
+.item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .itemActive,
 .itemActive:hover {
   background: var(--green-glow);
   border-left: 2px solid var(--green);
   color: var(--green);
+}
+
+@media (max-width: 768px) {
+  .rail {
+    position: static;
+    width: auto;
+    flex-direction: row;
+    gap: 4px;
+    padding: 12px 16px;
+    overflow-x: auto;
+  }
+
+  .item {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 6px 6px 0 0;
+    white-space: nowrap;
+  }
+
+  .itemActive,
+  .itemActive:hover {
+    border-left: none;
+    border-bottom: 2px solid var(--green);
+  }
 }

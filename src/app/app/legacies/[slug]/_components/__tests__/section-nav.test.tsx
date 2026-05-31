@@ -124,14 +124,14 @@ describe('SectionNav', () => {
     fireSectionVisible('succession', 0.8)
     expect(screen.getByRole('button', { name: 'Succession' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     )
 
     // A new section with a higher ratio wins.
     fireSectionVisible('milestones', 0.95)
     expect(screen.getByRole('button', { name: 'Milestones' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     )
     expect(screen.getByRole('button', { name: 'Succession' })).not.toHaveAttribute(
       'aria-current',
@@ -144,7 +144,7 @@ describe('SectionNav', () => {
     fireSectionVisible('succession', 0.8)
     expect(screen.getByRole('button', { name: 'Succession' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     )
 
     // Succession scrolls out (ratio 0) and milestones becomes the visible one.
@@ -152,7 +152,7 @@ describe('SectionNav', () => {
     fireSectionVisible('milestones', 0.4)
     expect(screen.getByRole('button', { name: 'Milestones' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     )
     expect(screen.getByRole('button', { name: 'Succession' })).not.toHaveAttribute(
       'aria-current',
@@ -175,7 +175,7 @@ describe('SectionNav', () => {
     fireSectionVisible('milestones', 0.9)
     expect(screen.getByRole('button', { name: 'Family' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     )
     expect(screen.getByRole('button', { name: 'Milestones' })).not.toHaveAttribute(
       'aria-current',

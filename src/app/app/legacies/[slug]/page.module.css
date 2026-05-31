@@ -3,3 +3,11 @@
   grid-template-columns: 200px 1fr;
   align-items: start;
 }
+
+/* Below the rail breakpoint, collapse to a single column. The sticky rail
+   becomes a normal-flow horizontal nav at the top (see section-nav.module.css). */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -47,7 +47,7 @@ export function ChronicleSections({
 }: ChronicleSectionsProps) {
   return (
     <div className={styles.column}>
-      <section id="hero" data-section="hero" className={styles.heroSection}>
+      <section id="hero" data-section="hero" aria-label="Overview" className={styles.heroSection}>
         <div className={styles.inner}>
           <Hero
             name={name}
@@ -64,6 +64,7 @@ export function ChronicleSections({
       <section
         id="succession"
         data-section="succession"
+        aria-label="Succession"
         className={styles.cardSection}
       >
         <div className={styles.inner}>
@@ -74,6 +75,7 @@ export function ChronicleSections({
       <section
         id="milestones"
         data-section="milestones"
+        aria-label="Milestones"
         className={styles.cardSection}
       >
         <div className={styles.inner}>
@@ -85,6 +87,7 @@ export function ChronicleSections({
         id="sims"
         data-section="sims"
         data-testid="roster"
+        aria-label="Sims"
         className={styles.rosterSection}
       >
         <div className={styles.inner}>

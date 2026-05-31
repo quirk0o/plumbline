@@ -156,6 +156,14 @@
   font-style: normal;
 }
 
+.capsuleDivider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
 .capsuleMeta {
   font-family: var(--font-body);
   font-size: 12px;

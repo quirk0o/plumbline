@@ -78,12 +78,15 @@ function LegacyCapsule({
             name
           )}
         </RadixDialog.Title>
-        {simCount > 0 && (
+      </div>
+      {simCount > 0 && (
+        <>
+          <span className={styles.capsuleDivider} aria-hidden="true" />
           <span className={styles.capsuleMeta} aria-hidden="true">
             {simLabel} · {genLabel}
           </span>
-        )}
-      </div>
+        </>
+      )}
     </div>
   )
 }

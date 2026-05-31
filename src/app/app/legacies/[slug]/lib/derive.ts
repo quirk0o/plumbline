@@ -148,14 +148,46 @@ export function computeStats(
 // ---------------------------------------------------------------------------
 
 /**
+ * The reigning heir — shown as "Heir designate" in the succession line and as
+ * the Hero's current heir. Chosen from heirs EXCLUDING the founder (the founder
+ * is shown separately as "Founder").
+ *
+ * Rule: the highest non-null `generationNumber` wins. A null-generation heir is
+ * never the designate unless EVERY heir is null-generation, in which case the
+ * last by id is chosen (deterministic). Returns null when there are no
+ * non-founder heirs.
+ *
+ * Both deriveSuccession and the page's currentHeir use this single selector so
+ * the two never disagree about who the heir is.
+ */
+export function selectDesignateHeir(
+  sims: ChronicleSim[],
+  founderSimId: string | null,
+): ChronicleSim | null {
+  const heirs = sims.filter((s) => s.isHeir && s.id !== founderSimId)
+  if (heirs.length === 0) return null
+  return heirs.reduce((best, sim) => {
+    const bestGen = best.generationNumber
+    const simGen = sim.generationNumber
+    if (simGen === null) {
+      // No generation: only wins if best is also null-gen and sim sorts later.
+      return bestGen === null && sim.id > best.id ? sim : best
+    }
+    if (bestGen === null) return sim // any numbered heir beats a null-gen one
+    if (simGen !== bestGen) return simGen > bestGen ? sim : best
+    return sim.id > best.id ? sim : best // tie → last by id
+  })
+}
+
+/**
  * Build the ordered succession line from a list of ChronicleSims.
  *
  * Order:
  *   1. The founder (role: "Founder"), if present.
  *   2. All heirs (isHeir), sorted by generationNumber ASC (nulls last),
  *      then by id for determinism. Each gets role "Heir · Gen {roman(gen)}"
- *      except the one with the highest gen (or last by id if tied), who
- *      gets "Heir designate".
+ *      except the heir selected by selectDesignateHeir, who gets
+ *      "Heir designate".
  *
  * If the founder is also an heir, they appear only once as "Founder".
  */
@@ -194,11 +226,12 @@ export function deriveSuccession(
       return a.id.localeCompare(b.id)
     })
 
-  heirs.forEach((sim, index) => {
-    const isLast = index === heirs.length - 1
+  const designate = selectDesignateHeir(sims, founderSimId)
+
+  heirs.forEach((sim) => {
     let role: string
 
-    if (isLast) {
+    if (designate && sim.id === designate.id) {
       role = 'Heir designate'
     } else if (sim.generationNumber !== null) {
       role = `Heir · Gen ${roman(sim.generationNumber)}`

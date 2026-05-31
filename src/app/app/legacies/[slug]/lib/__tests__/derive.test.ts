@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { FetchedLegacy } from '../types'
+import type { ChronicleSim, FetchedLegacy } from '../types'
 import {
   computeStats,
   deriveSuccession,
@@ -26,6 +26,24 @@ import {
   ringFor,
   toChronicleSim,
 } from '../derive'
+
+// ---------------------------------------------------------------------------
+// ChronicleSim factory
+// ---------------------------------------------------------------------------
+
+function makeChronicleSim(overrides: Partial<ChronicleSim> & { id: string }): ChronicleSim {
+  return {
+    firstName: 'Test',
+    lastName: 'Sim',
+    imageUrl: null,
+    generationNumber: null,
+    lifeStage: 'ADULT',
+    isHeir: false,
+    isFounder: false,
+    aspirationName: null,
+    ...overrides,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -528,6 +546,20 @@ describe('deriveSuccession', () => {
     // Founder should not appear since founderSimId is null
     const founderStep = result.find((s) => s.sim.id === FOUNDER_ID)
     expect(founderStep).toBeUndefined()
+  })
+
+  it('never designates a null-generation heir when a numbered heir exists', () => {
+    const sims: ChronicleSim[] = [
+      makeChronicleSim({ id: 'h2', isHeir: true, generationNumber: 2 }),
+      makeChronicleSim({ id: 'h3', isHeir: true, generationNumber: 3 }),
+      makeChronicleSim({ id: 'hx', isHeir: true, generationNumber: null }),
+    ]
+    const steps = deriveSuccession(sims, null)
+    const designate = steps.find((s) => s.role === 'Heir designate')
+    expect(designate?.sim.id).toBe('h3')
+    const nullHeir = steps.find((s) => s.sim.id === 'hx')
+    expect(nullHeir?.role).toBe('Heir')
+    expect(steps.filter((s) => s.role === 'Heir designate')).toHaveLength(1)
   })
 })
 

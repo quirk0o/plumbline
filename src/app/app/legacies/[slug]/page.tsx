@@ -6,9 +6,10 @@ import {
   deriveMilestones,
   deriveSuccession,
   groupByGeneration,
+  selectDesignateHeir,
   toChronicleSim,
 } from './lib/derive'
-import type { ChronicleSim, FetchedLegacy } from './lib/types'
+import type { FetchedLegacy } from './lib/types'
 import { SectionNav } from './_components/section-nav/section-nav'
 import { ChronicleSections } from './_components/chronicle-sections/chronicle-sections'
 import { ViewTree } from './_components/view-tree/view-tree'
@@ -102,18 +103,11 @@ export default async function LegacyDetailPage({ params }: Props) {
 
   const founder = chronicleSims.find((s) => s.isFounder) ?? null
 
-  // Current heir = the heir with the highest generationNumber (nulls last).
+  // Current heir = the same sim the succession line marks "Heir designate"
+  // (highest numbered heir). Fall back to the founder when they are the only heir.
   const currentHeir =
-    chronicleSims
-      .filter((s) => s.isHeir)
-      .reduce<ChronicleSim | null>((best, sim) => {
-        if (best === null) return sim
-        const bestGen = best.generationNumber
-        const simGen = sim.generationNumber
-        if (simGen === null) return best
-        if (bestGen === null) return sim
-        return simGen > bestGen ? sim : best
-      }, null) ?? null
+    selectDesignateHeir(chronicleSims, fetched.founderSimId) ??
+    (founder?.isHeir ? founder : null)
 
   return (
     <div className={styles.grid}>

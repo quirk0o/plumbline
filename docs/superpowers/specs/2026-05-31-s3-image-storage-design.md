@@ -231,8 +231,9 @@ Tests:
   rejects with `NoSuchKey` → `404`.
 - **Backfill script:** seed `Sim`/`Legacy` rows with `/uploads/<file>` URLs and
   create matching temp source files on disk → run the script → assert
-  `PutObjectCommand` was called per file and the rows now point at
-  `/media/uploads/backfill/<file>`; assert a row whose source file is absent is
+  `PutObjectCommand` was called per file under `uploads/<userId>/<file>` (the
+  userId copied from the related `Legacy`/`Sim`) and the rows now point at
+  `/media/uploads/<userId>/<file>`; assert a row whose source file is absent is
   reported and left unchanged; assert re-running is a no-op (rows already at
   `/media/...` are skipped, no further `PutObjectCommand`).
 - Existing component tests (`create-sim-modal`, `sim-form`) mock

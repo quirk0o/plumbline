@@ -1,4 +1,4 @@
-import { SectionHeading, GenerationBadge, ButtonLink } from '@/components/ui'
+import { SectionHeading, GenerationBadge, ButtonLink, EmptyState } from '@/components/ui'
 import { roman } from '@/lib/legacy-format'
 import type { RosterGroup } from '../../lib/types'
 import { RosterCard } from './roster-card'
@@ -32,16 +32,19 @@ export function Roster({ groups, slug }: RosterProps) {
       </div>
 
       {groups.length === 0 ? (
-        <div className={styles.emptyState}>
-          <p className={styles.emptyText}>No sims yet.</p>
-          <ButtonLink
-            variant="outline"
-            size="sm"
-            href={`/app/legacies/${slug}/sims/new`}
-          >
-            Add your first sim →
-          </ButtonLink>
-        </div>
+        <EmptyState
+          action={
+            <ButtonLink
+              variant="outline"
+              size="sm"
+              href={`/app/legacies/${slug}/sims/new`}
+            >
+              Add your first sim →
+            </ButtonLink>
+          }
+        >
+          No sims yet.
+        </EmptyState>
       ) : (
         /* One group per generation */
         groups.map((group) => (

@@ -1,4 +1,4 @@
-import { SectionHeading, PortraitAvatar } from '@/components/ui'
+import { SectionHeading, PortraitAvatar, EmptyState } from '@/components/ui'
 import { ringFor } from '../../lib/derive'
 import type { SuccessionStep } from '../../lib/types'
 import styles from './succession.module.css'
@@ -18,9 +18,7 @@ export function Succession({ steps, slug }: SuccessionProps) {
       />
 
       {steps.length === 0 ? (
-        <p className={styles.emptyState}>
-          No succession line yet — name an heir to begin.
-        </p>
+        <EmptyState>No succession line yet — name an heir to begin.</EmptyState>
       ) : (
         <div className={styles.line}>
           {steps.map((step, index) => (

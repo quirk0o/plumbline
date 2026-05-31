@@ -1,0 +1,17 @@
+.root {
+  margin-top: 24px;
+  padding: 24px 28px;
+  border: 1px dashed var(--border-bright);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  font-style: italic;
+}

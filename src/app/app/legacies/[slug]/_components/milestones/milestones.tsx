@@ -1,4 +1,4 @@
-import { SectionHeading } from '@/components/ui'
+import { SectionHeading, EmptyState } from '@/components/ui'
 import type { Milestone, ChronicleSim } from '../../lib/types'
 import { MilestoneRow } from './milestone-row'
 import styles from './milestones.module.css'
@@ -19,7 +19,7 @@ export function Milestones({ milestones, simsById, slug }: MilestonesProps) {
       />
 
       {milestones.length === 0 ? (
-        <p className={styles.emptyState}>No milestones recorded yet.</p>
+        <EmptyState>No milestones recorded yet.</EmptyState>
       ) : (
         <ul className={styles.rows}>
           {milestones.map((milestone) => (

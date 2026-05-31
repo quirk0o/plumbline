@@ -64,14 +64,3 @@
      on .line already centers the connector with the step block. */
 }
 
-/* ── Empty state ────────────────────────────────────────────────── */
-
-.emptyState {
-  margin-top: 24px;
-  padding: 24px 28px;
-  border: 1px dashed var(--border-bright);
-  border-radius: var(--radius-lg);
-  font-size: 14px;
-  color: var(--text-muted);
-  font-style: italic;
-}

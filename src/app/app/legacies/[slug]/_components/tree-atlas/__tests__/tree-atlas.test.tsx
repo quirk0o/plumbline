@@ -11,17 +11,17 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-const mockPush = vi.fn()
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
-  usePathname: () => '/app',
-}))
-
 vi.mock('@/components/lineage-tree/lineage-tree', () => ({
   LineageTree: ({ onSelectSim }: { onSelectSim?: (id: string) => void }) => (
     <button type="button" data-testid="lineage-tree" onClick={() => onSelectSim?.('s2')}>
       tree
     </button>
+  ),
+}))
+
+vi.mock('../sim-inspector', () => ({
+  SimInspector: ({ simId }: { simId: string }) => (
+    <div data-testid="sim-inspector">{simId}</div>
   ),
 }))
 
@@ -61,7 +61,6 @@ const TWO_SIMS = {
 
 describe('TreeAtlas (full-page route, not a dialog)', () => {
   beforeEach(() => {
-    mockPush.mockReset()
     mockUseQuery.mockReturnValue(TWO_SIMS)
   })
 
@@ -127,10 +126,11 @@ describe('TreeAtlas (full-page route, not a dialog)', () => {
     expect(screen.queryByTestId('lineage-tree')).not.toBeInTheDocument()
   })
 
-  it('navigates to the sim detail route when a node is selected', async () => {
+  it('opens the sim inspector when a node is selected', async () => {
     const user = userEvent.setup()
     render(<TreeAtlas {...defaultProps} />)
+    expect(screen.queryByTestId('sim-inspector')).not.toBeInTheDocument()
     await user.click(screen.getByTestId('lineage-tree'))
-    expect(mockPush).toHaveBeenCalledWith('/app/legacies/caliente/sims/s2')
+    expect(screen.getByTestId('sim-inspector')).toHaveTextContent('s2')
   })
 })

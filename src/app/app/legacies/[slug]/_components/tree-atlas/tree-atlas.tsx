@@ -1,7 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { trpc } from '@/trpc/client'
 import { LineageTree } from '@/components/lineage-tree/lineage-tree'
 import { computeLineageLayout } from '@/components/lineage-tree/layout'
@@ -9,6 +8,7 @@ import { usePanZoom } from '@/components/lineage-tree/use-pan-zoom'
 import { Plumbob } from '@/components/plumbob'
 import { splitLegacyName } from '../../lib/legacy-title'
 import { AtlasToolbar, type GenFilter } from './atlas-toolbar'
+import { SimInspector } from './sim-inspector'
 import styles from './tree-atlas.module.css'
 
 export interface TreeAtlasProps {
@@ -139,8 +139,6 @@ function AtlasBottomBar({
  * global AppNav is provided by the layout — this component does not render its own.
  */
 export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasProps) {
-  const router = useRouter()
-
   const { data, isLoading, isError } = trpc.sims.getTreeData.useQuery({ legacySlug })
 
   const allSims = useMemo(() => data?.sims ?? [], [data])
@@ -154,12 +152,14 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
 
   const [genFilter, setGenFilter] = useState<GenFilter>('all')
   const [query, setQuery] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const visibleSims = useMemo(
     () => (genFilter === 'all' ? allSims : allSims.filter((s) => s.generationNumber === genFilter)),
     [allSims, genFilter],
   )
   const visibleIds = useMemo(() => new Set(visibleSims.map((s) => s.id)), [visibleSims])
+  const activeId = selectedId && visibleIds.has(selectedId) ? selectedId : null
   const familyEdges = useMemo(
     () => (data?.familyEdges ?? []).filter((e) => visibleIds.has(e.parentId) && visibleIds.has(e.childId)),
     [data, visibleIds],
@@ -192,7 +192,7 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
   const generationCount = generations.length
 
   function handleSelectSim(simId: string) {
-    router.push(`/app/legacies/${legacySlug}/sims/${simId}`)
+    setSelectedId(simId)
   }
 
   return (
@@ -245,6 +245,7 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
                     founderSimId={founderSimId}
                     legacyName={legacyName}
                     dimmedIds={dimmedIds}
+                    selectedId={activeId ?? undefined}
                     onSelectSim={handleSelectSim}
                   />
                 ) : null}
@@ -257,6 +258,15 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
 
             {dimmedIds && visibleSims.length > 0 && dimmedIds.size === visibleSims.length && (
               <p className={styles.searchEmpty}>No sims match your search.</p>
+            )}
+
+            {activeId && (
+              <SimInspector
+                simId={activeId}
+                legacySlug={legacySlug}
+                founderSimId={founderSimId}
+                onClose={() => setSelectedId(null)}
+              />
             )}
 
             <AtlasBottomBar

@@ -19,7 +19,8 @@
     "db:test:setup": "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"Standing user consent to reset the local simstrack_test database via this test-only script (pinned to .env.test).\" node --env-file=.env.test ./node_modules/.bin/prisma migrate reset --force && node --env-file=.env.test ./node_modules/.bin/prisma db seed",
     "pretest:e2e": "npm run db:test:setup",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "backfill:uploads": "tsx scripts/backfill-uploads-to-s3.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

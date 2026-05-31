@@ -27,7 +27,7 @@
 
 .titleAccent {
   color: var(--color-amber-700);
-  font-style: normal;
+  font-style: italic;
 }
 
 .blurb {

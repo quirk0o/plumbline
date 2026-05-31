@@ -10,6 +10,11 @@
   font-weight: var(--weight-semibold);
   line-height: 1;
   color: var(--text);
+  /* Cormorant's default proportional figures give each digit a different left
+     side-bearing (e.g. "3" sits further right than "6"), so stacked stat numerals
+     don't line up with their labels. Tabular lining figures put every digit in a
+     uniform, consistently-positioned cell. */
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .label {

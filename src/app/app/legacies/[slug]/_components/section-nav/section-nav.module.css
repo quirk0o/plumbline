@@ -20,7 +20,7 @@
   background: transparent;
   color: var(--text-muted);
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   line-height: 1.2;
   text-align: left;
@@ -52,7 +52,7 @@
     width: auto;
     flex-direction: row;
     gap: 4px;
-    padding: 12px 16px;
+    padding: var(--space-3) var(--space-4);
     overflow-x: auto;
   }
 

@@ -6,7 +6,7 @@
 
 .value {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: var(--text-stat);
   font-weight: var(--weight-semibold);
   line-height: 1;
   color: var(--text);
@@ -18,7 +18,7 @@
 }
 
 .label {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.14em;
   text-transform: uppercase;

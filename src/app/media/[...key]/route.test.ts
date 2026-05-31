@@ -33,11 +33,29 @@ describe('GET /media/[...key]', () => {
   })
 
   it('returns 400 for a key containing .. without calling storage', async () => {
-    const res = await GET(new Request('http://localhost/media/uploads/..%2Fsecret'), ctx(['uploads', '..', 'secret']))
+    const res = await GET(new Request('http://localhost/media/uploads/../secret'), ctx(['uploads', '..', 'secret']))
 
     expect(res.status).toBe(400)
     expect(mockedExists).not.toHaveBeenCalled()
     expect(mockedPresign).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 for a key containing an empty segment without calling storage', async () => {
+    const res = await GET(new Request('http://localhost/media/uploads//a.png'), ctx(['uploads', '', 'a.png']))
+
+    expect(res.status).toBe(400)
+    expect(mockedExists).not.toHaveBeenCalled()
+    expect(mockedPresign).not.toHaveBeenCalled()
+  })
+
+  it('serves a file whose name contains .. as a substring (not a traversal segment)', async () => {
+    mockedExists.mockResolvedValue(true)
+    mockedPresign.mockResolvedValue('https://signed.example/obj')
+
+    const res = await GET(new Request('http://localhost/media/uploads/user-1/re..lease.png'), ctx(['uploads', 'user-1', 're..lease.png']))
+
+    expect(res.status).toBe(302)
+    expect(mockedPresign).toHaveBeenCalledWith('uploads/user-1/re..lease.png')
   })
 
   it('returns 404 when the object does not exist', async () => {

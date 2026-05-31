@@ -7,7 +7,7 @@ export async function GET(
 ) {
   const { key } = await params
 
-  if (key.some((segment) => segment.includes('..'))) {
+  if (key.some((segment) => segment === '..' || segment === '')) {
     return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
   }
 

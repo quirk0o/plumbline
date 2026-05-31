@@ -59,18 +59,29 @@ environment values differ between dev (MinIO) and prod (R2).
 3. The route returns `{ url: "/media/<key>" }` — an **app-relative** path. The
    database stores this relative path, never an infrastructure URL.
 
-### Read path (presigned redirect)
+### Read path (byte streaming)
+
+> **Revision (2026-05-31, post-implementation):** This section originally
+> specified a `302` redirect to a short-lived presigned URL. That proved
+> incompatible with `next/image`: the image optimizer does **not** follow 302
+> redirects to presigned URLs (it reads the empty redirect body and reports
+> "received null"). The read path was changed to stream the bytes through the
+> route instead. The description below reflects the as-built behavior.
 
 1. Images are rendered from the stored `/media/<key>` value (via `next/image`,
    same-origin).
-2. `GET /media/[...key]` reconstructs the key, generates a short-lived presigned
-   GET URL, and returns a `302` redirect to it.
-3. The browser (or the Next image optimizer) follows the redirect and fetches
-   the bytes **directly from MinIO/R2** — not through the serverless function.
+2. `GET /media/[...key]` reconstructs the key, fetches the object from S3/MinIO
+   via `getObject`, and streams the bytes back with the stored `Content-Type`
+   (`404` if absent, `502` on a non-404 storage error).
+3. Because the URL is a stable same-origin route returning real image bytes,
+   `next/image` optimization works normally.
 
-This keeps the bucket private, keeps infrastructure URLs out of the database, and
-avoids routing image bytes through Vercel functions. It works identically in dev
-(MinIO at `localhost:9000`) and prod (R2).
+This keeps the bucket private and keeps infrastructure URLs out of the database.
+Bytes pass through the serverless function, but `next/image` caches optimized
+results so origin fetches are infrequent, and R2 egress is free in production. In
+development, `next.config.ts` enables `images.dangerouslyAllowLocalIP` so the
+optimizer can fetch from local MinIO (`localhost:9000`); production uses a public
+R2 host, where the flag stays off.
 
 ## Components
 

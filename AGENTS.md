@@ -86,7 +86,10 @@ This starts MinIO (API `localhost:9000`, console `localhost:9001`, login
 buckets. The dev server reads `S3_*` vars from `.env`; see `.env.example`.
 
 Uploaded files are stored under `uploads/<userId>/<file>` and served via the
-`/media/<key>` route, which 302-redirects to a short-lived presigned URL.
+`/media/<key>` route, which streams the object's bytes from S3/MinIO. (It does
+not redirect to a presigned URL — `next/image`'s optimizer does not follow such
+redirects.) In development, `next.config.ts` sets `images.dangerouslyAllowLocalIP`
+so the optimizer can fetch from local MinIO; production uses a public R2 host.
 
 To migrate legacy `/uploads/...` rows from a previous local setup:
 

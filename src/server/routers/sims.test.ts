@@ -115,6 +115,65 @@ describe('sims.create', () => {
       })
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
   })
+
+  it('designates the first parentless sim as the founder (generation 1)', async () => {
+    const caller = authedCaller(userId)
+    const founder = await caller.sims.create({
+      legacyId,
+      firstName: 'Dina',
+      lastName: 'Caliente',
+      gender: Gender.FEMALE,
+    })
+
+    const legacy = await db.legacy.findUnique({ where: { id: legacyId } })
+    expect(legacy?.founderSimId).toBe(founder.id)
+    const record = await db.sim.findUnique({ where: { id: founder.id } })
+    expect(record?.generationNumber).toBe(1)
+  })
+
+  it('does not change the founder once one exists', async () => {
+    const caller = authedCaller(userId)
+    const first = await caller.sims.create({
+      legacyId,
+      firstName: 'Dina',
+      lastName: 'Caliente',
+      gender: Gender.FEMALE,
+    })
+    const second = await caller.sims.create({
+      legacyId,
+      firstName: 'Nina',
+      lastName: 'Caliente',
+      gender: Gender.FEMALE,
+    })
+
+    const legacy = await db.legacy.findUnique({ where: { id: legacyId } })
+    expect(legacy?.founderSimId).toBe(first.id)
+    expect(legacy?.founderSimId).not.toBe(second.id)
+  })
+
+  it('does not auto-designate a sim with parents as the founder', async () => {
+    const caller = authedCaller(userId)
+    // Seed a parent directly (not via the create mutation) so the legacy still
+    // has no founder when the child is created.
+    const parent = await createTestSim(legacyId)
+    await db.sim.update({
+      where: { id: parent.id },
+      data: { generationNumber: 1 },
+    })
+
+    const child = await caller.sims.create({
+      legacyId,
+      firstName: 'Cassandra',
+      lastName: 'Goth',
+      gender: Gender.FEMALE,
+      parentIds: [parent.id],
+    })
+
+    const legacy = await db.legacy.findUnique({ where: { id: legacyId } })
+    expect(legacy?.founderSimId).toBeNull()
+    const record = await db.sim.findUnique({ where: { id: child.id } })
+    expect(record?.generationNumber).toBe(2)
+  })
 })
 
 describe('sims.getById', () => {

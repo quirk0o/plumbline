@@ -1,10 +1,24 @@
-/* SortableMilestoneRow — draggable wrapper around MilestoneRow */
+/* Sortable & pinned milestone rows — both are <li> direct children of the
+   <ul>, wrapping the shared 4-column MilestoneRowContent grid. */
 
-.wrapper {
+.wrapper,
+.pinned {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   position: relative;
+}
+
+/* The 4-column grid that MilestoneRowContent expects, plus flex-fill so the
+   handle/controls bookend it. Mirrors `.row` in milestone-row.module.css. */
+.content {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 120px 40px 1fr auto;
+  gap: var(--space-6);
+  align-items: center;
+  padding: 18px 0;
 }
 
 .handle {
@@ -31,6 +45,14 @@
 
 .handle:active {
   cursor: grabbing;
+}
+
+/* Keeps pinned (auto) rows aligned with draggable rows by reserving the same
+   width the drag handle occupies. */
+.pinnedSpacer {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 24px;
 }
 
 .controls {

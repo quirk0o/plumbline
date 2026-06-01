@@ -8,7 +8,6 @@ import styles from './milestone-composer.module.css'
 
 export interface MilestoneComposerProps {
   legacyId: string
-  slug: string
   simsById: Record<string, ChronicleSim>
   /** When set, the composer opens pre-filled to edit this milestone. */
   editing: Milestone | null
@@ -21,11 +20,12 @@ interface ComposerFormProps {
   simsById: Record<string, ChronicleSim>
   editing: Milestone | null
   onDone: () => void
-  onCancelEdit: () => void
+  /** Cancel without persisting. Wired by the parent to avoid a needless refresh. */
+  onCancel: () => void
 }
 
 /** Inner stateful form — key-remounted when editing changes to reset state cleanly. */
-function ComposerForm({ legacyId, simsById, editing, onDone, onCancelEdit }: ComposerFormProps) {
+function ComposerForm({ legacyId, simsById, editing, onDone, onCancel }: ComposerFormProps) {
   const [title, setTitle] = useState(editing?.title ?? '')
   const [blurb, setBlurb] = useState(editing?.blurb ?? '')
   const [simIds, setSimIds] = useState<string[]>(editing?.simIds ?? [])
@@ -43,11 +43,6 @@ function ComposerForm({ legacyId, simsById, editing, onDone, onCancelEdit }: Com
       await create.mutateAsync({ legacyId, title: title.trim(), blurb: blurb.trim() || undefined, simIds })
     }
     onDone()
-  }
-
-  function handleCancel() {
-    if (isEditing) onCancelEdit()
-    else onDone()
   }
 
   const allSims = Object.values(simsById)
@@ -97,7 +92,7 @@ function ComposerForm({ legacyId, simsById, editing, onDone, onCancelEdit }: Com
       </fieldset>
 
       <div className={styles.actions}>
-        <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button type="button" onClick={handleSave} disabled={title.trim().length === 0 || pending}>
           Save milestone
         </Button>
@@ -107,7 +102,7 @@ function ComposerForm({ legacyId, simsById, editing, onDone, onCancelEdit }: Com
 }
 
 export function MilestoneComposer({
-  legacyId, slug: _slug, simsById, editing, onDone, onCancelEdit,
+  legacyId, simsById, editing, onDone, onCancelEdit,
 }: MilestoneComposerProps) {
   const [open, setOpen] = useState(false)
 
@@ -134,9 +129,11 @@ export function MilestoneComposer({
         setOpen(false)
         onDone()
       }}
-      onCancelEdit={() => {
+      onCancel={() => {
         setOpen(false)
-        onCancelEdit()
+        // Editing: tell the parent to clear the editing target. Cancelling a
+        // brand-new (unsaved) note just closes the form — no router.refresh().
+        if (editing !== null) onCancelEdit()
       }}
     />
   )

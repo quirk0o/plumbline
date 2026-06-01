@@ -14,7 +14,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { trpc } from '@/trpc/client'
 import type { Milestone, ChronicleSim } from '../../lib/types'
-import { MilestoneRow } from './milestone-row'
+import { PinnedMilestoneRow } from './pinned-milestone-row'
 import { SortableMilestoneRow } from './sortable-milestone-row'
 import { MilestoneComposer } from './milestone-composer'
 import styles from './milestones.module.css'
@@ -26,9 +26,47 @@ export interface MilestonesClientProps {
   legacyId: string
 }
 
-export function MilestonesClient({ milestones, simsById, slug, legacyId }: MilestonesClientProps) {
+/**
+ * Compute the reorder neighbours for a row at `pos` in a newest-first list.
+ * "prev" is the row above (higher sortOrder); "next" is the row below (lower
+ * sortOrder). Exported for unit testing the drag math without simulating an
+ * actual @dnd-kit drag in jsdom.
+ */
+export function neighborSortOrders(
+  items: Milestone[],
+  pos: number,
+): { prevSortOrder: number | undefined; nextSortOrder: number | undefined } {
+  return {
+    prevSortOrder: items[pos - 1]?.sortOrder,
+    nextSortOrder: items[pos + 1]?.sortOrder,
+  }
+}
+
+/**
+ * Content-aware signature of the server list. Changes whenever a row's id,
+ * order, sortOrder, or title changes — so an EDIT (same ids, new title) still
+ * remounts the inner list and reconciles, fixing the stale-title bug.
+ */
+function signatureOf(milestones: Milestone[]): string {
+  return milestones.map((m) => `${m.id}:${m.sortOrder}:${m.title}`).join('|')
+}
+
+interface MilestonesListProps {
+  initialMilestones: Milestone[]
+  simsById: Record<string, ChronicleSim>
+  slug: string
+  legacyId: string
+}
+
+/**
+ * The interactive list. Its local `items` state is seeded from props and only
+ * diverges optimistically (drag / delete). The parent remounts it (via a
+ * content-aware `key`) whenever the server data changes, so a fresh mount
+ * always reconciles to the latest server truth.
+ */
+function MilestonesList({ initialMilestones, simsById, slug, legacyId }: MilestonesListProps) {
   const router = useRouter()
-  const [items, setItems] = useState<Milestone[]>(milestones)
+  const [items, setItems] = useState<Milestone[]>(initialMilestones)
   const [editing, setEditing] = useState<Milestone | null>(null)
 
   const reorder = trpc.milestones.reorder.useMutation()
@@ -38,11 +76,6 @@ export function MilestonesClient({ milestones, simsById, slug, legacyId }: Miles
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
-
-  // Keep in sync if the server data changes (after router.refresh()).
-  if (milestones !== items && milestones.map((m) => m.id).join() !== items.map((m) => m.id).join()) {
-    setItems(milestones)
-  }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -58,30 +91,31 @@ export function MilestonesClient({ milestones, simsById, slug, legacyId }: Miles
     next.splice(newIndex, 0, moved)
     setItems(next)
 
-    // Neighbors in the new ordering (newest-first list): prev = above (higher
-    // sortOrder), nextRow = below (lower sortOrder).
     const pos = next.findIndex((m) => m.id === moved.id)
-    const prev = next[pos - 1]
-    const below = next[pos + 1]
-    await reorder.mutateAsync({
-      id: moved.id,
-      prevSortOrder: prev?.sortOrder,
-      nextSortOrder: below?.sortOrder,
-    })
-    router.refresh()
+    const { prevSortOrder, nextSortOrder } = neighborSortOrders(next, pos)
+
+    try {
+      await reorder.mutateAsync({ id: moved.id, prevSortOrder, nextSortOrder })
+    } finally {
+      // Pull the true server order back — reconciles success, reverts failure.
+      router.refresh()
+    }
   }
 
   async function handleDelete(id: string) {
     setItems((prev) => prev.filter((m) => m.id !== id))
-    await remove.mutateAsync({ id })
-    router.refresh()
+    try {
+      await remove.mutateAsync({ id })
+    } finally {
+      // On failure this restores the deleted row; on success it's a no-op.
+      router.refresh()
+    }
   }
 
   return (
     <div>
       <MilestoneComposer
         legacyId={legacyId}
-        slug={slug}
         simsById={simsById}
         editing={editing}
         onDone={() => {
@@ -94,7 +128,7 @@ export function MilestonesClient({ milestones, simsById, slug, legacyId }: Miles
       {items.length === 0 ? null : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map((m) => m.id)} strategy={verticalListSortingStrategy}>
-            <ul className={styles.rows}>
+            <ul className={styles.rows} role="list">
               {items.map((m) =>
                 m.userAuthored ? (
                   <SortableMilestoneRow
@@ -106,7 +140,12 @@ export function MilestonesClient({ milestones, simsById, slug, legacyId }: Miles
                     onDelete={() => handleDelete(m.id)}
                   />
                 ) : (
-                  <MilestoneRow key={m.id} milestone={m} simsById={simsById} slug={slug} />
+                  <PinnedMilestoneRow
+                    key={m.id}
+                    milestone={m}
+                    simsById={simsById}
+                    slug={slug}
+                  />
                 ),
               )}
             </ul>
@@ -114,5 +153,19 @@ export function MilestonesClient({ milestones, simsById, slug, legacyId }: Miles
         </DndContext>
       )}
     </div>
+  )
+}
+
+export function MilestonesClient({ milestones, simsById, slug, legacyId }: MilestonesClientProps) {
+  // Remount the interactive list whenever the server data's content signature
+  // changes (covers reorders, deletes, AND edits where ids are unchanged).
+  return (
+    <MilestonesList
+      key={signatureOf(milestones)}
+      initialMilestones={milestones}
+      simsById={simsById}
+      slug={slug}
+      legacyId={legacyId}
+    />
   )
 }

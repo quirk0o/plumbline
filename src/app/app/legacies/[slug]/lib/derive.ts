@@ -252,85 +252,110 @@ export function deriveSuccession(
 /**
  * Derive the auto-captured milestone timeline from the fetched legacy.
  *
- * Returns entries NEWEST-FIRST (by sortKey descending), tie-broken by id
+ * Returns entries NEWEST-FIRST (by sortOrder descending), tie-broken by id
  * for determinism.
  *
- * Births: one per sim. The founder's row uses kind 'Founding'; all others
- * use kind 'Birth'. Sort key = sim.createdAt.
+ * Origin rows: the founder gets kind 'Founding'; sims born into the legacy
+ * (i.e. those appearing as a childId whose parentId is also a legacy sim)
+ * get kind 'Birth'. Sims with no in-legacy parent (married/moved-in adults)
+ * receive NO origin row — this is the birth-bug fix.
+ *
+ * Death rows: one per sim where causeOfDeath !== null. sortOrder = updatedAt
+ * (proxy for the time of death). Independent of whether an origin row exists.
  *
  * Marriages: one per unique unordered pair (simAId, simBId) where
  * romanticStatus === 'MARRIED'. De-duplicated by canonical pair
  * (lower id first) to handle any accidental reciprocal rows.
- * Sort key = relationship.createdAt.
- *
- * Marriage gen: the minimum non-null generationNumber of the two partners.
- * Rationale: a marriage event "belongs to" the earlier generation involved,
- * which is typically the heir who initiates the relationship. If neither
- * partner has a generation number, gen is null.
+ * sortOrder = relationship.createdAt.
  */
 export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
   const simMap = new Map<string, FetchedSim>(legacy.sims.map((s) => [s.id, s]))
+  const legacySimIds = new Set(legacy.sims.map((s) => s.id))
 
-  // --- Births ---
-  const birthEntries = legacy.sims.map((sim) => {
+  // A sim is "born into the legacy" iff it has ≥1 parent who is also a member.
+  const bornInLegacy = new Set<string>()
+  for (const rel of legacy.familyRelationships) {
+    if (legacySimIds.has(rel.parentId)) bornInLegacy.add(rel.childId)
+  }
+
+  const entries: Array<{ milestone: Milestone; sortKey: number }> = []
+
+  for (const sim of legacy.sims) {
+    const fullName = [sim.firstName, sim.lastName].filter(Boolean).join(' ')
     const isFounder = sim.id === legacy.founderSimId
-    const kind: 'Founding' | 'Birth' = isFounder ? 'Founding' : 'Birth'
-    const title = isFounder
-      ? `${sim.firstName} ${sim.lastName} founds the legacy`
-      : `${sim.firstName} ${sim.lastName} is born`
+    const birthSortKey = sim.createdAt.getTime()
 
-    return {
-      milestone: {
-        id: `birth-${sim.id}`,
-        kind,
-        gen: sim.generationNumber,
-        simIds: [sim.id],
-        title,
-        // No derived blurb: we never fabricate places, dates, or events.
-        blurb: null,
-        userAuthored: false as const,
-      },
-      sortKey: sim.createdAt.getTime(),
+    // --- Origin row: Founding (founder), Birth (born-in), or nothing ---
+    if (isFounder) {
+      entries.push({
+        milestone: {
+          id: `birth-${sim.id}`,
+          kind: 'Founding',
+          gen: sim.generationNumber,
+          simIds: [sim.id],
+          title: `${fullName} founds the legacy`,
+          blurb: null,
+          userAuthored: false,
+          sortOrder: birthSortKey,
+        },
+        sortKey: birthSortKey,
+      })
+    } else if (bornInLegacy.has(sim.id)) {
+      entries.push({
+        milestone: {
+          id: `birth-${sim.id}`,
+          kind: 'Birth',
+          gen: sim.generationNumber,
+          simIds: [sim.id],
+          title: `${fullName} is born`,
+          blurb: null,
+          userAuthored: false,
+          sortOrder: birthSortKey,
+        },
+        sortKey: birthSortKey,
+      })
     }
-  })
+    // else: married-in / moved-in adult → no origin row (the bug fix)
 
-  // --- Marriages ---
-  // De-duplicate by canonical pair (lexicographically sorted ids)
+    // --- Death row (independent of origin); proxy sort by updatedAt ---
+    if (sim.causeOfDeath !== null) {
+      const deathSortKey = sim.updatedAt.getTime()
+      entries.push({
+        milestone: {
+          id: `death-${sim.id}`,
+          kind: 'Death',
+          gen: sim.generationNumber,
+          simIds: [sim.id],
+          title: `${fullName} dies`,
+          blurb: null,
+          userAuthored: false,
+          sortOrder: deathSortKey,
+        },
+        sortKey: deathSortKey,
+      })
+    }
+  }
+
+  // --- Marriages: one per unique unordered MARRIED pair ---
   const seenPairs = new Set<string>()
-  const marriageEntries: Array<{ milestone: Milestone; sortKey: number }> = []
-
   for (const rel of legacy.socialRelationships) {
     if (rel.romanticStatus !== 'MARRIED') continue
-
     const [idA, idB] = [rel.simAId, rel.simBId].sort()
     const pairKey = `${idA}:${idB}`
     if (seenPairs.has(pairKey)) continue
     seenPairs.add(pairKey)
 
-    // Resolve partners by the canonical (sorted) ids so the title, simIds,
-    // and id are all deterministic regardless of which row order won de-dup.
     const simA = simMap.get(idA)
     const simB = simMap.get(idB)
-
-    // Names for the title; fall back gracefully if a partner is missing, and
-    // drop empty segments so an empty lastName never produces a double space.
-    const aName = [simA?.firstName ?? 'Unknown', simA?.lastName ?? '']
-      .filter(Boolean)
-      .join(' ')
-    const bName = [simB?.firstName ?? 'Unknown', simB?.lastName ?? '']
-      .filter(Boolean)
-      .join(' ')
-
-    // Marriage gen = min of non-null generation numbers of the two partners
+    const aName = [simA?.firstName ?? 'Unknown', simA?.lastName ?? ''].filter(Boolean).join(' ')
+    const bName = [simB?.firstName ?? 'Unknown', simB?.lastName ?? ''].filter(Boolean).join(' ')
     const gens = [simA?.generationNumber, simB?.generationNumber].filter(
       (g): g is number => g !== null && g !== undefined,
     )
     const gen: number | null = gens.length > 0 ? Math.min(...gens) : null
-
-    // Sort key = relationship.createdAt (field exists on SocialRelationship)
     const sortKey = rel.createdAt.getTime()
 
-    marriageEntries.push({
+    entries.push({
       milestone: {
         id: `marriage-${idA}-${idB}`,
         kind: 'Marriage',
@@ -338,27 +363,25 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
         simIds: [idA, idB],
         title: `${aName} marries ${bName}`,
         blurb: null,
-        userAuthored: false as const,
+        userAuthored: false,
+        sortOrder: sortKey,
       },
       sortKey,
     })
   }
 
-  // --- Merge and sort ---
-  const all = [...birthEntries, ...marriageEntries]
-
-  all.sort((a, b) => {
+  entries.sort((a, b) => {
     if (b.sortKey !== a.sortKey) return b.sortKey - a.sortKey
-    // Tie-break by id for determinism
     return a.milestone.id.localeCompare(b.milestone.id)
   })
 
-  return all.map((entry) => entry.milestone)
+  return entries.map((entry) => entry.milestone)
 }
 
 // ---------------------------------------------------------------------------
 // 6. groupByGeneration
 // ---------------------------------------------------------------------------
+
 
 /**
  * Group ChronicleSims by generationNumber for the Roster section.
@@ -401,4 +424,53 @@ export function groupByGeneration(sims: ChronicleSim[]): RosterGroup[] {
   }
 
   return result
+}
+
+// ---------------------------------------------------------------------------
+// 7. toUserMilestones
+// ---------------------------------------------------------------------------
+
+/**
+ * Map persisted user-authored milestones into view `Milestone`s.
+ * Generation is inferred from the tagged sims (min non-null generationNumber,
+ * the same rule marriages use); null when no tagged sim has a generation.
+ */
+export function toUserMilestones(legacy: FetchedLegacy): Milestone[] {
+  const genById = new Map<string, number | null>(
+    legacy.sims.map((s) => [s.id, s.generationNumber]),
+  )
+
+  return legacy.userMilestones.map((m) => {
+    const simIds = m.sims.map((s) => s.simId)
+    const gens = simIds
+      .map((id) => genById.get(id))
+      .filter((g): g is number => g !== null && g !== undefined)
+    const gen: number | null = gens.length > 0 ? Math.min(...gens) : null
+
+    return {
+      id: m.id,
+      kind: 'Note' as const,
+      gen,
+      simIds,
+      title: m.title,
+      blurb: m.blurb,
+      userAuthored: true,
+      sortOrder: m.sortOrder,
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
+// 8. mergeMilestones
+// ---------------------------------------------------------------------------
+
+/**
+ * Merge derived (auto) and user-authored milestones into one timeline,
+ * newest-first by sortOrder, tie-broken by id for determinism.
+ */
+export function mergeMilestones(auto: Milestone[], user: Milestone[]): Milestone[] {
+  return [...auto, ...user].sort((a, b) => {
+    if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
+    return a.id.localeCompare(b.id)
+  })
 }

@@ -69,6 +69,7 @@ const milestones: Milestone[] = [
     title: 'Dina Caliente founds the legacy',
     blurb: null,
     userAuthored: false,
+    sortOrder: 1000,
   },
 ]
 

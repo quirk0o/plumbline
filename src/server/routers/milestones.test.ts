@@ -4,6 +4,46 @@ import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy, createTestSim } from '@/test/helpers'
 import { db } from '@/server/db'
 
+describe('milestones.update', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('edits title/blurb and replaces the tag set without touching sortOrder', async () => {
+    const simA = await createTestSim(legacyId, { firstName: 'A' })
+    const simB = await createTestSim(legacyId, { firstName: 'B' })
+    const caller = authedCaller(userId)
+    const created = await caller.milestones.create({ legacyId, title: 'Old', simIds: [simA.id] })
+
+    const updated = await caller.milestones.update({
+      id: created.id, title: 'New', blurb: 'now with blurb', simIds: [simB.id],
+    })
+
+    expect(updated.title).toBe('New')
+    expect(updated.blurb).toBe('now with blurb')
+    expect(updated.sims.map((s) => s.simId)).toEqual([simB.id])
+    expect(updated.sortOrder).toBe(created.sortOrder)
+  })
+
+  it("rejects editing another user's milestone", async () => {
+    const caller = authedCaller(userId)
+    const created = await caller.milestones.create({ legacyId, title: 'Mine', simIds: [] })
+    const otherUser = await createTestUser()
+    const otherCaller = authedCaller(otherUser.id)
+    await expect(
+      otherCaller.milestones.update({ id: created.id, title: 'Hijack', simIds: [] }),
+    ).rejects.toBeInstanceOf(TRPCError)
+    await cleanupUser(otherUser.id)
+  })
+})
+
 describe('milestones.create', () => {
   let userId: string
   let legacyId: string

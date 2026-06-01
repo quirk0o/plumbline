@@ -35,7 +35,7 @@
 **Decisions already made with the user (do not re-litigate):**
 1. **Scope includes the Hero brand-new treatment** (em-dash stats + dashed "Now & then" ghost founder/heir slots), in addition to the three section empties.
 2. **Empty-state CTAs:** render the buttons, but the Succession ("Name an heir →") and Milestones ("Record a moment →") CTAs have **no action wired yet** — render them as inert `<button>` elements (a real-looking affordance pending a future flow). The Roster CTA ("Add your founder →") **keeps a working link** to the existing add-Sim route `/app/legacies/[slug]/sims/new`, and the Hero's ghost-founder-slot CTA links there too.
-   - **Post-plan update (resolved):** the Succession "Name an heir →" CTA was subsequently wired — it now links to the Family roster (`#sims`) and a "Make heir" toggle was added to the sim detail page. See *Post-plan addition: heir designation* at the end of this document. The Milestones "Record a moment →" CTA remains inert (no manual-entry feature).
+   - **Post-plan update (resolved):** heir designation was wired. The Succession empty state only appears when a legacy has **no founder** (a founder always yields ≥1 succession step), so its CTA is now **"Add your founder →"** → `/app/legacies/[slug]/sims/new` (matching the Hero/Roster empties). Heirs are designated by a new **"Make heir" toggle** on the sim detail page. See *Post-plan addition: heir designation* at the end of this document. The Milestones "Record a moment →" CTA remains inert (no manual-entry feature).
 
 **Open decisions deferred to the user (see end of plan) — do not block on these.**
 
@@ -1517,7 +1517,7 @@ Use the `superpowers:finishing-a-development-branch` skill to decide how to inte
 
 ## Open decisions for the user (do not block; confirm at review)
 
-1. **Inert CTAs.** ~~"Name an heir →" (Succession)~~ and "Record a moment →" (Milestones) are rendered as buttons with no action, per your instruction. **Resolved for Succession:** "Name an heir →" is now a working link to the Family roster (`#sims`) backed by a new "Make heir" toggle on the sim detail page (see *Post-plan addition* below). The Milestones "Record a moment →" CTA remains inert — milestones are auto-derived and there is no manual-entry feature. If a manual-entry flow is ever built, wire it then.
+1. **Inert CTAs.** ~~"Name an heir →" (Succession)~~ and "Record a moment →" (Milestones) were originally rendered as buttons with no action. **Resolved for Succession:** the empty state only appears when there is no founder, so its CTA is now **"Add your founder →"** → `/sims/new`; heirs are designated via a new "Make heir" toggle on the sim detail page (see *Post-plan addition* below). The Milestones "Record a moment →" CTA remains inert — milestones are auto-derived and there is no manual-entry feature. If a manual-entry flow is ever built, wire it then.
 2. **Heir-ghost hint copy.** Used generic "Named when the next generation comes of age." instead of the mock's literal "Named when Gen II comes of age." to avoid hard-coding a generation number. Swap if you want the literal mock copy.
 3. **Default brand-new blurb.** When a brand-new legacy has no description, the hero shows the mock's guidance sentence. If you'd rather show nothing, drop the `BRAND_NEW_BLURB` fallback.
 
@@ -1527,13 +1527,13 @@ Use the `superpowers:finishing-a-development-branch` skill to decide how to inte
 
 Added after the original plan, at the user's request to make the Succession "Name an heir" CTA functional. This was a genuine gap — nothing in the app surfaced heir designation, even though the `sims.update({ isHeir })` mutation already existed and clears the previous heir in the same generation server-side.
 
-**The flow:** Succession empty state ("No succession to *trace* yet.") → "Name an heir →" links to the Family roster (`#sims`) → open a sim → toggle **Heir**. Marking any sim as heir makes `deriveSuccession` return that heir, so the line populates and the empty state disappears.
+**The flow:** the Succession empty state only shows when a legacy has no founder, so its CTA is "Add your founder →" (→ `/sims/new`). Once sims exist, an heir is designated via the **"Make heir" toggle** on the sim detail page — marking any sim as heir makes `deriveSuccession` return that heir, so the line populates and the empty state disappears. (The toggle is reached from the Family roster by opening a sim.)
 
 **Changes (commits `261590f`, `01118f5`):**
 - `sims/[id]/identity-section.tsx` — `SimProp` gains `isHeir`; a `HeirToggle` (`<button type="button" aria-pressed>` labelled "Heir") in the identity chip row, with optimistic local state + revert-on-error, persisting via the section's existing `sims.update` mutateAsync.
 - `sims/[id]/page.module.css` — `.heirField` / `.heirToggle` styles; active state uses the amber-tint lineage recipe (`rgba(217,165,65,0.18)` — the one raw value, with an explanatory comment, as no token exists for that wash).
 - `sims/[id]/sim-detail-client.tsx` — `sim` Props type gains `isHeir` (the page already provides it via Prisma `include`).
-- `_components/succession/succession.tsx` — CTA switched from an inert `Button` to `<ButtonLink href="#sims">`; component stays an RSC (the page scrolls the window, so the native anchor resolves).
-- Tests: new `sims/[id]/__tests__/identity-section.test.tsx` (toggle set/unset/initial-state/save-failure-revert, tRPC mocked, `Combobox` stubbed); updated `succession.test.tsx` (CTA now asserted as a `link` with `href="#sims"`).
+- `_components/succession/succession.tsx` — CTA switched from an inert `Button` to `<ButtonLink href="/app/legacies/[slug]/sims/new">Add your founder →</ButtonLink>` (the empty state only renders sans founder); component stays an RSC.
+- Tests: new `sims/[id]/__tests__/identity-section.test.tsx` (toggle set/unset/initial-state/save-failure-revert, tRPC mocked, `Combobox` stubbed); updated `succession.test.tsx` (CTA asserted as an "Add your founder" `link` to `/sims/new`).
 
 **Verified:** `tsc` + `lint` clean; full unit suite green; e2e `add-sims-to-legacy`, `legacy-wizard`, and `sim-detail` (17 tests) pass.

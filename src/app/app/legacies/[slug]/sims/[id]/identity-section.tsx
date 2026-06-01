@@ -46,6 +46,7 @@ interface SimProp {
   pronounPossessive: string | null
   imageUrl: string | null
   occultType: string | null
+  isHeir: boolean
 }
 
 export function IdentitySection({ sim }: { sim: SimProp }) {
@@ -123,10 +124,54 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
               <Combobox.Item key={o} value={o}>{formatEnum(o)}</Combobox.Item>
             ))}
           </Combobox>
+
+          <HeirToggle sim={sim} onSave={save} />
         </div>
 
       </div>
     </div>
+  )
+}
+
+/**
+ * Heir designation toggle. Marking a sim as heir is the only way to draw the
+ * succession line; the server clears the previous heir in the same generation,
+ * so this is a single-press action with optimistic local state.
+ */
+function HeirToggle({
+  sim,
+  onSave,
+}: {
+  sim: SimProp
+  onSave: (fields: { id: string; isHeir: boolean }) => Promise<unknown>
+}) {
+  const [isHeir, setIsHeir] = useState(sim.isHeir)
+  const [error, setError] = useState('')
+
+  async function toggle() {
+    const next = !isHeir
+    setIsHeir(next)
+    try {
+      await onSave({ id: sim.id, isHeir: next })
+      setError('')
+    } catch {
+      setIsHeir(!next)
+      setError('Failed to save')
+    }
+  }
+
+  return (
+    <span className={styles.heirField}>
+      <button
+        type="button"
+        className={styles.heirToggle}
+        aria-pressed={isHeir}
+        onClick={toggle}
+      >
+        Heir
+      </button>
+      {error && <span className={styles.inlineError}>{error}</span>}
+    </span>
   )
 }
 

@@ -68,15 +68,14 @@ describe('Succession', () => {
     expect(
       screen.getByText(/Name an heir and the line draws itself/i),
     ).toBeInTheDocument()
-    // CTA is present as a button (no action wired yet — see plan decision 2).
-    expect(
-      screen.getByRole('button', { name: /Name an heir/i }),
-    ).toBeInTheDocument()
+    // CTA links to the Family roster (#sims), where heirs are designated.
+    const cta = screen.getByRole('link', { name: /Name an heir/i })
+    expect(cta).toHaveAttribute('href', '#sims')
   })
 
   it('does not render the empty state when steps are present', () => {
     render(<Succession steps={[founder]} slug="caliente" />)
-    expect(screen.queryByRole('button', { name: /Name an heir/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Name an heir/i })).toBeNull()
     expect(screen.getByText('Dina Caliente')).toBeInTheDocument()
   })
 

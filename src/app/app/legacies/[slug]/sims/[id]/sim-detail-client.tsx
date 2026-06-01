@@ -24,6 +24,7 @@ interface Props {
     pronounPossessive: string | null
     imageUrl: string | null
     occultType: string | null
+    isHeir: boolean
     causeOfDeath: CauseOfDeath | null
     legacyId: string
     personalityTraits: { personalityTrait: { id: string; name: string } }[]

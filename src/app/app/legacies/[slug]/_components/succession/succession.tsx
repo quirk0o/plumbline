@@ -2,7 +2,7 @@ import {
   SectionHeading,
   PortraitAvatar,
   EmptyState,
-  Button,
+  ButtonLink,
   GitBranchIcon,
   ArrowRightIcon,
 } from '@/components/ui'
@@ -35,9 +35,9 @@ export function Succession({ steps, slug }: SuccessionProps) {
             </>
           }
           action={
-            <Button variant="primary" size="sm" type="button">
+            <ButtonLink variant="primary" size="sm" href="#sims">
               Name an heir <ArrowRightIcon size={16} />
-            </Button>
+            </ButtonLink>
           }
         >
           Name an heir and the line draws itself — founder to heir, down the

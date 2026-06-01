@@ -4,6 +4,39 @@ import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy, createTestSim } from '@/test/helpers'
 import { db } from '@/server/db'
 
+describe('milestones.delete', () => {
+  let userId: string
+  let legacyId: string
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('deletes the milestone and cascades its tag rows', async () => {
+    const sim = await createTestSim(legacyId)
+    const caller = authedCaller(userId)
+    const created = await caller.milestones.create({ legacyId, title: 'Bye', simIds: [sim.id] })
+
+    const res = await caller.milestones.delete({ id: created.id })
+    expect(res.id).toBe(created.id)
+    expect(await db.milestone.findUnique({ where: { id: created.id } })).toBeNull()
+    expect(await db.milestoneSim.count({ where: { milestoneId: created.id } })).toBe(0)
+  })
+
+  it("rejects deleting another user's milestone", async () => {
+    const caller = authedCaller(userId)
+    const created = await caller.milestones.create({ legacyId, title: 'Mine', simIds: [] })
+    const otherUser = await createTestUser()
+    await expect(
+      authedCaller(otherUser.id).milestones.delete({ id: created.id }),
+    ).rejects.toBeInstanceOf(TRPCError)
+    await cleanupUser(otherUser.id)
+  })
+})
+
 describe('milestones.update', () => {
   let userId: string
   let legacyId: string

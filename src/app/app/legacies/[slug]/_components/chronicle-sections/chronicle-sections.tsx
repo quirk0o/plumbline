@@ -68,7 +68,11 @@ export function ChronicleSections({
         className={styles.cardSection}
       >
         <div className={styles.inner}>
-          <Succession steps={succession} slug={slug} />
+          <Succession
+            steps={succession}
+            slug={slug}
+            sims={Object.values(simsById)}
+          />
         </div>
       </section>
 

@@ -1,37 +1,42 @@
-import Link from 'next/link'
 import {
   SectionHeading,
   PortraitAvatar,
   EmptyState,
   ButtonLink,
-  GhostCircle,
   GitBranchIcon,
   ArrowRightIcon,
-  UserPlusIcon,
 } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { roman } from '@/lib/legacy-format'
 import { ringFor } from '../../lib/derive'
-import type { SuccessionStep } from '../../lib/types'
+import type { ChronicleSim, SuccessionStep } from '../../lib/types'
+import { NameHeirDialog } from './name-heir-dialog'
 import styles from './succession.module.css'
 
 export interface SuccessionProps {
   steps: SuccessionStep[]
   slug: string
+  /** All sims in the legacy; heir candidates are filtered to the next gen. */
+  sims?: ChronicleSim[]
 }
 
-export function Succession({ steps, slug }: SuccessionProps) {
+export function Succession({ steps, slug, sims = [] }: SuccessionProps) {
   // "Page in progress": a founder exists but no heir is designated yet. Show a
-  // trailing ghost slot prompting the user to name one (links to the roster,
-  // where each sim's detail page carries the heir toggle).
+  // trailing ghost slot prompting the user to name one (opens an in-place
+  // dialog listing the next generation's sims).
   const needsHeir = !steps.some((step) => step.isHeir && !step.isFounder)
   const highestGen = steps.reduce<number | null>((max, step) => {
     const gen = step.sim.generationNumber
     if (gen === null) return max
     return max === null || gen > max ? gen : max
   }, null)
-  const nextHeirLabel =
-    highestGen !== null ? `Gen ${roman(highestGen + 1)}` : 'Next heir'
+  const nextGen = highestGen !== null ? highestGen + 1 : null
+  const nextHeirLabel = nextGen !== null ? `Gen ${roman(nextGen)}` : 'Next heir'
+  // Only sims belonging to the next generation can carry the line forward.
+  const heirCandidates =
+    nextGen !== null
+      ? sims.filter((sim) => sim.generationNumber === nextGen)
+      : []
 
   return (
     <div className={styles.container}>
@@ -103,13 +108,11 @@ export function Succession({ steps, slug }: SuccessionProps) {
                 className={cn(styles.connector, styles.connectorDashed)}
                 aria-hidden="true"
               />
-              <Link href="#sims" className={styles.ghostStep}>
-                <GhostCircle size={72} accent>
-                  <UserPlusIcon size={20} />
-                </GhostCircle>
-                <span className={styles.ghostName}>Name an heir</span>
-                <span className={styles.stepRole}>{nextHeirLabel}</span>
-              </Link>
+              <NameHeirDialog
+                slug={slug}
+                nextHeirLabel={nextHeirLabel}
+                candidates={heirCandidates}
+              />
             </div>
           )}
         </div>

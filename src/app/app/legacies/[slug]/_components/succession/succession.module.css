@@ -64,44 +64,11 @@
      on .line already centers the connector with the step block. */
 }
 
-/* Dashed variant — connects the line to the "name an heir" ghost slot. */
+/* Dashed variant — connects the line to the "name an heir" ghost slot
+   (the slot itself lives in NameHeirDialog). */
 .connectorDashed {
   height: 0;
   background: transparent;
   border-top: 1.5px dashed var(--amber);
-}
-
-/* ── "Name an heir" ghost step (page-in-progress state) ─────────────── */
-
-.ghostStep {
-  flex: 0 0 auto;
-  width: 168px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  text-align: center;
-  text-decoration: none;
-  padding: 6px 0;
-  border-radius: var(--radius-lg);
-  transition: background var(--transition-base);
-}
-
-.ghostStep:hover {
-  background: var(--bg-card-hover);
-}
-
-.ghostStep:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--green-glow);
-}
-
-.ghostName {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--text-md);
-  font-weight: 600;
-  color: var(--text-muted);
-  line-height: 1.15;
 }
 

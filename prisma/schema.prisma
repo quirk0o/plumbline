@@ -322,6 +322,7 @@ model Legacy {
   households    Household[]
   sims          Sim[]          @relation("LegacyMember")
   challengeRuns ChallengeRun[]
+  milestones    Milestone[]
 
   @@unique([userId, slug])
   @@map("legacies")
@@ -371,6 +372,7 @@ model Sim {
   foundedLegacy        Legacy?               @relation("LegacyFounder")
   socialRelationshipsA SocialRelationship[]  @relation("SocialA")
   socialRelationshipsB SocialRelationship[]  @relation("SocialB")
+  milestones           MilestoneSim[]
 
   @@index([legacyId, generationNumber])
   @@map("sims")
@@ -626,4 +628,31 @@ model TrackerProgress {
   tracker ChallengeRunTracker @relation(fields: [challengeRunTrackerId], references: [id], onDelete: Cascade)
 
   @@map("tracker_progress")
+}
+
+model Milestone {
+  id        String   @id @default(cuid())
+  legacyId  String
+  title     String
+  blurb     String?
+  sortOrder Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  legacy Legacy         @relation(fields: [legacyId], references: [id], onDelete: Cascade)
+  sims   MilestoneSim[]
+
+  @@index([legacyId, sortOrder])
+  @@map("milestones")
+}
+
+model MilestoneSim {
+  milestoneId String
+  simId       String
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  sim       Sim       @relation(fields: [simId], references: [id], onDelete: Cascade)
+
+  @@id([milestoneId, simId])
+  @@map("milestone_sims")
 }

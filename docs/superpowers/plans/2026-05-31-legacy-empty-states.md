@@ -1537,3 +1537,5 @@ Added after the original plan, at the user's request to make the Succession "Nam
 - Tests: new `sims/[id]/__tests__/identity-section.test.tsx` (toggle set/unset/initial-state/save-failure-revert, tRPC mocked, `Combobox` stubbed); updated `succession.test.tsx` (CTA asserted as an "Add your founder" `link` to `/sims/new`).
 
 **Verified:** `tsc` + `lint` clean; full unit suite green; e2e `add-sims-to-legacy`, `legacy-wizard`, and `sim-detail` (17 tests) pass.
+
+**Founder designation (commit `6dc0a2e`).** Adding a sim previously never set the legacy's `founderSimId` (it was only set by the creation wizard), so "Add your founder" produced no actual founder. Fixed in `sims.create`: a legacy with no founder adopts its first **parentless** sim as the founder, assigning generation 1 when none was given (matching the wizard and the domain invariant that founders are Gen 1). Sims with parents, and legacies that already have a founder, are untouched. Covered by three `sims.test.ts` integration tests.

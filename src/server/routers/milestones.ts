@@ -42,8 +42,9 @@ export const milestonesRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
+      const simIds = [...new Set(input.simIds)]
       await assertOwnedLegacy(ctx.db, input.legacyId, userId)
-      await assertSimsInLegacy(ctx.db, input.simIds, input.legacyId)
+      await assertSimsInLegacy(ctx.db, simIds, input.legacyId)
 
       return ctx.db.milestone.create({
         data: {
@@ -51,7 +52,7 @@ export const milestonesRouter = router({
           title: input.title,
           blurb: input.blurb ?? null,
           sortOrder: Date.now(),
-          sims: { create: input.simIds.map((simId) => ({ simId })) },
+          sims: { create: simIds.map((simId) => ({ simId })) },
         },
         include: milestoneInclude,
       })
@@ -68,18 +69,21 @@ export const milestonesRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
+      const simIds = [...new Set(input.simIds)]
       const existing = await findOwnedMilestone(ctx.db, input.id, userId)
-      await assertSimsInLegacy(ctx.db, input.simIds, existing.legacyId)
+      await assertSimsInLegacy(ctx.db, simIds, existing.legacyId)
 
-      await ctx.db.milestoneSim.deleteMany({ where: { milestoneId: input.id } })
-      return ctx.db.milestone.update({
-        where: { id: input.id },
-        data: {
-          title: input.title,
-          blurb: input.blurb ?? null,
-          sims: { create: input.simIds.map((simId) => ({ simId })) },
-        },
-        include: milestoneInclude,
+      return ctx.db.$transaction(async (tx) => {
+        await tx.milestoneSim.deleteMany({ where: { milestoneId: input.id } })
+        return tx.milestone.update({
+          where: { id: input.id },
+          data: {
+            title: input.title,
+            blurb: input.blurb ?? null,
+            sims: { create: simIds.map((simId) => ({ simId })) },
+          },
+          include: milestoneInclude,
+        })
       })
     }),
 

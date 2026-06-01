@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   DndContext,
@@ -66,6 +66,7 @@ interface MilestonesListProps {
  */
 function MilestonesList({ initialMilestones, simsById, slug, legacyId }: MilestonesListProps) {
   const router = useRouter()
+  const dndId = useId()
   const [items, setItems] = useState<Milestone[]>(initialMilestones)
   const [editing, setEditing] = useState<Milestone | null>(null)
 
@@ -126,7 +127,7 @@ function MilestonesList({ initialMilestones, simsById, slug, legacyId }: Milesto
       />
 
       {items.length === 0 ? null : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map((m) => m.id)} strategy={verticalListSortingStrategy}>
             <ul className={styles.rows} role="list" data-testid="milestones-list">
               {items.map((m) =>

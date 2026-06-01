@@ -131,4 +131,53 @@ test.describe('Legacy milestones', () => {
     await page.getByRole('button', { name: 'Delete The back-porch truce' }).click()
     await expect(milestonesSection.getByText('The back-porch truce')).toHaveCount(0)
   })
+
+  /**
+   * User can edit an existing user milestone: the new title replaces the old,
+   * and the change persists after a reload.
+   */
+  test('user can edit a milestone title and the change persists', async ({ page }) => {
+    const legacyUrl = await createLegacyWithFounder(page, 'Cassandra', 'Goth', 'Milestone Edit')
+
+    await page.goto(legacyUrl)
+    await page.locator('#milestones').scrollIntoViewIfNeeded()
+
+    // Create a Note milestone.
+    await page.getByRole('button', { name: /\+ Add milestone/i }).click()
+    await page.getByLabel('Title').fill('Original title')
+    await page.getByRole('button', { name: 'Save milestone' }).click()
+
+    const milestonesSection = page.locator('#milestones')
+    await expect(milestonesSection.getByText('Original title')).toBeVisible()
+
+    // Click the Edit control for this milestone.
+    await page.getByRole('button', { name: 'Edit Original title' }).click()
+
+    // The composer opens pre-filled; clear and type the new title.
+    const titleInput = page.getByRole('textbox', { name: 'Title' })
+    await expect(titleInput).toHaveValue('Original title')
+    await titleInput.clear()
+    await titleInput.fill('Updated title')
+
+    // Save the edit.
+    await page.getByRole('button', { name: 'Save milestone' }).click()
+
+    // The updated title should be visible; the old one should be gone.
+    await expect(milestonesSection.getByText('Updated title')).toBeVisible()
+    await expect(milestonesSection.getByText('Original title')).toHaveCount(0)
+
+    // Change persists after a page reload.
+    await page.reload()
+    await page.locator('#milestones').scrollIntoViewIfNeeded()
+    await expect(milestonesSection.getByText('Updated title')).toBeVisible()
+    await expect(milestonesSection.getByText('Original title')).toHaveCount(0)
+  })
+
+  /**
+   * Drag-reorder is covered at the unit level by the neighborSortOrders tests
+   * in milestones-client.test.tsx. Keyboard-based dnd-kit reorder is not
+   * included here because Playwright's synthetic keyboard events do not reliably
+   * trigger dnd-kit's KeyboardSensor lift/move/drop cycle in a headed browser,
+   * making any such test inherently flaky.
+   */
 })

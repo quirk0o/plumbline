@@ -1,11 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 import { config } from 'dotenv'
 
-// In a git worktree the per-environment .env.test provides the test DATABASE_URL.
-// The parent project's .env (three levels up from the worktree) provides AUTH_SECRET
-// and other shared secrets. We load both; .env.test wins for any key it redeclares.
-config({ path: '../../../.env' })
-config({ path: '.env.test', override: true })
+config({ path: '.env.test' })
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3737'
 
@@ -40,7 +36,6 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       DATABASE_URL: process.env.DATABASE_URL!,
-      AUTH_SECRET: process.env.AUTH_SECRET!,
       AUTH_TEST_MODE: 'true',
       NEXT_DIST_DIR: '.next-test',
     },

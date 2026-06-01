@@ -15,6 +15,7 @@ export interface ChronicleSectionsProps {
   name: string
   description: string | null
   slug: string
+  legacyId: string
   stats: LegacyStats
   founder: ChronicleSim | null
   currentHeir: ChronicleSim | null
@@ -36,6 +37,7 @@ export function ChronicleSections({
   name,
   description,
   slug,
+  legacyId,
   stats,
   founder,
   currentHeir,
@@ -79,7 +81,7 @@ export function ChronicleSections({
         className={styles.cardSection}
       >
         <div className={styles.inner}>
-          <Milestones milestones={milestones} simsById={simsById} slug={slug} />
+          <Milestones milestones={milestones} simsById={simsById} slug={slug} legacyId={legacyId} />
         </div>
       </section>
 

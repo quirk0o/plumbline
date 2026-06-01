@@ -128,7 +128,7 @@ function MilestonesList({ initialMilestones, simsById, slug, legacyId }: Milesto
       {items.length === 0 ? null : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map((m) => m.id)} strategy={verticalListSortingStrategy}>
-            <ul className={styles.rows} role="list">
+            <ul className={styles.rows} role="list" data-testid="milestones-list">
               {items.map((m) =>
                 m.userAuthored ? (
                   <SortableMilestoneRow

@@ -377,10 +377,12 @@ describe('deriveMilestones', () => {
 
   it('does NOT emit any origin row for a married-in adult (no in-legacy parent)', () => {
     const rows = deriveMilestones(fixture)
-    const spouseOrigin = rows.find(
-      (m) => (m.kind === 'Birth' || m.kind === 'Founding') && m.simIds.includes(SPOUSE1_ID),
-    )
-    expect(spouseOrigin).toBeUndefined()
+    for (const id of [SPOUSE1_ID, SPOUSE2_ID, NO_GEN_SIM_ID]) {
+      const originRow = rows.find(
+        (m) => (m.kind === 'Birth' || m.kind === 'Founding') && m.simIds.includes(id),
+      )
+      expect(originRow, `unexpected origin row for ${id}`).toBeUndefined()
+    }
   })
 
   it('emits a Death row when causeOfDeath is set, independent of birth', () => {
@@ -422,6 +424,59 @@ describe('deriveMilestones', () => {
         (prev.sortOrder === cur.sortOrder && prev.id.localeCompare(cur.id) <= 0)
       expect(inOrder).toBe(true)
     }
+  })
+
+  it('tie-breaks by id ascending when two milestones share the same sortOrder', () => {
+    // Two sims born at the exact same createdAt → identical sortOrder; the one
+    // with the lexicographically smaller id must come first (ascending id tie-break).
+    const SAME_TIME = new Date('2024-03-01T00:00:00.000Z')
+    const SIM_AAA = 'sim-aaa' // sorts before sim-zzz
+    const SIM_ZZZ = 'sim-zzz'
+    const legacy: FetchedLegacy = {
+      id: 'legacy-tie',
+      name: 'Tie Legacy',
+      description: null,
+      founderSimId: SIM_AAA,
+      households: [],
+      familyRelationships: [
+        // SIM_ZZZ is born into the legacy via SIM_AAA
+        { parentId: SIM_AAA, childId: SIM_ZZZ },
+      ],
+      userMilestones: [],
+      socialRelationships: [],
+      sims: [
+        {
+          id: SIM_AAA,
+          firstName: 'Alpha',
+          lastName: 'Sim',
+          imageUrl: null,
+          generationNumber: 1,
+          isHeir: false,
+          lifeStage: 'ADULT',
+          createdAt: SAME_TIME,
+          updatedAt: SAME_TIME,
+          causeOfDeath: null,
+          aspirations: [],
+        },
+        {
+          id: SIM_ZZZ,
+          firstName: 'Zeta',
+          lastName: 'Sim',
+          imageUrl: null,
+          generationNumber: 1,
+          isHeir: false,
+          lifeStage: 'ADULT',
+          createdAt: SAME_TIME,
+          updatedAt: SAME_TIME,
+          causeOfDeath: null,
+          aspirations: [],
+        },
+      ],
+    }
+    const rows = deriveMilestones(legacy)
+    // Both milestones have the same sortOrder; tie-break must order by id ASC.
+    expect(rows[0].id).toBe(`birth-${SIM_AAA}`) // 'birth-sim-aaa' < 'birth-sim-zzz'
+    expect(rows[1].id).toBe(`birth-${SIM_ZZZ}`)
   })
 
   it('includes exactly 2 marriages (de-duplicates reciprocal row)', () => {
@@ -736,5 +791,16 @@ describe('mergeMilestones', () => {
     ]
     const merged = mergeMilestones(auto, user)
     expect(merged.map((m) => m.id)).toEqual(['birth-b', 'm1', 'birth-a'])
+  })
+
+  it('tie-breaks by id ascending when sortOrders are equal', () => {
+    // Three milestones all sharing the same sortOrder — output must be id-sorted ASC.
+    const milestones: Milestone[] = [
+      { id: 'zzz', kind: 'Note', gen: null, simIds: [], title: 'Z', blurb: null, userAuthored: true, sortOrder: 500 },
+      { id: 'aaa', kind: 'Birth', gen: 1, simIds: ['x'], title: 'A', blurb: null, userAuthored: false, sortOrder: 500 },
+      { id: 'mmm', kind: 'Death', gen: 1, simIds: ['x'], title: 'M', blurb: null, userAuthored: false, sortOrder: 500 },
+    ]
+    const merged = mergeMilestones(milestones, [])
+    expect(merged.map((m) => m.id)).toEqual(['aaa', 'mmm', 'zzz'])
   })
 })

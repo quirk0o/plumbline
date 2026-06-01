@@ -278,60 +278,50 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
     if (legacySimIds.has(rel.parentId)) bornInLegacy.add(rel.childId)
   }
 
-  const entries: Array<{ milestone: Milestone; sortKey: number }> = []
+  const entries: Milestone[] = []
 
   for (const sim of legacy.sims) {
     const fullName = [sim.firstName, sim.lastName].filter(Boolean).join(' ')
     const isFounder = sim.id === legacy.founderSimId
-    const birthSortKey = sim.createdAt.getTime()
+    const birthSortOrder = sim.createdAt.getTime()
 
     // --- Origin row: Founding (founder), Birth (born-in), or nothing ---
     if (isFounder) {
       entries.push({
-        milestone: {
-          id: `birth-${sim.id}`,
-          kind: 'Founding',
-          gen: sim.generationNumber,
-          simIds: [sim.id],
-          title: `${fullName} founds the legacy`,
-          blurb: null,
-          userAuthored: false,
-          sortOrder: birthSortKey,
-        },
-        sortKey: birthSortKey,
+        id: `birth-${sim.id}`,
+        kind: 'Founding',
+        gen: sim.generationNumber,
+        simIds: [sim.id],
+        title: `${fullName} founds the legacy`,
+        blurb: null,
+        userAuthored: false,
+        sortOrder: birthSortOrder,
       })
     } else if (bornInLegacy.has(sim.id)) {
       entries.push({
-        milestone: {
-          id: `birth-${sim.id}`,
-          kind: 'Birth',
-          gen: sim.generationNumber,
-          simIds: [sim.id],
-          title: `${fullName} is born`,
-          blurb: null,
-          userAuthored: false,
-          sortOrder: birthSortKey,
-        },
-        sortKey: birthSortKey,
+        id: `birth-${sim.id}`,
+        kind: 'Birth',
+        gen: sim.generationNumber,
+        simIds: [sim.id],
+        title: `${fullName} is born`,
+        blurb: null,
+        userAuthored: false,
+        sortOrder: birthSortOrder,
       })
     }
     // else: married-in / moved-in adult → no origin row (the bug fix)
 
     // --- Death row (independent of origin); proxy sort by updatedAt ---
     if (sim.causeOfDeath !== null) {
-      const deathSortKey = sim.updatedAt.getTime()
       entries.push({
-        milestone: {
-          id: `death-${sim.id}`,
-          kind: 'Death',
-          gen: sim.generationNumber,
-          simIds: [sim.id],
-          title: `${fullName} dies`,
-          blurb: null,
-          userAuthored: false,
-          sortOrder: deathSortKey,
-        },
-        sortKey: deathSortKey,
+        id: `death-${sim.id}`,
+        kind: 'Death',
+        gen: sim.generationNumber,
+        simIds: [sim.id],
+        title: `${fullName} dies`,
+        blurb: null,
+        userAuthored: false,
+        sortOrder: sim.updatedAt.getTime(),
       })
     }
   }
@@ -353,35 +343,30 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
       (g): g is number => g !== null && g !== undefined,
     )
     const gen: number | null = gens.length > 0 ? Math.min(...gens) : null
-    const sortKey = rel.createdAt.getTime()
 
     entries.push({
-      milestone: {
-        id: `marriage-${idA}-${idB}`,
-        kind: 'Marriage',
-        gen,
-        simIds: [idA, idB],
-        title: `${aName} marries ${bName}`,
-        blurb: null,
-        userAuthored: false,
-        sortOrder: sortKey,
-      },
-      sortKey,
+      id: `marriage-${idA}-${idB}`,
+      kind: 'Marriage',
+      gen,
+      simIds: [idA, idB],
+      title: `${aName} marries ${bName}`,
+      blurb: null,
+      userAuthored: false,
+      sortOrder: rel.createdAt.getTime(),
     })
   }
 
   entries.sort((a, b) => {
-    if (b.sortKey !== a.sortKey) return b.sortKey - a.sortKey
-    return a.milestone.id.localeCompare(b.milestone.id)
+    if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
+    return a.id.localeCompare(b.id)
   })
 
-  return entries.map((entry) => entry.milestone)
+  return entries
 }
 
 // ---------------------------------------------------------------------------
 // 6. groupByGeneration
 // ---------------------------------------------------------------------------
-
 
 /**
  * Group ChronicleSims by generationNumber for the Roster section.

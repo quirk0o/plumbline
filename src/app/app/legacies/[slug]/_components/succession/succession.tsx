@@ -35,13 +35,17 @@ export function Succession({ steps, slug }: SuccessionProps) {
             </>
           }
           action={
-            <ButtonLink variant="primary" size="sm" href="#sims">
-              Name an heir <ArrowRightIcon size={16} />
+            <ButtonLink
+              variant="primary"
+              size="sm"
+              href={`/app/legacies/${slug}/sims/new`}
+            >
+              Add your founder <ArrowRightIcon size={16} />
             </ButtonLink>
           }
         >
-          Name an heir and the line draws itself — founder to heir, down the
-          generations.
+          Add your founder to begin — the line traces from them, founder to
+          heir, down the generations.
         </EmptyState>
       ) : (
         <div className={styles.line}>

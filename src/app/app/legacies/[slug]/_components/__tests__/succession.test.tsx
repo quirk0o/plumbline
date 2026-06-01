@@ -66,16 +66,17 @@ describe('Succession', () => {
     ).toBeInTheDocument()
     // Body copy.
     expect(
-      screen.getByText(/Name an heir and the line draws itself/i),
+      screen.getByText(/Add your founder to begin/i),
     ).toBeInTheDocument()
-    // CTA links to the Family roster (#sims), where heirs are designated.
-    const cta = screen.getByRole('link', { name: /Name an heir/i })
-    expect(cta).toHaveAttribute('href', '#sims')
+    // With no founder there is no line to trace yet, so the CTA starts the
+    // lineage by adding the founder (the empty state only shows sans founder).
+    const cta = screen.getByRole('link', { name: /Add your founder/i })
+    expect(cta).toHaveAttribute('href', '/app/legacies/caliente/sims/new')
   })
 
   it('does not render the empty state when steps are present', () => {
     render(<Succession steps={[founder]} slug="caliente" />)
-    expect(screen.queryByRole('link', { name: /Name an heir/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Add your founder/i })).toBeNull()
     expect(screen.getByText('Dina Caliente')).toBeInTheDocument()
   })
 

@@ -4,6 +4,45 @@ import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy, createTestSim } from '@/test/helpers'
 import { db } from '@/server/db'
 
+describe('milestones.reorder', () => {
+  let userId: string
+  let legacyId: string
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('sets sortOrder to the midpoint between two neighbors', async () => {
+    const caller = authedCaller(userId)
+    const m = await caller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    const res = await caller.milestones.reorder({ id: m.id, prevSortOrder: 1000, nextSortOrder: 2000 })
+    expect(res.sortOrder).toBe(1500)
+  })
+
+  it('places above-all when only nextSortOrder is given', async () => {
+    const caller = authedCaller(userId)
+    const m = await caller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    const res = await caller.milestones.reorder({ id: m.id, nextSortOrder: 2000 })
+    expect(res.sortOrder).toBe(3000)
+  })
+
+  it('places below-all when only prevSortOrder is given', async () => {
+    const caller = authedCaller(userId)
+    const m = await caller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    const res = await caller.milestones.reorder({ id: m.id, prevSortOrder: 2000 })
+    expect(res.sortOrder).toBe(1000)
+  })
+
+  it('rejects when neither neighbor is provided', async () => {
+    const caller = authedCaller(userId)
+    const m = await caller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    await expect(caller.milestones.reorder({ id: m.id })).rejects.toBeInstanceOf(TRPCError)
+  })
+})
+
 describe('milestones.delete', () => {
   let userId: string
   let legacyId: string

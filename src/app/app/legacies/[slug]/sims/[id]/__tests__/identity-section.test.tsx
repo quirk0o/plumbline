@@ -86,4 +86,17 @@ describe('IdentitySection — heir toggle', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
     expect(mutateAsync).toHaveBeenCalledWith({ id: 'sim-1', isHeir: false })
   })
+
+  it('reverts the toggle and surfaces an error when the save fails', async () => {
+    const user = userEvent.setup()
+    mutateAsync.mockRejectedValueOnce(new Error('save failed'))
+    render(<IdentitySection sim={baseSim} />)
+
+    const toggle = screen.getByRole('button', { name: 'Heir' })
+    await user.click(toggle)
+
+    // The optimistic flip rolls back once the mutation rejects.
+    expect(await screen.findByText('Failed to save')).toBeInTheDocument()
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  })
 })

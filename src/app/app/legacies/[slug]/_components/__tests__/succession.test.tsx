@@ -98,4 +98,19 @@ describe('Succession', () => {
       screen.getByRole('heading', { name: 'Succession line' }),
     ).toBeInTheDocument()
   })
+
+  it('shows a "Name an heir" ghost slot when a founder has no heir yet', () => {
+    render(<Succession steps={[founder]} slug="caliente" />)
+    // Links to the family roster, where each sim's detail page has the heir
+    // toggle used to designate.
+    const link = screen.getByRole('link', { name: /Name an heir/i })
+    expect(link).toHaveAttribute('href', '#sims')
+    // The founder is Gen I, so the next heir to name is Gen II.
+    expect(screen.getByText('Gen II')).toBeInTheDocument()
+  })
+
+  it('hides the "Name an heir" ghost slot once an heir is designated', () => {
+    render(<Succession steps={[founder, heir]} slug="caliente" />)
+    expect(screen.queryByRole('link', { name: /Name an heir/i })).toBeNull()
+  })
 })

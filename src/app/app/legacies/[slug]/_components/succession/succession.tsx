@@ -1,11 +1,16 @@
+import Link from 'next/link'
 import {
   SectionHeading,
   PortraitAvatar,
   EmptyState,
   ButtonLink,
+  GhostCircle,
   GitBranchIcon,
   ArrowRightIcon,
+  UserPlusIcon,
 } from '@/components/ui'
+import { cn } from '@/lib/utils'
+import { roman } from '@/lib/legacy-format'
 import { ringFor } from '../../lib/derive'
 import type { SuccessionStep } from '../../lib/types'
 import styles from './succession.module.css'
@@ -16,6 +21,18 @@ export interface SuccessionProps {
 }
 
 export function Succession({ steps, slug }: SuccessionProps) {
+  // "Page in progress": a founder exists but no heir is designated yet. Show a
+  // trailing ghost slot prompting the user to name one (links to the roster,
+  // where each sim's detail page carries the heir toggle).
+  const needsHeir = !steps.some((step) => step.isHeir && !step.isFounder)
+  const highestGen = steps.reduce<number | null>((max, step) => {
+    const gen = step.sim.generationNumber
+    if (gen === null) return max
+    return max === null || gen > max ? gen : max
+  }, null)
+  const nextHeirLabel =
+    highestGen !== null ? `Gen ${roman(highestGen + 1)}` : 'Next heir'
+
   return (
     <div className={styles.container}>
       <SectionHeading
@@ -79,6 +96,22 @@ export function Succession({ steps, slug }: SuccessionProps) {
               )}
             </div>
           ))}
+
+          {needsHeir && (
+            <div className={styles.stepWrapper}>
+              <div
+                className={cn(styles.connector, styles.connectorDashed)}
+                aria-hidden="true"
+              />
+              <Link href="#sims" className={styles.ghostStep}>
+                <GhostCircle size={72} accent>
+                  <UserPlusIcon size={20} />
+                </GhostCircle>
+                <span className={styles.ghostName}>Name an heir</span>
+                <span className={styles.stepRole}>{nextHeirLabel}</span>
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

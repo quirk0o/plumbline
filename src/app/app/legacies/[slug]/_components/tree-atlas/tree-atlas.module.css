@@ -1,0 +1,238 @@
+@keyframes legacy-tree-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Full-page atlas: fills the viewport below the 48px sticky AppNav. */
+.atlas {
+  position: relative;
+  height: calc(100dvh - 48px);
+  overflow: hidden;
+  background: var(--bg);
+  animation: legacy-tree-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas {
+    animation: none;
+  }
+}
+
+.message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  padding: var(--space-8);
+}
+
+/* Dot-grid canvas behind the tree. The dot colour is derived from --text so it
+   tracks the theme automatically (dark forest gets a faint warm dot, parchment
+   a faint brown dot) without touching globals.css. */
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--text) 8%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 20px 20px;
+}
+
+.surface {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.surface:active {
+  cursor: grabbing;
+}
+
+.viewport {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* ─── Floating glass capsule (top-left legacy identity) ─────────── */
+.capsule {
+  composes: glass from '../../../../../../components/ui/surfaces/surfaces.module.css';
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 18px;
+  border-radius: var(--radius-lg);
+}
+
+
+.capsuleText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.capsuleEyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.capsuleTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  font-style: normal;
+  color: var(--text);
+}
+
+.capsuleAccent {
+  color: var(--amber-text);
+  font-style: italic;
+}
+
+.capsuleDivider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.capsuleMeta {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* ─── Bottom bar (legend pill + zoom controls) ──────────────────── */
+.bottomBar {
+  composes: glass from '../../../../../../components/ui/surfaces/surfaces.module.css';
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: var(--space-2) 14px;
+  border-radius: var(--radius-full);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+}
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+
+.zoomReadout {
+  min-width: 44px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.emptyFilter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+}
+
+.searchEmpty {
+  composes: glass from '../../../../../../components/ui/surfaces/surfaces.module.css';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.legendDotHeir,
+.legendDotSim {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legendDotHeir {
+  background: var(--amber);
+}
+
+.legendDotSim {
+  background: var(--green);
+}
+
+.legendLineMarriage,
+.legendLineLineage {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.legendLineMarriage {
+  background: var(--amber);
+}
+
+.legendLineLineage {
+  background: var(--border-bright);
+}

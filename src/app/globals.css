@@ -30,10 +30,11 @@
   --border:        #e8dfc8;
   --border-bright: #c8b896;
 
-  /* Text hierarchy */
+  /* Text hierarchy — muted/subtle darkened to meet WCAG AA (>=4.5:1) on every
+     surface while keeping the warm parchment brown. See contrast.test.ts. */
   --text:        #2a1f0e;
-  --text-muted:  #8c7a5e;
-  --text-subtle: #b8a88a;
+  --text-muted:  #5c5446;
+  --text-subtle: #6f6657;
 
   /* Green accent (interactive only) */
   --green:        var(--color-green-800);
@@ -42,6 +43,10 @@
 
   /* Amber accent (legacy/heir callouts only) */
   --amber:        var(--color-amber-600);
+  /* Amber TEXT — AA-legible heir/legacy text colour. Darker than --amber in
+     light mode; brightens in dark mode (see [data-theme="dark"] below).
+     Components must use this for amber text, never the raw --color-amber-* scale. */
+  --amber-text:   #b45309;
 
   /* Status colors */
   --error:   #b91c1c;
@@ -98,6 +103,7 @@
   --font-body:    var(--font-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
 
   /* Typography scale */
+  --text-xs:   0.625rem;   /* 10px — tiny uppercase metadata */
   --text-sm:   0.75rem;    /* 12px — labels, badges */
   --text-base: 0.875rem;   /* 14px — body text */
   --text-md:   1.0625rem;  /* 17px — slightly larger body */
@@ -105,6 +111,11 @@
   --text-xl:   1.5rem;     /* 24px */
   --text-2xl:  2rem;       /* 32px */
   --text-3xl:  2.75rem;    /* 44px */
+
+  /* Display sizes (fixed Cormorant headings, named by role) */
+  --text-stat:    1.75rem;  /* 28px — stat-block numerals */
+  --text-heading: 2.25rem;  /* 36px — section headings */
+  --text-hero:    3.5rem;   /* 56px — hero display title */
 
   /* Fluid headings */
   --heading-sm: clamp(1.5rem, 3vw, 2.5rem);
@@ -144,14 +155,17 @@
   --border-bright: rgba(255, 255, 255, 0.15);
 
   --text:        #f0ede8;
+  /* --text-muted already clears AA (>=4.5:1) on every dark surface; only
+     --text-subtle needed lightening to meet AA while staying warm-neutral. */
   --text-muted:  #a09488;
-  --text-subtle: #6e6258;
+  --text-subtle: #a89e8a;
 
   --green:        #4aaf72;
   --green-bright: #6dc98e;
   --green-glow:   rgba(74, 175, 114, 0.15);
 
   --amber:        #fbbf24;
+  --amber-text:   #fbbf24;
 
   --error:   #fca5a5;
   --success: #86efac;
@@ -187,7 +201,9 @@ html {
 
 html, body {
   max-width: 100vw;
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) prevents horizontal scroll without establishing a
+     scroll container — `hidden` here silently breaks `position: sticky`. */
+  overflow-x: clip;
 }
 
 body {
@@ -210,4 +226,30 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* ─── Skip-to-content link ────────────────────────────────────── */
+/* `.sr-only` is provided by Tailwind v4 (imported in the root layout), so it
+   is not redefined here. The skip link parks itself off-screen and slides into
+   view only when focused, so keyboard users can jump straight to <main>. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-md);
+  transition: top var(--transition-fast) ease;
+}
+.skip-link:focus {
+  top: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
 }

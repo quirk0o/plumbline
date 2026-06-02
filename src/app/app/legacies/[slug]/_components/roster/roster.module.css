@@ -1,0 +1,53 @@
+/* Roster section — inner content container */
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ── Top row: heading + add-sim button ──────────────────────────── */
+
+.topRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.headingWrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.addSimButton {
+  flex-shrink: 0;
+}
+
+/* ── Generation group ───────────────────────────────────────────── */
+
+.group {
+  margin-top: var(--space-6);
+}
+
+.groupHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: 14px;
+}
+
+.groupCount {
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+  letter-spacing: 0.06em;
+}
+
+/* ── Card grid ──────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

@@ -1,0 +1,74 @@
+/* Succession section — inner content container */
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ── Step line ──────────────────────────────────────────────────── */
+
+.line {
+  margin-top: var(--space-6);
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  /* overflow-x: auto forces overflow-y: auto, which would clip the portrait's
+     amber accent ring (a 3px box-shadow). The top/bottom padding gives it room. */
+  padding: 6px 0 8px;
+}
+
+/* stepWrapper holds the step block + optional connector side-by-side */
+.stepWrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.step {
+  flex: 0 0 auto;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.stepName {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.15;
+}
+
+.stepRole {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* Connector between steps. Amber is intentional here — it is the brand's
+   heir/lineage accent, and the succession chain is a lineage callout. */
+.connector {
+  flex: 0 0 60px;
+  height: 1px;
+  background: var(--amber);
+  margin: 0 -2px;
+  align-self: center;
+  /* Push the connector to align with the center of the 72px avatar.
+     The avatar center sits at: 10px (gap) + 72/2 = 46px from top of .step.
+     We don't need to adjust margin-top here because align-items: center
+     on .line already centers the connector with the step block. */
+}
+
+/* Dashed variant — connects the line to the "name an heir" ghost slot
+   (the slot itself lives in NameHeirDialog). */
+.connectorDashed {
+  height: 0;
+  background: transparent;
+  border-top: 1.5px dashed var(--amber);
+}
+

@@ -1,0 +1,143 @@
+/* Hero section — inner content container (page owns the outer section/bg) */
+
+.grid {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+
+/* ── Left column ────────────────────────────────────────────────── */
+
+.left {
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  font-weight: 600;
+  color: var(--text);
+  margin: 14px 0 18px;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.titleAccent {
+  color: var(--amber-text);
+  font-style: italic;
+}
+
+.blurb {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--text-muted);
+  line-height: 1.55;
+  max-width: 560px;
+}
+
+.statRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-7);
+}
+
+.buttonRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Right column ───────────────────────────────────────────────── */
+
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nowThenCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-6);
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.nowThenDivider {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── NowThenColumn ──────────────────────────────────────────────── */
+
+.nowThenColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.nowThenNameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nowThenName {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.nowThenAspiration {
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Dashed variant of the Now & then card, for a brand-new legacy. */
+.nowThenCardEmpty {
+  background: var(--bg);
+  border: 1px dashed var(--border-bright);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+/* CTA wrapper inside an empty founder slot. */
+.nowThenCta {
+  margin-top: 2px;
+}
+
+/* "No heir yet" — italic display, muted (decorative accent only). */
+.nowThenNameEmpty {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.1;
+}
+
+.nowThenHint {
+  font-size: 11px;
+  color: var(--text-subtle);
+  line-height: 1.4;
+}

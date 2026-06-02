@@ -1,0 +1,136 @@
+/* "Name an heir" ghost trigger — mirrors a succession step column. */
+.trigger {
+  flex: 0 0 auto;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  background: none;
+  border: none;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: none;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 3px var(--green-glow);
+}
+
+.triggerName {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.15;
+  transition: color var(--transition-base);
+}
+
+/* Subtle hover: warm the prompt to amber rather than drawing a box. */
+.trigger:hover .triggerName {
+  color: var(--amber-text);
+}
+
+.triggerRole {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* ── Dialog body ────────────────────────────────────────────────────── */
+
+.list {
+  list-style: none;
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.candidate {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-base);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.candidate:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border);
+}
+
+.candidate:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--green-glow);
+}
+
+.candidate:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.candidateName {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty {
+  margin-top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-muted);
+}
+
+.error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--error);
+}
+
+.actions {
+  margin-top: var(--space-5);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cancel {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: 0.4rem 0.85rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.cancel:hover {
+  background: var(--bg-card-hover);
+}

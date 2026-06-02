@@ -16,6 +16,14 @@ if (typeof ResizeObserver === 'undefined') {
   }
 }
 
+// jsdom does not implement the Pointer Capture API; Radix Dialog's dismissable
+// layer touches it. No-op it so modal tests don't throw.
+if (typeof Element !== 'undefined' && !Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false
+  Element.prototype.setPointerCapture = () => {}
+  Element.prototype.releasePointerCapture = () => {}
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())

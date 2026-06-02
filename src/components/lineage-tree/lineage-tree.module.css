@@ -1,0 +1,21 @@
+.tree {
+  display: block;
+}
+
+/* Node click target <g>. SVG groups don't render a CSS outline, so we draw a
+   dedicated focus halo and toggle it on :focus-visible instead. */
+.node {
+  outline: none;
+  transition: opacity var(--transition-base);
+}
+
+/* Focus halo: present in the DOM but invisible until the node is keyboard
+   focused. Never intercepts pointer events. */
+.focusRing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.node:focus-visible .focusRing {
+  opacity: 1;
+}

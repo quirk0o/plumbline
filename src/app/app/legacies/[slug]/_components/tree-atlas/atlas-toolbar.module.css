@@ -1,0 +1,82 @@
+.toolbar {
+  composes: glass from '../../../../../../components/ui/surfaces/surfaces.module.css';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+}
+
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 4px;
+}
+
+.searchIcon {
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text);
+  width: 160px;
+}
+
+.searchInput::placeholder {
+  color: var(--text-subtle);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pill {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.pill:hover {
+  border-color: var(--border-bright);
+  color: var(--text);
+}
+
+.pillActive,
+.pillActive:hover {
+  background: var(--green-glow);
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.pill:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

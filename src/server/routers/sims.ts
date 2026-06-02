@@ -66,6 +66,13 @@ export const simsRouter = router({
         }
       }
 
+      // A legacy with no founder adopts its first parentless sim as the founder
+      // (matching the creation wizard), so the "Add your founder" affordance
+      // actually establishes the lineage root. Founders are always generation 1
+      // (domain invariant); only fill it in when no generation was specified.
+      const willBeFounder = !legacy.founderSimId && parents.length === 0
+      if (willBeFounder && generationNumber === null) generationNumber = 1
+
       const newSim = await ctx.db.sim.create({
         data: {
           legacyId: input.legacyId,
@@ -98,6 +105,13 @@ export const simsRouter = router({
             type: FamilyRelationshipType.BIOLOGICAL,
           })),
           skipDuplicates: true,
+        })
+      }
+
+      if (willBeFounder) {
+        await ctx.db.legacy.update({
+          where: { id: legacy.id },
+          data: { founderSimId: newSim.id },
         })
       }
 
@@ -164,6 +178,8 @@ export const simsRouter = router({
             lastName: true,
             imageUrl: true,
             generationNumber: true,
+            lifeStage: true,
+            isHeir: true,
           },
           orderBy: { id: 'asc' },
         }),

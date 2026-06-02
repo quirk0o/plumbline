@@ -1,0 +1,17 @@
+/* Milestones section — inner content container */
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ── Rows list ──────────────────────────────────────────────────── */
+
+.rows {
+  margin-top: 12px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+

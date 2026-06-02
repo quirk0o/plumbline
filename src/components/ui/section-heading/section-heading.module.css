@@ -1,0 +1,22 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-heading);
+  font-weight: var(--weight-semibold);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0;
+}
+
+.blurb {
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: var(--space-1) 0 0;
+}

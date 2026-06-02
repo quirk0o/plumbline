@@ -1,0 +1,18 @@
+/* Frosted-glass surfaces for floating overlays (atlas toolbar, capsule, inspector).
+   Consumed via CSS Modules `composes` so the treatment lives in one place while
+   each consumer keeps its own positioning, radius, and layout. */
+
+.glass {
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+/* Heavier variant for the inspector panel: more opaque, larger lift. */
+.glassPanel {
+  background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}

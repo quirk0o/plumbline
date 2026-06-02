@@ -23,7 +23,7 @@ test('user can create a legacy with a founder sim', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
   await expect(page.getByRole('heading', { name: legacyName })).toBeVisible()
-  await expect(page.getByRole('listitem').getByText('Alice Sim')).toBeVisible()
+  await expect(page.getByTestId('roster').getByRole('listitem').getByText('Alice Sim')).toBeVisible()
 })
 
 test('user can create a legacy and skip the founder sim', async ({ page }) => {
@@ -39,7 +39,11 @@ test('user can create a legacy and skip the founder sim', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
   await expect(page.getByRole('heading', { name: legacyName })).toBeVisible()
-  await expect(page.getByText('No founder set.')).toBeVisible()
+  await expect(
+    page
+      .getByTestId('roster')
+      .getByRole('heading', { name: /No Sims\s+named\s+yet\./i }),
+  ).toBeVisible()
 })
 
 test('step 1 shows a validation error when legacy name is empty', async ({ page }) => {

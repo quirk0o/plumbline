@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { AppNav } from './components/app-nav'
+import { AppShell } from './components/app-shell'
 
 export default async function AppLayout({
   children,
@@ -11,13 +11,12 @@ export default async function AppLayout({
   if (!session?.user) redirect('/auth/signin?callbackUrl=/app')
 
   return (
-    <>
-      <AppNav
-        name={session.user.name ?? null}
-        email={session.user.email ?? null}
-        image={session.user.image ?? null}
-      />
-      <main>{children}</main>
-    </>
+    <AppShell
+      name={session.user.name ?? null}
+      email={session.user.email ?? null}
+      image={session.user.image ?? null}
+    >
+      {children}
+    </AppShell>
   )
 }

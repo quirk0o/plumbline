@@ -1,0 +1,71 @@
+.rail {
+  position: sticky;
+  top: 48px;
+  align-self: start;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 52px 16px 32px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base),
+    color var(--transition-base);
+}
+
+.item:hover {
+  background: var(--bg-card-hover);
+  color: var(--text);
+}
+
+.item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.itemActive,
+.itemActive:hover {
+  background: var(--green-glow);
+  border-left: 2px solid var(--green);
+  color: var(--green);
+}
+
+@media (max-width: 768px) {
+  .rail {
+    position: static;
+    width: auto;
+    flex-direction: row;
+    gap: 4px;
+    padding: var(--space-3) var(--space-4);
+    overflow-x: auto;
+  }
+
+  .item {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 6px 6px 0 0;
+    white-space: nowrap;
+  }
+
+  .itemActive,
+  .itemActive:hover {
+    border-left: none;
+    border-bottom: 2px solid var(--green);
+  }
+}

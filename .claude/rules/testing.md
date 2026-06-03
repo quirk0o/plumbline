@@ -12,6 +12,102 @@ This project follows [Kent C. Dodds' Testing Trophy](https://kentcdodds.com/blog
 
 ---
 
+## Test Behavior, Not Implementation Details
+
+**Testing implementation details is not allowed.** Tests must assert on observable behavior — what a user sees and does, or what a public API returns — never on _how_ the code achieves it internally. As Kent C. Dodds puts it: ["The more your tests resemble the way your software is used, the more confidence they can give you."](https://testing-library.com/docs/guiding-principles/)
+
+An implementation detail is anything a user (end user or API caller) never observes: internal state, private functions, component internals, the exact DOM/CSS structure, or which collaborators were called. Tests coupled to these break when you refactor working code (false negatives) and pass when behavior is actually broken (false positives). Both destroy the test's value.
+
+### What counts as an implementation detail
+
+- Internal component state, hooks, or instance variables
+- Private (non-exported) functions and helpers
+- CSS class names, element IDs, tag names, and DOM nesting structure
+- Whether a specific internal function or collaborator was called, and how many times
+- Props passed to child components
+- Full-DOM snapshots that fail on any markup change
+
+### Examples
+
+**❌ Asserting on internal state instead of rendered output**
+
+```tsx
+// BAD — reaches into the component's state
+const { result } = renderHook(() => usePackGrid())
+expect(result.current.selectedPacks).toContain('expansion-1')
+```
+
+```tsx
+// GOOD — asserts what the user sees
+render(<PackGrid />)
+await userEvent.click(screen.getByRole('button', { name: 'City Living' }))
+expect(screen.getByRole('button', { name: 'City Living' })).toHaveAttribute('aria-pressed', 'true')
+```
+
+**❌ Asserting on CSS classes or DOM structure**
+
+```tsx
+// BAD — couples the test to styling and markup
+expect(container.querySelector('.pack-card--selected')).toBeTruthy()
+expect(container.querySelector('div > form > input')).toBeTruthy()
+```
+
+```tsx
+// GOOD — asserts the accessible, user-facing state
+expect(screen.getByRole('button', { name: 'City Living' })).toHaveAttribute('aria-pressed', 'true')
+expect(screen.getByLabelText('Legacy name')).toBeInTheDocument()
+```
+
+**❌ Asserting that an internal function was called**
+
+```tsx
+// BAD — tests the wiring, not the result. Refactoring the internals breaks this
+//        even when the user-visible behavior is unchanged.
+const toggleSpy = vi.spyOn(packModule, 'computeToggleState')
+render(<PackGrid />)
+await userEvent.click(screen.getByRole('button', { name: 'City Living' }))
+expect(toggleSpy).toHaveBeenCalledTimes(1)
+```
+
+```tsx
+// GOOD — assert the outcome the user gets from the click
+await userEvent.click(screen.getByRole('button', { name: 'City Living' }))
+expect(await screen.findByText('Pack added')).toBeInTheDocument()
+```
+
+> Mocking **external** boundaries (tRPC hooks, the Next.js router, NextAuth, the S3 client) is correct and expected — those are not implementation details of the unit under test. The rule is about spying on the code's _own_ internals.
+
+**❌ Testing a private helper directly instead of through its public surface**
+
+```ts
+// BAD — imports and tests a non-exported helper, freezing an internal contract
+import { __sanitizeCallbackUrl } from '../sign-in-form'
+expect(__sanitizeCallbackUrl('javascript:alert(1)')).toBe('/')
+```
+
+```ts
+// GOOD — exercise the behavior through the public component/procedure
+render(<SignInForm callbackUrl="javascript:alert(1)" />)
+await userEvent.click(screen.getByRole('button', { name: 'Send magic link' }))
+// assert the safe redirect target the user actually ends up with
+```
+
+**❌ Full-DOM snapshot tests**
+
+```tsx
+// BAD — fails on any markup/styling change, tells you nothing about behavior
+expect(container).toMatchSnapshot()
+```
+
+```tsx
+// GOOD — assert the specific, meaningful output
+expect(screen.getByRole('heading', { name: 'Your Legacy' })).toBeInTheDocument()
+```
+
+For tRPC integration tests, assert on the **procedure's return value and the resulting database state** (the observable contract), not on which internal query builders or service functions ran along the way.
+
+---
+
 ## Running Tests
 
 ```bash
@@ -121,7 +217,7 @@ Two browser projects:
 
 ## Query Priority
 
-Always query by what the user sees and interacts with — never by implementation details like element IDs, CSS classes, or DOM structure. Use this priority order in both RTL and Playwright:
+This is the query-level application of [Test Behavior, Not Implementation Details](#test-behavior-not-implementation-details). Always query by what the user sees and interacts with — never by implementation details like element IDs, CSS classes, or DOM structure. Use this priority order in both RTL and Playwright:
 
 1. **`getByRole`** — matches by ARIA role + accessible name. Prefer this for buttons, links, headings, inputs.
    ```ts

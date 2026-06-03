@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { trpc } from '@/trpc/client'
-import { Button } from '@/components/ui'
+import { Button, Drawer, Eyebrow } from '@/components/ui'
 import type { Milestone, ChronicleSim } from '../../lib/types'
+import { SimTagChips } from './sim-tag-chips'
 import styles from './milestone-composer.module.css'
 
 export interface MilestoneComposerProps {
@@ -20,11 +21,12 @@ interface ComposerFormProps {
   simsById: Record<string, ChronicleSim>
   editing: Milestone | null
   onDone: () => void
-  /** Cancel without persisting. Wired by the parent to avoid a needless refresh. */
+  /** Cancel without persisting. */
   onCancel: () => void
 }
 
-/** Inner stateful form — key-remounted when editing changes to reset state cleanly. */
+/** Inner stateful form rendered inside the drawer. Key-remounted when `editing`
+ *  changes so its state resets cleanly per open. */
 function ComposerForm({ legacyId, simsById, editing, onDone, onCancel }: ComposerFormProps) {
   const [title, setTitle] = useState(editing?.title ?? '')
   const [blurb, setBlurb] = useState(editing?.blurb ?? '')
@@ -45,59 +47,59 @@ function ComposerForm({ legacyId, simsById, editing, onDone, onCancel }: Compose
     onDone()
   }
 
+  function toggleSim(id: string) {
+    setSimIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
   const allSims = Object.values(simsById)
 
   return (
-    <div className={styles.composer}>
-      <label className={styles.field}>
-        <span className={styles.label}>Title</span>
-        <input
-          className={styles.input}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. The Caliente–Lothario feud begins"
-        />
-      </label>
+    <>
+      <header className={styles.header}>
+        <div className={styles.headerTop}>
+          <Eyebrow>Record a moment</Eyebrow>
+          <Drawer.Close className={styles.close} aria-label="Close">✕</Drawer.Close>
+        </div>
+        <Drawer.Title className={styles.headerTitle}>
+          {isEditing ? 'Edit milestone' : 'New milestone'}
+        </Drawer.Title>
+      </header>
 
-      <label className={styles.field}>
-        <span className={styles.label}>Story</span>
-        <textarea
-          className={styles.textarea}
-          rows={3}
-          value={blurb}
-          onChange={(e) => setBlurb(e.target.value)}
-          placeholder="Tell the story in your own words…"
-        />
-      </label>
+      <div className={styles.body}>
+        <label className={styles.field}>
+          <span className={styles.label}>Title</span>
+          <input
+            className={styles.input}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. The Caliente–Lothario feud begins"
+          />
+        </label>
 
-      <fieldset className={styles.tags}>
-        <legend className={styles.label}>Tag sims</legend>
-        {allSims.map((s) => {
-          const checked = simIds.includes(s.id)
-          return (
-            <label key={s.id} className={styles.tag}>
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) =>
-                  setSimIds((prev) =>
-                    e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id),
-                  )
-                }
-              />
-              {s.firstName} {s.lastName}
-            </label>
-          )
-        })}
-      </fieldset>
+        <label className={styles.field}>
+          <span className={styles.label}>Story</span>
+          <textarea
+            className={styles.textarea}
+            rows={4}
+            value={blurb}
+            onChange={(e) => setBlurb(e.target.value)}
+            placeholder="Tell the story in your own words…"
+          />
+        </label>
 
-      <div className={styles.actions}>
+        <div className={styles.field}>
+          <span className={styles.label}>Tag the sims involved</span>
+          <SimTagChips sims={allSims} value={simIds} onToggle={toggleSim} />
+        </div>
+      </div>
+
+      <footer className={styles.footer}>
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button type="button" onClick={handleSave} disabled={title.trim().length === 0 || pending}>
           Save milestone
         </Button>
-      </div>
-    </div>
+      </footer>
+    </>
   )
 }
 
@@ -105,36 +107,42 @@ export function MilestoneComposer({
   legacyId, simsById, editing, onDone, onCancelEdit,
 }: MilestoneComposerProps) {
   const [open, setOpen] = useState(false)
-
-  // When the parent sets an editing milestone, open the form.
-  // The `key` on ComposerForm resets its internal state when editing changes.
   const showForm = open || editing !== null
 
-  if (!showForm) {
-    return (
-      <div className={styles.trigger}>
-        <span className={styles.triggerText}>Record a moment</span>
-        <Button type="button" onClick={() => setOpen(true)}>+ Add milestone</Button>
-      </div>
-    )
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      setOpen(false)
+      // Editing: clear the parent's editing target. A brand-new unsaved note
+      // just closes — no router.refresh().
+      if (editing !== null) onCancelEdit()
+    }
   }
 
   return (
-    <ComposerForm
-      key={editing?.id ?? 'new'}
-      legacyId={legacyId}
-      simsById={simsById}
-      editing={editing}
-      onDone={() => {
-        setOpen(false)
-        onDone()
-      }}
-      onCancel={() => {
-        setOpen(false)
-        // Editing: tell the parent to clear the editing target. Cancelling a
-        // brand-new (unsaved) note just closes the form — no router.refresh().
-        if (editing !== null) onCancelEdit()
-      }}
-    />
+    <>
+      <div className={styles.trigger}>
+        <span className={styles.triggerText}>Record a moment of your own.</span>
+        <Button type="button" onClick={() => setOpen(true)}>+ Add milestone</Button>
+      </div>
+
+      <Drawer open={showForm} onOpenChange={handleOpenChange}>
+        <Drawer.Portal>
+          <Drawer.Overlay />
+          <Drawer.Content side="right" aria-describedby={undefined}>
+            <ComposerForm
+              key={editing?.id ?? 'new'}
+              legacyId={legacyId}
+              simsById={simsById}
+              editing={editing}
+              onDone={() => {
+                setOpen(false)
+                onDone()
+              }}
+              onCancel={() => handleOpenChange(false)}
+            />
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer>
+    </>
   )
 }

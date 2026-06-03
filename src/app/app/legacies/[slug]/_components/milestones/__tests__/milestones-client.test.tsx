@@ -1,9 +1,22 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MilestonesClient, neighborSortOrders } from '../milestones-client'
 import type { Milestone, ChronicleSim } from '../../../lib/types'
+
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false, media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(),
+      addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+    })),
+  })
+  class MockResizeObserver { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn() }
+  global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
+})
 
 const { mockDelete, mockRefresh } = vi.hoisted(() => ({
   mockDelete: vi.fn().mockResolvedValue({ id: 'm1' }),

@@ -1,19 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Combobox } from '../combobox'
-
-// cmdk uses ResizeObserver — not available in jsdom
-class MockResizeObserver {
-  observe = vi.fn()
-  unobserve = vi.fn()
-  disconnect = vi.fn()
-}
-
-beforeAll(() => {
-  global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
-})
 
 function Simple({ value = '', onChange = vi.fn() } = {}) {
   return (

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { TraitPicker } from '../trait-picker'
 
 const traits = [
@@ -18,17 +19,17 @@ describe('TraitPicker', () => {
     expect(screen.getByRole('button', { name: 'Bookworm' })).toBeInTheDocument()
   })
 
-  it('calls onChange with the selected trait id when a trait is clicked', () => {
+  it('calls onChange with the selected trait id when a trait is clicked', async () => {
     const onChange = vi.fn()
     render(<TraitPicker traits={traits} selected={[]} onChange={onChange} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Neat' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Neat' }))
     expect(onChange).toHaveBeenCalledWith(['neat'])
   })
 
-  it('deselects a trait when it is clicked again', () => {
+  it('deselects a trait when it is clicked again', async () => {
     const onChange = vi.fn()
     render(<TraitPicker traits={traits} selected={['neat']} onChange={onChange} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Neat' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Neat' }))
     expect(onChange).toHaveBeenCalledWith([])
   })
 
@@ -55,9 +56,9 @@ describe('TraitPicker', () => {
     expect(screen.getByRole('button', { name: 'Evil' })).toBeDisabled()
   })
 
-  it('filters traits by category tab', () => {
+  it('filters traits by category tab', async () => {
     render(<TraitPicker traits={traits} selected={[]} onChange={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Hobby' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Hobby' }))
     expect(screen.getByRole('button', { name: 'Bookworm' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Neat' })).not.toBeInTheDocument()
   })

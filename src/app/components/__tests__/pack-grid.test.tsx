@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { PackType } from '@prisma/client'
 import { server } from '@/test/msw-server'
@@ -23,7 +24,7 @@ const expansionGroup: PackGroup = {
 function mockPacksGetAll(groups: PackGroup[] = [expansionGroup]) {
   server.use(
     http.get('http://localhost/api/trpc/packs.getAll', () =>
-      HttpResponse.json([{ result: { data: { json: groups } } }])
+      HttpResponse.json([{ result: { data: groups } }])
     )
   )
 }
@@ -31,7 +32,7 @@ function mockPacksGetAll(groups: PackGroup[] = [expansionGroup]) {
 function mockPacksToggle(response = { isOwned: true }) {
   server.use(
     http.post('http://localhost/api/trpc/packs.toggle', () =>
-      HttpResponse.json([{ result: { data: { json: response } } }])
+      HttpResponse.json([{ result: { data: response } }])
     )
   )
 }
@@ -74,9 +75,11 @@ describe('PackGrid', () => {
   it('calls the toggle mutation when a card is clicked', async () => {
     mockPacksGetAll()
     mockPacksToggle()
+    const user = userEvent.setup()
     renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
-    fireEvent.click(screen.getByRole('button', { name: /City Living/ }))
-    // Optimistic update should flip the state immediately
+    await user.click(screen.getByRole('button', { name: /City Living/ }))
+    // Optimistic update should flip the state immediately; wait for the mutation
+    // to also settle (invalidation refetch completes) to avoid React teardown errors.
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /City Living/ })).toHaveAttribute('aria-pressed', 'true')
     )

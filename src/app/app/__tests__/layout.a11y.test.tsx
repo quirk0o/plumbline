@@ -44,9 +44,9 @@ describe('app shell accessibility', () => {
     ).toBe(true)
   })
 
-  it('marks the main content region with a matching id', () => {
-    const { container } = renderShell()
-    const main = container.querySelector('main#main-content')
-    expect(main).toBeTruthy()
+  it('marks the main content region with the skip-link target id', () => {
+    renderShell()
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'main-content')
   })
 })

@@ -45,20 +45,18 @@ describe('PortraitAvatar', () => {
     expect(screen.queryByText('DC')).not.toBeInTheDocument()
   })
 
-  it('applies accent box-shadow for ring="founder"', () => {
-    const { container } = render(
+  it('marks the avatar as accented for ring="founder"', () => {
+    render(
       <PortraitAvatar imageUrl={null} firstName="Bob" lastName="Pancakes" ring="founder" />
     )
-    const avatar = container.firstChild as HTMLElement
-    expect(avatar.style.boxShadow).toContain('var(--amber)')
+    expect(screen.getByTitle('Bob Pancakes')).toHaveAttribute('data-accent')
   })
 
-  it('does not apply accent box-shadow for ring="green"', () => {
-    const { container } = render(
+  it('does not mark the avatar as accented for ring="green"', () => {
+    render(
       <PortraitAvatar imageUrl={null} firstName="Bob" lastName="Pancakes" ring="green" />
     )
-    const avatar = container.firstChild as HTMLElement
-    expect(avatar.style.boxShadow).toBe('')
+    expect(screen.getByTitle('Bob Pancakes')).not.toHaveAttribute('data-accent')
   })
 
   it('renders a link to the sim when href is provided', () => {

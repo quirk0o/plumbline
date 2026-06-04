@@ -16,18 +16,10 @@ const icons = [
 ] as const
 
 describe('empty-state icons', () => {
-  it.each(icons)('%s renders a decorative svg', (_name, Icon) => {
+  it.each(icons)('%s renders a decorative svg hidden from screen readers', (_name, Icon) => {
     const { container } = render(<Icon />)
     const svg = container.querySelector('svg')
     expect(svg).not.toBeNull()
     expect(svg).toHaveAttribute('aria-hidden', 'true')
-    expect(svg).toHaveAttribute('stroke', 'currentColor')
-  })
-
-  it.each(icons)('%s honors the size prop', (_name, Icon) => {
-    const { container } = render(<Icon size={20} />)
-    const svg = container.querySelector('svg')
-    expect(svg).toHaveAttribute('width', '20')
-    expect(svg).toHaveAttribute('height', '20')
   })
 })

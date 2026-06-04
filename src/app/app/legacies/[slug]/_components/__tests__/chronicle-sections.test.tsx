@@ -94,13 +94,11 @@ const baseProps = {
 }
 
 describe('ChronicleSections', () => {
-  it('renders all four sections with the expected ids', () => {
-    const { container } = render(<ChronicleSections {...baseProps} />)
-
+  it('renders all four sections as anchor targets', () => {
+    render(<ChronicleSections {...baseProps} />)
     for (const id of ['hero', 'succession', 'milestones', 'sims']) {
-      const el = container.querySelector(`[data-section="${id}"]`)
-      expect(el, `section ${id}`).not.toBeNull()
-      expect(el?.id).toBe(id)
+      // SectionNav locates sections via document.getElementById — assert the same contract.
+      expect(document.getElementById(id), `section #${id}`).not.toBeNull()
     }
   })
 
@@ -117,8 +115,8 @@ describe('ChronicleSections', () => {
   })
 
   it('renders the treeSlot content inside the hero', () => {
-    const { container } = render(<ChronicleSections {...baseProps} />)
-    const hero = container.querySelector('[data-section="hero"]')
+    render(<ChronicleSections {...baseProps} />)
+    const hero = document.getElementById('hero')
     expect(hero).not.toBeNull()
     const button = screen.getByRole('button', { name: /view family tree/i })
     expect(hero?.contains(button)).toBe(true)

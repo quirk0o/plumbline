@@ -48,6 +48,7 @@ export function PortraitAvatar({
     <div
       className={cn(styles.photoContainer, rootClass)}
       style={{ width: size, height: size, ...accentRingStyle }}
+      data-accent={isAccent ? '' : undefined}
       {...rootRest}
     >
       <Image
@@ -71,6 +72,7 @@ export function PortraitAvatar({
       // Give the monogram an accessible name so screen readers announce the sim,
       // not the bare initials. (When linked, the <Link> aria-label covers this.)
       title={href ? undefined : fullName}
+      data-accent={isAccent ? '' : undefined}
       {...rootRest}
     >
       <span

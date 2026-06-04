@@ -1,0 +1,53 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 4rem;
+}
+
+.backLink {
+  display: inline-block;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-bottom: var(--space-4);
+}
+
+.backLink:hover {
+  color: var(--text);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  margin: 0 0 var(--space-2);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.phaseCount {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.description {
+  color: var(--text);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  margin: 0 0 var(--space-6);
+  max-width: 65ch;
+}

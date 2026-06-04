@@ -39,6 +39,15 @@ export function StartRunDialog({ challengeId, challengeName, legacies }: StartRu
   const router = useRouter()
   const link = trpc.challengeRuns.link.useMutation()
 
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      setLegacyId('')
+      setName(challengeName)
+      setError('')
+    }
+    setOpen(nextOpen)
+  }
+
   async function start() {
     if (!legacyId) {
       setError('Choose a legacy first.')
@@ -55,7 +64,7 @@ export function StartRunDialog({ challengeId, challengeName, legacies }: StartRu
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <Dialog.Trigger asChild>
         <Button>Start run</Button>
       </Dialog.Trigger>
@@ -98,6 +107,7 @@ export function StartRunDialog({ challengeId, challengeName, legacies }: StartRu
                 <Input
                   id="start-run-name"
                   value={name}
+                  maxLength={200}
                   onChange={(e) => setName(e.target.value)}
                 />
               </FormField>

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // External boundaries — mock the mutation + router; assert what the dialog
@@ -131,5 +131,30 @@ describe('StartRunDialog', () => {
       'href',
       '/app/legacies/new',
     )
+  })
+
+  it('discards selection, name edits, and errors when the dialog is closed and reopened', async () => {
+    const user = userEvent.setup()
+    render(
+      <StartRunDialog challengeId="ch-1" challengeName="Legacy Challenge" legacies={legacies} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Start run' }))
+    await user.click(dialog().getByRole('button', { name: /choose a legacy/i }))
+    await user.click(await screen.findByRole('option', { name: 'The Calientes' }))
+    const nameInput = dialog().getByLabelText('Run name')
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Scratch this')
+    await user.click(dialog().getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Start run' }))
+    expect(dialog().getByLabelText('Run name')).toHaveValue('Legacy Challenge')
+    await user.click(dialog().getByRole('button', { name: 'Start run' }))
+    expect(await dialog().findByRole('alert')).toHaveTextContent(/choose a legacy/i)
+    expect(mutateAsync).not.toHaveBeenCalled()
   })
 })

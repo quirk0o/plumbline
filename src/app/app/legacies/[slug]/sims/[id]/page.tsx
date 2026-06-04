@@ -42,10 +42,10 @@ export default async function SimDetailPage({ params }: Props) {
       select: { id: true, firstName: true, lastName: true, imageUrl: true },
       orderBy: { firstName: 'asc' },
     }),
-    fetchTraitsWithConflicts(),
-    fetchAspirations(),
-    fetchCareers(),
-    fetchSkills(),
+    fetchTraitsWithConflicts(userId),
+    fetchAspirations(userId),
+    fetchCareers(userId),
+    fetchSkills(userId),
   ])
 
   if (!sim) notFound()

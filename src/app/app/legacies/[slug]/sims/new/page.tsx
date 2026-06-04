@@ -13,14 +13,15 @@ export default async function AddSimPage({ params }: Props) {
   const { slug } = await params
   const session = await auth()
   if (!session?.user?.id) redirect('/auth/signin')
+  const userId = session.user.id
 
-  const legacy = await db.legacy.findFirst({ where: { slug, userId: session.user.id } })
+  const legacy = await db.legacy.findFirst({ where: { slug, userId } })
   if (!legacy) notFound()
 
   const [traits, aspirations, careers] = await Promise.all([
-    fetchTraitsWithConflicts(),
-    fetchAspirations(),
-    fetchCareers(),
+    fetchTraitsWithConflicts(userId),
+    fetchAspirations(userId),
+    fetchCareers(userId),
   ])
 
   return (

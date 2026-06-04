@@ -39,11 +39,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.5;
+  opacity: 0;
   transition: opacity 0.15s ease;
 }
 
-.handle:hover {
+/* Reveal the handle + controls on row hover, and on keyboard focus within the
+   row so they stay reachable without a pointer. */
+.wrapper:hover .handle,
+.wrapper:focus-within .handle {
+  opacity: 0.5;
+}
+
+.handle:hover,
+.handle:focus-visible {
   opacity: 1;
   color: var(--text);
 }
@@ -57,4 +65,11 @@
   align-items: center;
   gap: var(--space-3);
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.wrapper:hover .controls,
+.wrapper:focus-within .controls {
+  opacity: 1;
 }

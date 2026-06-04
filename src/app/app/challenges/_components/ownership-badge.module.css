@@ -1,0 +1,24 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-xs);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.public {
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+.yours {
+  background: color-mix(in srgb, var(--amber) 14%, transparent);
+  color: var(--amber-text);
+  border-color: color-mix(in srgb, var(--amber) 28%, transparent);
+}

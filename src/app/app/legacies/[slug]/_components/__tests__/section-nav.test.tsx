@@ -175,5 +175,4 @@ describe('SectionNav', () => {
       'aria-current',
     )
   })
-
 })

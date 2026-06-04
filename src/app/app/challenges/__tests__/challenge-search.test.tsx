@@ -57,4 +57,32 @@ describe('ChallengeSearch', () => {
       expect(replace).toHaveBeenCalledWith('/app/challenges', { scroll: false }),
     )
   })
+
+  it('does not push to the URL on mount when seeded from an existing query', async () => {
+    params = new URLSearchParams('q=legacy')
+    render(<ChallengeSearch />)
+
+    expect(screen.getByRole('searchbox', { name: 'Search challenges' })).toHaveValue('legacy')
+
+    await new Promise((r) => setTimeout(r, 400))
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('adopts an external URL change into the input without re-pushing', async () => {
+    params = new URLSearchParams('q=legacy')
+    const { rerender } = render(<ChallengeSearch />)
+
+    const input = screen.getByRole('searchbox', { name: 'Search challenges' })
+    expect(input).toHaveValue('legacy')
+
+    // Simulate Back/forward: the URL loses `q`. The mock reads module-level
+    // `params` at render, so reassign + rerender to surface the new value.
+    params = new URLSearchParams()
+    rerender(<ChallengeSearch />)
+
+    await waitFor(() => expect(input).toHaveValue(''))
+
+    await new Promise((r) => setTimeout(r, 400))
+    expect(replace).not.toHaveBeenCalled()
+  })
 })

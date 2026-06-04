@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui'
 import styles from './challenge-search.module.css'
@@ -18,6 +18,16 @@ export function ChallengeSearch() {
   const urlQuery = searchParams.get('q') ?? ''
   const [value, setValue] = useState(urlQuery)
   const [, startTransition] = useTransition()
+  const lastPushed = useRef(urlQuery)
+
+  // External URL change (Back/forward, link nav) → adopt it into the input
+  // rather than re-pushing the stale local value and fighting the user.
+  useEffect(() => {
+    if (urlQuery !== lastPushed.current) {
+      lastPushed.current = urlQuery
+      setValue(urlQuery)
+    }
+  }, [urlQuery])
 
   useEffect(() => {
     if (value === urlQuery) return
@@ -26,6 +36,9 @@ export function ChallengeSearch() {
       if (value.trim()) params.set('q', value)
       else params.delete('q')
       const qs = params.toString()
+      // Whitespace-only deletes `q`, so the resulting urlQuery is '' — record
+      // that, not the raw value, or the sync-back effect will misfire.
+      lastPushed.current = value.trim() ? value : ''
       startTransition(() => {
         router.replace(qs ? `/app/challenges?${qs}` : '/app/challenges', { scroll: false })
       })

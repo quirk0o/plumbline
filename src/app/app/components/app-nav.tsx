@@ -37,6 +37,12 @@ export function AppNav({ name, email, image }: AppNavProps) {
           Dashboard
         </Link>
         <Link
+          href="/app/challenges"
+          className={`${styles.link} ${isActive('/app/challenges') ? styles.linkActive : ''}`}
+        >
+          Challenges
+        </Link>
+        <Link
           href="/app/settings/packs"
           className={`${styles.link} ${isActive('/app/settings') ? styles.linkActive : ''}`}
         >

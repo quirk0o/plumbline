@@ -108,6 +108,85 @@ For tRPC integration tests, assert on the **procedure's return value and the res
 
 ---
 
+## E2E Tests Cover User Journeys, Not Edge Cases
+
+E2E tests are the slowest, most expensive, and flakiest layer of the trophy. Every E2E test must earn its place by covering a **complete user journey** — a realistic workflow a user walks through start to finish. Granular checks of a single widget behavior belong in component or integration tests, where they are fast and cheap.
+
+> "Think about the high-value interactions users will have with your application. Try to come up with user journeys that define the core value of your product and translate the most important steps of these user journeys into automated end-to-end tests." — [Martin Fowler, The Practical Test Pyramid](https://martinfowler.com/articles/practical-test-pyramid.html)
+
+> "I typically suggest that you have a single 'Arrange' per test, and as many 'Act' and 'Asserts' as necessary for the workflow you're trying to get confidence about." — [Kent C. Dodds, Write fewer, longer tests](https://kentcdodds.com/blog/write-fewer-longer-tests)
+
+### The litmus test
+
+Read the test name. If it describes a **user goal** ("user creates a legacy and records the founder's marriage"), it's an E2E test. If it describes a **widget behavior** ("cancel closes the modal", "dropdown saves on change", "section titles are h2 headings"), it's too granular — push it down to a component test.
+
+### Rules
+
+1. **One test per journey: single Arrange, many Act/Assert.** Drive a full workflow with multiple interactions and checks. The old "one assertion per test" dogma does not apply at this level — modern runners pinpoint the exact failing assertion regardless.
+2. **Structure journeys with `test.step()`.** Each named step shows up as a collapsible node in the HTML report and trace, so a long test stays readable and failures point at the exact phase.
+3. **Push edge cases down the trophy.** Validation errors, cancel paths, empty states, combobox contents, heading levels, and ARIA landmarks are component-test material. Don't re-test at the E2E level what a lower layer already covers.
+4. **Tests stay independent of each other.** "Fewer, longer" means each test is a self-contained journey — not a `describe.serial()` chain where one test's output feeds the next, and not one mega-test gluing unrelated flows together.
+5. **Expensive setup repeated per micro-test is the smell to watch for.** If every test in a file replays the same multi-step helper (`createLegacyWithTwoSims(page)`) just to make one small assertion, those tests want to be one journey.
+
+### Example
+
+**❌ Granular widget tests — each replays the full setup to check one thing**
+
+```ts
+test('add relationship modal opens and shows available sims in the combobox', async ({ page }) => {
+  await createLegacyWithTwoSims(page)   // ~10 steps of setup
+  await page.getByRole('button', { name: /^\+ Add$/ }).click()
+  await expect(page.getByText('Mortimer Goth')).toBeVisible()
+})
+
+test('cancel closes the modal without adding a relationship', async ({ page }) => {
+  await createLegacyWithTwoSims(page)   // same ~10 steps again
+  await page.getByRole('button', { name: /^\+ Add$/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Add relationship' })
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dialog).not.toBeVisible()
+})
+```
+
+The cancel behavior, combobox contents, and dialog open/close are component-level concerns — test them in a jsdom test of the dialog component with mocked tRPC.
+
+**✅ One journey test — the full scenario a user actually performs**
+
+```ts
+test('user records relationships for a sim', async ({ page }) => {
+  await test.step('create a legacy with two sims', async () => {
+    await createLegacyWithTwoSims(page)
+  })
+
+  await test.step('add a partner relationship', async () => {
+    await page.getByRole('button', { name: /^\+ Add$/ }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add relationship' })
+    await page.getByRole('button', { name: 'Select sim' }).click()
+    await page.getByText('Mortimer Goth').click()
+    await dialog.getByRole('button', { name: 'Add' }).click()
+    await expect(dialog).not.toBeVisible()
+  })
+
+  await test.step('verify the relationship persists', async () => {
+    await page.reload()
+    await expect(page.getByText('Mortimer Goth')).toBeVisible()
+  })
+})
+```
+
+### Where the granular checks go instead
+
+| Granular concern | Right home |
+|---|---|
+| Cancel/escape closes a dialog | Component test of the dialog |
+| Validation error on empty field | Component test of the form |
+| Dropdown options, combobox contents | Component test |
+| Heading levels, ARIA landmarks | Component test (or an axe a11y check) |
+| Auth guard, ownership checks | tRPC integration test |
+| Data persists correctly | tRPC integration test (or one assert inside a journey) |
+
+---
+
 ## Running Tests
 
 ```bash
@@ -170,14 +249,9 @@ DATABASE_URL="postgresql://..." npm test
 
 ### E2E Tests (Playwright, full stack required)
 
-End-to-end tests using Playwright that exercise the full stack — Next.js server, database, auth flow. They run against the dev server.
+End-to-end tests using Playwright that exercise the full stack — Next.js server, database, auth flow. They run against the dev server. Each test covers a **complete user journey** (see [E2E Tests Cover User Journeys, Not Edge Cases](#e2e-tests-cover-user-journeys-not-edge-cases)).
 
-**Location:** `e2e/`
-
-**What's tested:**
-- `e2e/auth.spec.ts` — full sign-in user flow: unauthenticated redirect → sign-in page → email submission → inbox confirmation
-- `e2e/packs.spec.ts` — authenticated pack management flow: onboarding page → pack grid → toggle ownership
-- `e2e/legacy-wizard.spec.ts` — legacy creation wizard: name + description → founder sim (with and without) → validation → back navigation
+**Location:** `e2e/` — one spec file per feature area, one test per journey through it. Examples: `auth.spec.ts` (unauthenticated redirect → sign-in → email submission → inbox confirmation), `packs.spec.ts` (onboarding page → browse grid → toggle ownership), `legacy-wizard.spec.ts` (create legacy with founder, end to end).
 
 **Authentication setup:** The `setup/auth.setup.ts` project creates a test user and saves session cookies to `e2e/.auth/user.json`. The `packs.spec.ts` tests reuse this session. Teardown deletes the test user.
 
@@ -282,13 +356,25 @@ Mock external dependencies (tRPC, Next.js router, NextAuth) with `vi.mock(...)`.
 
 ### New user flow → add `e2e/feature.spec.ts`
 
+Write one journey test per scenario, structured with `test.step()`. Before adding a new E2E test, check it passes the [litmus test](#the-litmus-test): does the name describe a user goal, or a widget behavior?
+
 ```ts
 import { test, expect } from '@playwright/test'
 
-test('user can do the thing', async ({ page }) => {
-  await page.goto('/app/feature')
-  await page.getByRole('button', { name: 'Do thing' }).click()
-  await expect(page.getByText('Thing done')).toBeVisible()
+test('user completes the feature workflow', async ({ page }) => {
+  await test.step('navigate to the feature', async () => {
+    await page.goto('/app/feature')
+  })
+
+  await test.step('do the thing', async () => {
+    await page.getByRole('button', { name: 'Do thing' }).click()
+    await expect(page.getByText('Thing done')).toBeVisible()
+  })
+
+  await test.step('verify it persisted', async () => {
+    await page.reload()
+    await expect(page.getByText('Thing done')).toBeVisible()
+  })
 })
 ```
 

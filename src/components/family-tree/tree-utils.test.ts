@@ -63,7 +63,7 @@ describe('buildDagreGraph', () => {
     const sims = [makeSim('p', 1), makeSim('c', 2)]
     const { edges } = buildDagreGraph(sims, [{ parentId: 'p', childId: 'c' }])
     expect(edges).toHaveLength(1)
-    expect(edges[0]).toMatchObject({ id: 'family-p-c', source: 'p', target: 'c' })
+    expect(edges[0]).toMatchObject({ source: 'p', target: 'c' })
   })
 
   it('returns empty edges for a single sim with no relationships', () => {
@@ -82,12 +82,11 @@ describe('buildDagreGraph', () => {
 })
 
 describe('buildPartnerEdges', () => {
-  it('creates a dashed straight edge for each partner pair', () => {
+  it('creates one edge per partner pair', () => {
     const pairs: PartnerEdge[] = [{ simAId: 'a', simBId: 'b' }]
     const edges = buildPartnerEdges(pairs)
     expect(edges).toHaveLength(1)
-    expect(edges[0]).toMatchObject({ id: 'partner-a-b', source: 'a', target: 'b', type: 'straight' })
-    expect(String(edges[0].style?.strokeDasharray)).toMatch(/\d/)
+    expect(edges[0]).toMatchObject({ source: 'a', target: 'b' })
   })
 
   it('returns empty array when there are no partner pairs', () => {

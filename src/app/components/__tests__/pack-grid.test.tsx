@@ -78,8 +78,9 @@ describe('PackGrid', () => {
     const user = userEvent.setup()
     renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
     await user.click(screen.getByRole('button', { name: /City Living/ }))
-    // Optimistic update should flip the state immediately; wait for the mutation
-    // to also settle (invalidation refetch completes) to avoid React teardown errors.
+    // Assert the transient optimistic flip: waitFor's first poll catches
+    // aria-pressed="true" before the invalidation refetch lands (the getAll
+    // mock still reports the pack as not owned, so the settled state reverts).
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /City Living/ })).toHaveAttribute('aria-pressed', 'true')
     )

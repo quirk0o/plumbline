@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CreateSimModal } from '../create-sim-modal'
@@ -28,6 +28,27 @@ vi.mock('../trait-picker', () => ({
 }))
 
 describe('CreateSimModal', () => {
+  beforeEach(() => {
+    // Reset call history AND queued Once-values so tests don't bleed into each other.
+    // clearMocks (vitest.config.ts) clears call counts but does NOT drain mockReturnValueOnce
+    // queues, so we do a full reset here and re-establish the default implementations.
+    mockMutateAsync.mockReset()
+    mockUseMutation.mockReset()
+    mockUseMutation.mockImplementation(() => ({ mutateAsync: mockMutateAsync, isPending: false }))
+    vi.mocked(trpc.traits.getAll.useQuery).mockReset()
+    vi.mocked(trpc.traits.getAll.useQuery).mockImplementation(
+      () => ({ data: [{ id: 't1', name: 'Creative', category: 'HOBBY', conflictsWith: [] }], isLoading: false }) as ReturnType<typeof trpc.traits.getAll.useQuery>
+    )
+    vi.mocked(trpc.aspirations.getAll.useQuery).mockReset()
+    vi.mocked(trpc.aspirations.getAll.useQuery).mockImplementation(
+      () => ({ data: [{ id: 'a1', name: 'Painter Extraordinaire', category: 'CREATIVITY' }], isLoading: false }) as ReturnType<typeof trpc.aspirations.getAll.useQuery>
+    )
+    vi.mocked(trpc.careers.getAll.useQuery).mockReset()
+    vi.mocked(trpc.careers.getAll.useQuery).mockImplementation(
+      () => ({ data: [{ id: 'c1', name: 'Painter', type: 'STANDARD' }], isLoading: false }) as ReturnType<typeof trpc.careers.getAll.useQuery>
+    )
+  })
+
   it('shows loading state while queries are pending', () => {
     vi.mocked(trpc.traits.getAll.useQuery).mockReturnValueOnce({ data: undefined, isLoading: true } as unknown as ReturnType<typeof trpc.traits.getAll.useQuery>)
     render(<CreateSimModal legacyId="leg-1" onCreated={vi.fn()} onClose={vi.fn()} />)

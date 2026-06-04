@@ -20,16 +20,18 @@ describe('TraitPicker', () => {
   })
 
   it('calls onChange with the selected trait id when a trait is clicked', async () => {
+    const user = userEvent.setup()
     const onChange = vi.fn()
     render(<TraitPicker traits={traits} selected={[]} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Neat' }))
+    await user.click(screen.getByRole('button', { name: 'Neat' }))
     expect(onChange).toHaveBeenCalledWith(['neat'])
   })
 
   it('deselects a trait when it is clicked again', async () => {
+    const user = userEvent.setup()
     const onChange = vi.fn()
     render(<TraitPicker traits={traits} selected={['neat']} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Neat' }))
+    await user.click(screen.getByRole('button', { name: 'Neat' }))
     expect(onChange).toHaveBeenCalledWith([])
   })
 
@@ -57,8 +59,9 @@ describe('TraitPicker', () => {
   })
 
   it('filters traits by category tab', async () => {
+    const user = userEvent.setup()
     render(<TraitPicker traits={traits} selected={[]} onChange={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Hobby' }))
+    await user.click(screen.getByRole('button', { name: 'Hobby' }))
     expect(screen.getByRole('button', { name: 'Bookworm' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Neat' })).not.toBeInTheDocument()
   })

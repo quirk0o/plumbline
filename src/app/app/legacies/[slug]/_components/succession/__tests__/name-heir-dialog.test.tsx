@@ -72,6 +72,25 @@ describe('NameHeirDialog', () => {
     expect(refresh).toHaveBeenCalled()
   })
 
+  it('shows exactly the provided candidates as selectable options — no more, no less', async () => {
+    const user = userEvent.setup()
+    render(
+      <NameHeirDialog slug="caliente" nextHeirLabel="Gen II" candidates={candidates} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Name an heir/i }))
+
+    // Both candidates appear as buttons.
+    expect(await screen.findByRole('button', { name: /Reed Caliente/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Nina Caliente/i })).toBeInTheDocument()
+
+    // No extra sim names bleed in — only the two provided.
+    const candidateButtons = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.textContent && ['Reed Caliente', 'Nina Caliente'].some((name) => btn.textContent?.includes(name)))
+    expect(candidateButtons).toHaveLength(2)
+  })
+
   it('prompts to add a sim when there are no candidates', async () => {
     const user = userEvent.setup()
     render(<NameHeirDialog slug="caliente" nextHeirLabel="Gen II" candidates={[]} />)

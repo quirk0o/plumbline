@@ -73,24 +73,27 @@ describe('SimNode', () => {
   })
 
   it('navigates to data.href when the node is clicked', async () => {
+    const user = userEvent.setup()
     render(<SimNode {...makeNodeProps()} />)
-    await userEvent.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button'))
     expect(mockPush).toHaveBeenCalledOnce()
     expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth-dynasty/sims/sim-1')
   })
 
   it('navigates to data.href when Enter is pressed', async () => {
+    const user = userEvent.setup()
     render(<SimNode {...makeNodeProps()} />)
     screen.getByRole('button').focus()
-    await userEvent.keyboard('{Enter}')
+    await user.keyboard('{Enter}')
     expect(mockPush).toHaveBeenCalledOnce()
     expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth-dynasty/sims/sim-1')
   })
 
   it('navigates to data.href when Space is pressed', async () => {
+    const user = userEvent.setup()
     render(<SimNode {...makeNodeProps()} />)
     screen.getByRole('button').focus()
-    await userEvent.keyboard(' ')
+    await user.keyboard(' ')
     expect(mockPush).toHaveBeenCalledOnce()
     expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth-dynasty/sims/sim-1')
   })

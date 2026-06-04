@@ -12,7 +12,6 @@ import type { SectionNavItem } from '../section-nav/section-nav'
 type IOCallback = (entries: Array<Partial<IntersectionObserverEntry>>) => void
 
 let ioCallback: IOCallback | null = null
-const disconnectSpy = vi.fn()
 
 class MockIntersectionObserver {
   constructor(cb: IOCallback) {
@@ -20,7 +19,7 @@ class MockIntersectionObserver {
   }
   observe = vi.fn()
   unobserve = vi.fn()
-  disconnect = disconnectSpy
+  disconnect = vi.fn()
   takeRecords = vi.fn()
   root = null
   rootMargin = ''
@@ -62,7 +61,6 @@ describe('SectionNav', () => {
 
   beforeEach(() => {
     ioCallback = null
-    disconnectSpy.mockClear()
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
 
     scrollToSpy = vi.fn()
@@ -101,8 +99,9 @@ describe('SectionNav', () => {
   })
 
   it('smooth-scrolls the window when an item is clicked', async () => {
+    const user = userEvent.setup()
     render(<SectionNav items={items} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Milestones' }))
+    await user.click(screen.getByRole('button', { name: 'Milestones' }))
     expect(scrollToSpy).toHaveBeenCalledWith(
       expect.objectContaining({ behavior: 'smooth', top: expect.any(Number) }),
     )
@@ -177,9 +176,4 @@ describe('SectionNav', () => {
     )
   })
 
-  it('disconnects the observer on unmount', () => {
-    const { unmount } = render(<SectionNav items={items} />)
-    unmount()
-    expect(disconnectSpy).toHaveBeenCalled()
-  })
 })

@@ -102,8 +102,9 @@ describe('SignInForm', () => {
   })
 
   it('calls signIn("google") with callbackUrl when Google button is clicked', async () => {
+    const user = userEvent.setup()
     render(<SignInForm />)
-    await userEvent.click(screen.getByText('Continue with Google'))
+    await user.click(screen.getByText('Continue with Google'))
     expect(mockSignIn).toHaveBeenCalledWith('google', { callbackUrl: '/app' })
   })
 })

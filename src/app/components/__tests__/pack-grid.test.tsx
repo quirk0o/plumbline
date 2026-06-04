@@ -29,14 +29,6 @@ function mockPacksGetAll(groups: PackGroup[] = [expansionGroup]) {
   )
 }
 
-function mockPacksToggle(response = { isOwned: true }) {
-  server.use(
-    http.post('http://localhost/api/trpc/packs.toggle', () =>
-      HttpResponse.json([{ result: { data: response } }])
-    )
-  )
-}
-
 describe('PackGrid', () => {
   it('renders section label and all pack cards', async () => {
     mockPacksGetAll()
@@ -72,15 +64,31 @@ describe('PackGrid', () => {
     expect(screen.getByRole('button', { name: /Seasons/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('calls the toggle mutation when a card is clicked', async () => {
-    mockPacksGetAll()
-    mockPacksToggle()
+  it('reflects owned state after toggle and subsequent refetch', async () => {
+    // Stateful handler: after the toggle fires, getAll returns City Living as owned.
+    let cityLivingOwned = false
+    server.use(
+      http.get('http://localhost/api/trpc/packs.getAll', () => {
+        const groups: PackGroup[] = [{
+          type: PackType.EXPANSION,
+          packs: [
+            { id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: '🏙️', imageUrl: null, isOwned: cityLivingOwned },
+            { id: 'p2', name: 'Seasons', type: PackType.EXPANSION, icon: '🍂', imageUrl: null, isOwned: true },
+          ],
+        }]
+        return HttpResponse.json([{ result: { data: groups } }])
+      }),
+      http.post('http://localhost/api/trpc/packs.toggle', () => {
+        cityLivingOwned = true
+        return HttpResponse.json([{ result: { data: { isOwned: true } } }])
+      }),
+    )
+
     const user = userEvent.setup()
     renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
     await user.click(screen.getByRole('button', { name: /City Living/ }))
-    // Assert the transient optimistic flip: waitFor's first poll catches
-    // aria-pressed="true" before the invalidation refetch lands (the getAll
-    // mock still reports the pack as not owned, so the settled state reverts).
+
+    // Optimistic update flips immediately; settled refetch agrees — both land on true.
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /City Living/ })).toHaveAttribute('aria-pressed', 'true')
     )

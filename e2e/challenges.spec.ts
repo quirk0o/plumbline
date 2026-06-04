@@ -44,9 +44,15 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  await db.challengeRun.deleteMany({ where: { sourceChallengeId: challengeId } })
+  if (!db) return
+  if (challengeId) {
+    await db.challengeRun.deleteMany({ where: { sourceChallengeId: challengeId } })
+  }
   await db.legacy.deleteMany({ where: { slug: LEGACY_SLUG } })
-  await db.challenge.deleteMany({ where: { id: { in: [challengeId, decoyId] } } })
+  const ids = [challengeId, decoyId].filter((id): id is string => Boolean(id))
+  if (ids.length > 0) {
+    await db.challenge.deleteMany({ where: { id: { in: ids } } })
+  }
   await db.$disconnect()
 })
 
@@ -67,8 +73,8 @@ test('user browses challenges, searches, and starts a run on their legacy', asyn
 
   await test.step('search narrows the list', async () => {
     await page.getByRole('searchbox', { name: 'Search challenges' }).fill(`Decennial Legacy ${STAMP}`)
-    await expect(page.getByRole('heading', { name: DECOY_NAME })).not.toBeVisible()
     await expect(page.getByRole('heading', { name: CHALLENGE_NAME })).toBeVisible()
+    await expect(page.getByRole('heading', { name: DECOY_NAME })).not.toBeVisible()
     await expect(page).toHaveURL(/q=Decennial/)
   })
 

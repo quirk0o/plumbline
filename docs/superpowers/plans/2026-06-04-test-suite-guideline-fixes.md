@@ -967,143 +967,29 @@ git commit -m "test: consolidate jsdom polyfills into shared setup, migrate rema
 
 ---
 
-### Task 10: E2E fixes — hard sleeps, h2 test, networkidle, unscoped assertions, config glob
+### Task 10 (REVISED 2026-06-04): E2E suite — journey consolidation + reliability fixes
 
-**Independent.** E2E runs need PostgreSQL seeded, `.env` present (if working in a worktree, copy the root `.env` in — `AUTH_SECRET` is required), and the Playwright web server starts automatically on port 3737.
+> **Revision note:** Mid-execution, `.claude/rules/testing.md` gained a new section, "E2E Tests Cover User Journeys, Not Edge Cases": every e2e test must cover a complete user journey (single Arrange, many Act/Assert, structured with `test.step()`); granular widget checks (cancel closes modal, dropdown saves, combobox contents, heading levels, ARIA landmarks) are component-test material and must not be re-tested at the e2e level. This task therefore consolidates the granular specs into journeys while keeping all the originally planned reliability fixes (no hard sleeps, no `networkidle`, scoped assertions, config glob, h2-test deletion).
+
+**Independent.** E2E runs need PostgreSQL seeded, `.env` present in the worktree, Playwright web server on port 3737 (automatic).
 
 **Files:**
-- Modify: `e2e/sim-detail.spec.ts`
-- Modify: `e2e/add-relationship-modal.spec.ts`
-- Modify: `e2e/packs.spec.ts`
-- Modify: `e2e/legacy-wizard.spec.ts`
-- Modify: `playwright.config.ts`
-- Possibly modify: the sim-detail page component (to add `data-testid="relationships"` — see Step 3)
+- Rewrite: `e2e/sim-detail.spec.ts` → one journey test
+- Rewrite: `e2e/add-relationship-modal.spec.ts` → one journey test
+- Modify: `e2e/legacy-wizard.spec.ts` → fold validation/back-nav micro-tests into the two existing creation journeys as steps; remove `networkidle`
+- Modify: `e2e/packs.spec.ts` → remove `networkidle` only (already a single journey)
+- Modify: `playwright.config.ts` → glob authed specs with `testIgnore` for auth.spec.ts
+- Possibly modify: the sim-detail page component (add `data-testid="relationships"` if no handle exists)
+- Untouched: `e2e/auth.spec.ts`, `e2e/add-sims-to-legacy.spec.ts`
 
-- [ ] **Step 1: `sim-detail.spec.ts` — replace the two hard sleeps with response waits**
+**Consolidation outcomes:**
 
-Test `'editing first name inline saves on blur'` (lines 36–43) — replace:
+1. `sim-detail.spec.ts` becomes ONE journey, `'user reviews and edits a sim's details'`, with steps: create legacy with founder → open the sim from the roster (portrait link, URL + prefilled name asserted) → edit first name inline (waitForResponse on `sims.update`, NOT waitForTimeout) → change life stage (same response wait) → reload once, assert both edits persisted → open mark-as-deceased (assert Cause of death + Confirm visible) → navigate back via the breadcrumb legacy link (URL asserted). DELETED OUTRIGHT: `'section titles are h2 headings'` (user decision) and `'breadcrumb is a navigation landmark'` (ARIA-landmark checks are component-test material per the new rule; the breadcrumb's behavior is exercised by clicking it in the journey).
+2. `add-relationship-modal.spec.ts` becomes ONE journey, `'user records relationships for a sim'` (the guideline's own example), with steps: create legacy with two sims → add a partner relationship (combobox option role-scoped; dialog-scoped Add) → add a family relationship → reload, assert both persist within the relationships region (`getByTestId('relationships')` — add the testid to the page component if missing). DELETED OUTRIGHT: the combobox-contents test and the cancel test (both covered by the component tests `add-relationship-modal.test.tsx` / `dialog.test.tsx` — verify that coverage exists before deleting; report if it doesn't).
+3. `legacy-wizard.spec.ts` keeps its two journeys (`with founder` / `skip founder`) but absorbs the three micro-tests as steps: the with-founder journey gains "submit empty name → see 'Legacy name is required'" before filling the name, and "submit empty founder → see required-field errors" + "back → name intact → continue" before filling the founder. All current assertion strings preserved. The three standalone micro-tests are deleted. Both journeys structured with `test.step()`.
+4. `playwright.config.ts` chromium project: `testMatch: '**/*.spec.ts'` + `testIgnore: '**/auth.spec.ts'` (new authed specs stop being silently skipped).
 
-```ts
-const firstNameInput = page.getByLabel('First name')
-await firstNameInput.fill('Nova')
-await firstNameInput.blur()
-
-// Wait for the mutation to settle then reload to confirm persistence
-await page.waitForTimeout(500)
-await page.reload()
-await expect(page.getByLabel('First name')).toHaveValue('Nova')
-```
-
-with:
-
-```ts
-const firstNameInput = page.getByLabel('First name')
-await firstNameInput.fill('Nova')
-// Register the wait BEFORE the blur that fires the mutation.
-const saved = page.waitForResponse(
-  (r) => r.url().includes('sims.update') && r.ok(),
-)
-await firstNameInput.blur()
-await saved
-await page.reload()
-await expect(page.getByLabel('First name')).toHaveValue('Nova')
-```
-
-Test `'life stage dropdown saves on change'` (lines 54–58) — replace:
-
-```ts
-await page.getByRole('button', { name: 'Young Adult' }).click()
-await page.getByRole('option', { name: 'Elder' }).click()
-await page.waitForTimeout(500)
-await page.reload()
-await expect(page.getByRole('button', { name: 'Elder' })).toBeVisible()
-```
-
-with:
-
-```ts
-await page.getByRole('button', { name: 'Young Adult' }).click()
-const saved = page.waitForResponse(
-  (r) => r.url().includes('sims.update') && r.ok(),
-)
-await page.getByRole('option', { name: 'Elder' }).click()
-await saved
-await page.reload()
-await expect(page.getByRole('button', { name: 'Elder' })).toBeVisible()
-```
-
-(tRPC batches requests at `/api/trpc/<proc>?batch=1`, so `url().includes('sims.update')` matches. Verify the actual procedure path in a trace/run if the wait times out; adjust the substring to what the network tab shows, e.g. a batched multi-proc URL still contains `sims.update`.)
-
-- [ ] **Step 2: `sim-detail.spec.ts` — delete the heading-level test (lines 87–97)**
-
-Delete the whole test (user decision: remove, don't relax):
-
-```ts
-test('section titles are h2 headings', async ({ page }) => { ... })
-```
-
-- [ ] **Step 3: `add-relationship-modal.spec.ts` — scope the post-add assertions**
-
-The two `await expect(page.getByText('Mortimer Goth')).toBeVisible()` after the dialog closes (lines 58 and 76) pass even if only a stale combobox option is on the page. Scope them to the relationships region. First check the sim-detail page component for an existing handle on the Relationships section (`grep -rn "Relationships" src/app/app/legacies/`); if none exists, add `data-testid="relationships"` to the section element that wraps the relationships list in that component (last-resort testid is the documented pattern for container scoping). Then replace both occurrences:
-
-```ts
-await expect(dialog).not.toBeVisible()
-await expect(
-  page.getByTestId('relationships').getByText('Mortimer Goth'),
-).toBeVisible()
-```
-
-Also tighten the combobox-open assertions (lines 41–42) to option roles:
-
-```ts
-await page.getByRole('button', { name: 'Select sim' }).click()
-await expect(page.getByRole('option', { name: /Mortimer Goth/ })).toBeVisible()
-await expect(page.getByRole('option', { name: /\+ Create new sim…/ })).toBeVisible()
-```
-
-And the selections at lines 53 and 71: `await page.getByRole('option', { name: /Mortimer Goth/ }).click()`. (If the combobox items don't expose `role="option"`, check the rendered markup first and scope with the listbox role or the dialog instead — do not leave the page-global `getByText`.)
-
-- [ ] **Step 4: Remove the redundant `networkidle` waits**
-
-Delete `await page.waitForLoadState('networkidle')` from:
-- `e2e/sim-detail.spec.ts:5`
-- `e2e/add-relationship-modal.spec.ts:5`
-- `e2e/packs.spec.ts:5`
-- `e2e/legacy-wizard.spec.ts:5`
-
-Each is followed by web-first assertions/actions that auto-wait. In `legacy-wizard.spec.ts` the next action is a `getByRole('link').click()` with auto-wait; in `packs.spec.ts` the next line asserts the heading is visible. No replacement needed.
-
-- [ ] **Step 5: `playwright.config.ts` — stop hand-listing authenticated specs**
-
-A new authenticated spec currently silently never runs unless added to the `testMatch` array. Replace the `chromium` project (lines 21–26):
-
-```ts
-{
-  name: 'chromium',
-  testMatch: '**/*.spec.ts',
-  testIgnore: '**/auth.spec.ts',
-  use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
-  dependencies: ['setup'],
-},
-```
-
-(`setup`/`teardown` projects match `*.ts` under their own dirs, not `*.spec.ts`, so they're unaffected; `auth.spec.ts` stays exclusive to `chromium-unauthed`.)
-
-- [ ] **Step 6: Run the e2e suite**
-
-Run: `npm run test:e2e`
-Expected: all specs pass, including both previously-sleeping sim-detail tests, with no `waitForTimeout` left: `grep -rn "waitForTimeout\|networkidle" e2e/` returns nothing.
-
-- [ ] **Step 7: Validate and commit**
-
-Run: `npx tsc --noEmit && npm run lint`
-
-```bash
-git add e2e/sim-detail.spec.ts e2e/add-relationship-modal.spec.ts e2e/packs.spec.ts e2e/legacy-wizard.spec.ts playwright.config.ts
-# plus the component file if a relationships testid was added:
-# git add <sim-detail page component path>
-git commit -m "test(e2e): replace hard sleeps with response waits, drop networkidle and heading-level test, scope post-add assertions, glob authed specs"
-```
+Validation: `npm run test:e2e` green; `grep -rn "waitForTimeout|networkidle" e2e/` empty; `npx tsc --noEmit && npm run lint` clean. Conventional commit staging exactly the changed files.
 
 ---
 

@@ -85,7 +85,7 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
           <SkillEditor sim={sim} allSkills={skills} />
         </section>
 
-        <section className={styles.section}>
+        <section className={styles.section} data-testid="relationships">
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionLabel}>Relationships</h2>
             <div className={styles.sectionLine} />

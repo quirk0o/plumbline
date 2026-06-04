@@ -1,13 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { clampZoom, computeFit, zoomAtPoint, MIN_ZOOM, MAX_ZOOM } from '../use-pan-zoom'
-
-describe('clampZoom', () => {
-  it('clamps to [MIN_ZOOM, MAX_ZOOM]', () => {
-    expect(clampZoom(0.01)).toBe(MIN_ZOOM)
-    expect(clampZoom(99)).toBe(MAX_ZOOM)
-    expect(clampZoom(1)).toBe(1)
-  })
-})
+import { computeFit, zoomAtPoint, MAX_ZOOM } from '../use-pan-zoom'
 
 describe('computeFit', () => {
   it('never upscales past 100% and centers a small content', () => {

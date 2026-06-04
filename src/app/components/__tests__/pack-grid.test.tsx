@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { PackType } from '@prisma/client'
 import { server } from '@/test/msw-server'
@@ -23,15 +24,7 @@ const expansionGroup: PackGroup = {
 function mockPacksGetAll(groups: PackGroup[] = [expansionGroup]) {
   server.use(
     http.get('http://localhost/api/trpc/packs.getAll', () =>
-      HttpResponse.json([{ result: { data: { json: groups } } }])
-    )
-  )
-}
-
-function mockPacksToggle(response = { isOwned: true }) {
-  server.use(
-    http.post('http://localhost/api/trpc/packs.toggle', () =>
-      HttpResponse.json([{ result: { data: { json: response } } }])
+      HttpResponse.json([{ result: { data: groups } }])
     )
   )
 }
@@ -71,12 +64,31 @@ describe('PackGrid', () => {
     expect(screen.getByRole('button', { name: /Seasons/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('calls the toggle mutation when a card is clicked', async () => {
-    mockPacksGetAll()
-    mockPacksToggle()
+  it('reflects owned state after toggle and subsequent refetch', async () => {
+    // Stateful handler: after the toggle fires, getAll returns City Living as owned.
+    let cityLivingOwned = false
+    server.use(
+      http.get('http://localhost/api/trpc/packs.getAll', () => {
+        const groups: PackGroup[] = [{
+          type: PackType.EXPANSION,
+          packs: [
+            { id: 'p1', name: 'City Living', type: PackType.EXPANSION, icon: '🏙️', imageUrl: null, isOwned: cityLivingOwned },
+            { id: 'p2', name: 'Seasons', type: PackType.EXPANSION, icon: '🍂', imageUrl: null, isOwned: true },
+          ],
+        }]
+        return HttpResponse.json([{ result: { data: groups } }])
+      }),
+      http.post('http://localhost/api/trpc/packs.toggle', () => {
+        cityLivingOwned = true
+        return HttpResponse.json([{ result: { data: { isOwned: true } } }])
+      }),
+    )
+
+    const user = userEvent.setup()
     renderWithTRPC(<PackGrid initialGroups={[expansionGroup]} />)
-    fireEvent.click(screen.getByRole('button', { name: /City Living/ }))
-    // Optimistic update should flip the state immediately
+    await user.click(screen.getByRole('button', { name: /City Living/ }))
+
+    // Optimistic update flips immediately; settled refetch agrees — both land on true.
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /City Living/ })).toHaveAttribute('aria-pressed', 'true')
     )

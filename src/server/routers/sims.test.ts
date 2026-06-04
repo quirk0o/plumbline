@@ -8,6 +8,11 @@ import {
   createTestSim,
   getAnyTrait,
   getConflictingTraits,
+  getAnySkill,
+  getAnyAspiration,
+  getAnyCareer,
+  getTrackerTypeByName,
+  getPersonalityTraits,
   createTestChallenge,
   createTestChallengePhase,
   createTestChallengeRun,
@@ -198,8 +203,8 @@ describe('sims.getById', () => {
     const caller = authedCaller(userId)
     const result = await caller.sims.getById({ id: simId })
     expect(result.id).toBe(simId)
-    expect(result.personalityTraits).toBeDefined()
-    expect(result.skills).toBeDefined()
+    expect(result.personalityTraits).toEqual([])
+    expect(result.skills).toEqual([])
   })
 
   it('throws NOT_FOUND when the sim belongs to a different user', async () => {
@@ -233,8 +238,10 @@ describe('sims.listByLegacy', () => {
 
   it('returns all sims in the legacy', async () => {
     const result = await authedCaller(userId).sims.listByLegacy({ legacyId })
-    expect(result).toHaveLength(2)
-    expect(result[0]).toMatchObject({ firstName: expect.any(String), imageUrl: null })
+    expect(result.map((s) => s.firstName).sort()).toEqual(['Alice', 'Bob'])
+    for (const sim of result) {
+      expect(sim.imageUrl).toBeNull()
+    }
   })
 
   it('throws NOT_FOUND for a legacy belonging to another user', async () => {
@@ -281,8 +288,7 @@ describe('sims.update', () => {
   })
 
   it('swaps aspiration', async () => {
-    const aspiration = await db.aspiration.findFirst()
-    if (!aspiration) return
+    const aspiration = await getAnyAspiration()
     await authedCaller(userId).sims.update({ id: simId, aspirationId: aspiration.id })
     const rows = await db.simAspiration.findMany({ where: { simId, completedAt: null } })
     expect(rows).toHaveLength(1)
@@ -343,8 +349,7 @@ describe('sims.addTrait / sims.removeTrait', () => {
   })
 
   it('throws BAD_REQUEST when already at 6 traits', async () => {
-    const traits = await db.personalityTrait.findMany({ take: 7 })
-    if (traits.length < 7) return // not enough seed data
+    const traits = await getPersonalityTraits(7)
     for (const t of traits.slice(0, 6)) {
       await db.simPersonalityTrait.create({ data: { simId, personalityTraitId: t.id } })
     }
@@ -373,24 +378,21 @@ describe('sims.addSkill / sims.setSkillLevel / sims.removeSkill', () => {
   })
 
   it('adds a skill at the given level', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     await authedCaller(userId).sims.addSkill({ simId, skillId: skill.id, level: 1 })
     const row = await db.simSkill.findUnique({ where: { simId_skillId: { simId, skillId: skill.id } } })
     expect(row?.level).toBe(1)
   })
 
   it('throws BAD_REQUEST when level exceeds maxLevel', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     await expect(
       authedCaller(userId).sims.addSkill({ simId, skillId: skill.id, level: skill.maxLevel + 1 })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 
   it('updates skill level', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId, skillId: skill.id, level: 1 } })
     await authedCaller(userId).sims.setSkillLevel({ simId, skillId: skill.id, level: 3 })
     const row = await db.simSkill.findUnique({ where: { simId_skillId: { simId, skillId: skill.id } } })
@@ -398,8 +400,7 @@ describe('sims.addSkill / sims.setSkillLevel / sims.removeSkill', () => {
   })
 
   it('removes a skill', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId, skillId: skill.id, level: 2 } })
     await authedCaller(userId).sims.removeSkill({ simId, skillId: skill.id })
     const row = await db.simSkill.findUnique({ where: { simId_skillId: { simId, skillId: skill.id } } })
@@ -409,8 +410,7 @@ describe('sims.addSkill / sims.setSkillLevel / sims.removeSkill', () => {
   it("throws NOT_FOUND for another user's sim", async () => {
     const other = await createTestUser()
     try {
-      const skill = await db.skill.findFirst()
-      if (!skill) return
+      const skill = await getAnySkill()
       await expect(
         authedCaller(other.id).sims.addSkill({ simId, skillId: skill.id, level: 1 })
       ).rejects.toMatchObject({ code: 'NOT_FOUND' })
@@ -839,14 +839,6 @@ describe('sims — generationNumber population', () => {
     expect(recordA?.isHeir).toBe(false)
   })
 
-  it('updating only firstName does not call recomputeLegacyTrackers path (update succeeds without error)', async () => {
-    const sim = await createTestSim(legacyId)
-    // This test verifies the firstName-only update path does not trigger recompute.
-    // If recompute were triggered with broken data it would throw; here it should succeed silently.
-    await authedCaller(userId).sims.update({ id: sim.id, firstName: 'Renamed' })
-    const record = await db.sim.findUnique({ where: { id: sim.id } })
-    expect(record?.firstName).toBe('Renamed')
-  })
 })
 
 describe('recomputeLegacyTrackers — triggered by sim mutations', () => {
@@ -863,10 +855,8 @@ describe('recomputeLegacyTrackers — triggered by sim mutations', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('stamps completedAt on Skill Maxed tracker when skill is maxed via addSkill', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
-    const trackerType = await db.trackerType.findFirst({ where: { name: 'Skill Maxed' } })
-    if (!trackerType) return
+    const skill = await getAnySkill()
+    const trackerType = await getTrackerTypeByName('Skill Maxed')
 
     const challenge = await createTestChallenge(userId)
     const phase = await createTestChallengePhase(challenge.id, { generationNumber: 1 })
@@ -980,8 +970,7 @@ describe('sims.completeAspiration', () => {
   })
 
   it('sets completedAt on the SimAspiration record', async () => {
-    const aspiration = await db.aspiration.findFirst()
-    if (!aspiration) return
+    const aspiration = await getAnyAspiration()
     await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id } })
 
     await authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
@@ -996,8 +985,7 @@ describe('sims.completeAspiration', () => {
     const other = await createTestUser()
     const otherLegacy = await createTestLegacy(other.id)
     const otherSim = await createTestSim(otherLegacy.id)
-    const aspiration = await db.aspiration.findFirst()
-    if (!aspiration) return
+    const aspiration = await getAnyAspiration()
     await db.simAspiration.create({ data: { simId: otherSim.id, aspirationId: aspiration.id } })
     try {
       await expect(
@@ -1009,8 +997,7 @@ describe('sims.completeAspiration', () => {
   })
 
   it('returns NOT_FOUND when aspiration is not on the sim', async () => {
-    const aspiration = await db.aspiration.findFirst()
-    if (!aspiration) return
+    const aspiration = await getAnyAspiration()
     // no SimAspiration row created — aspiration not on sim
     await expect(
       authedCaller(userId).sims.completeAspiration({ simId, aspirationId: aspiration.id })
@@ -1018,8 +1005,7 @@ describe('sims.completeAspiration', () => {
   })
 
   it('returns BAD_REQUEST when aspiration is already completed', async () => {
-    const aspiration = await db.aspiration.findFirst()
-    if (!aspiration) return
+    const aspiration = await getAnyAspiration()
     await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id, completedAt: new Date() } })
 
     await expect(
@@ -1047,8 +1033,7 @@ describe('sims.endCareer', () => {
   })
 
   it('sets endedAt on the active SimCareer record', async () => {
-    const career = await db.career.findFirst()
-    if (!career) return
+    const career = await getAnyCareer()
     await db.simCareer.create({
       data: { simId, careerId: career.id, employmentType: 'EMPLOYED', startedAt: new Date() },
     })

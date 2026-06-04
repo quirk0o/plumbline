@@ -16,6 +16,22 @@ if (typeof ResizeObserver === 'undefined') {
   }
 }
 
+// jsdom does not implement matchMedia; Radix and reduced-motion checks touch it.
+// Default to "no media query matches" (motion allowed, desktop).
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = (query: string): MediaQueryList =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList
+}
+
 // jsdom does not implement the Pointer Capture API; Radix Dialog's dismissable
 // layer touches it. No-op it so modal tests don't throw.
 if (typeof Element !== 'undefined' && !Element.prototype.hasPointerCapture) {

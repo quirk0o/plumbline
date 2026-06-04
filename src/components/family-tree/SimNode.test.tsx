@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { SimNode } from './SimNode'
 import type { SimNodeType } from './SimNode'
 
@@ -71,36 +72,39 @@ describe('SimNode', () => {
     expect(screen.getByText('?')).toBeInTheDocument()
   })
 
-  it('navigates to data.href when the node is clicked', () => {
+  it('navigates to data.href when the node is clicked', async () => {
+    const user = userEvent.setup()
     render(<SimNode {...makeNodeProps()} />)
-    fireEvent.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button'))
     expect(mockPush).toHaveBeenCalledOnce()
     expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth-dynasty/sims/sim-1')
   })
 
-  it('navigates to data.href when Enter is pressed', () => {
+  it('navigates to data.href when Enter is pressed', async () => {
+    const user = userEvent.setup()
     render(<SimNode {...makeNodeProps()} />)
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' })
+    screen.getByRole('button').focus()
+    await user.keyboard('{Enter}')
     expect(mockPush).toHaveBeenCalledOnce()
     expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth-dynasty/sims/sim-1')
   })
 
-  it('navigates to data.href when Space is pressed', () => {
+  it('navigates to data.href when Space is pressed', async () => {
+    const user = userEvent.setup()
     render(<SimNode {...makeNodeProps()} />)
-    fireEvent.keyDown(screen.getByRole('button'), { key: ' ' })
+    screen.getByRole('button').focus()
+    await user.keyboard(' ')
     expect(mockPush).toHaveBeenCalledOnce()
     expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth-dynasty/sims/sim-1')
   })
 
-  it('applies focused CSS class when data.isFocused is true', () => {
-    const { container } = render(<SimNode {...makeNodeProps({ isFocused: true })} />)
-    const node = container.querySelector('[role="button"]')
-    expect(node?.className).toMatch(/focused/)
+  it('marks the node as current when data.isFocused is true', () => {
+    render(<SimNode {...makeNodeProps({ isFocused: true })} />)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-current', 'location')
   })
 
-  it('does not apply focused CSS class when data.isFocused is false', () => {
-    const { container } = render(<SimNode {...makeNodeProps({ isFocused: false })} />)
-    const node = container.querySelector('[role="button"]')
-    expect(node?.className).not.toMatch(/focused/)
+  it('does not mark the node as current when data.isFocused is false', () => {
+    render(<SimNode {...makeNodeProps({ isFocused: false })} />)
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-current')
   })
 })

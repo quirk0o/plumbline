@@ -67,6 +67,7 @@ export function CrestNode({
   return (
     <g
       data-tree-node
+      data-dimmed={isDimmed ? '' : undefined}
       transform={`translate(${x}, ${y})`}
       className={onSelect ? styles.node : undefined}
       role={onSelect ? 'button' : undefined}

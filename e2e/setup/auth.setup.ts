@@ -21,10 +21,7 @@ setup('authenticate', async ({ request }) => {
     },
   })
 
-  console.log('credentials POST status:', res.status())
-  console.log('credentials POST url:', res.url())
   const body = await res.text()
-  console.log('credentials POST body:', body.slice(0, 200))
 
   await request.storageState({ path: AUTH_FILE })
 
@@ -33,6 +30,9 @@ setup('authenticate', async ({ request }) => {
     c.name.includes('session-token')
   )
   if (!hasSession) {
+    console.log('credentials POST status:', res.status())
+    console.log('credentials POST url:', res.url())
+    console.log('credentials POST body:', body.slice(0, 200))
     throw new Error(
       'Auth setup failed: no session cookie found. ' +
       'Ensure the dev server started with AUTH_TEST_MODE=true.'

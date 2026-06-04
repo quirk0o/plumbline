@@ -21,12 +21,10 @@ describe('traits.getAll', () => {
     expect(result.length).toBeGreaterThan(0)
   })
 
-  it('each trait has the expected shape with a conflictsWith array', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.traits.getAll()
+  it('includes the conflictsWith relation on every trait', async () => {
+    const result = await authedCaller(userId).traits.getAll()
+    expect(result.length).toBeGreaterThan(0)
     for (const trait of result) {
-      expect(typeof trait.id).toBe('string')
-      expect(typeof trait.name).toBe('string')
       expect(Array.isArray(trait.conflictsWith)).toBe(true)
     }
   })

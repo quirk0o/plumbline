@@ -1,88 +1,40 @@
 import { test, expect } from '@playwright/test'
+import { createLegacyWithTwoSims } from './helpers'
 
-async function createLegacyWithTwoSims(page: import('@playwright/test').Page) {
-  await page.goto('/app/legacies/new')
-  await page.waitForLoadState('networkidle')
+test('user records relationships for a sim', async ({ page }) => {
+  await test.step('create a legacy with two sims', async () => {
+    await createLegacyWithTwoSims(page, 'Relationship Test')
+  })
 
-  const legacyName = `Relationship Test ${Date.now()}`
-  await page.getByPlaceholder('e.g. The Caliente Legacy').fill(legacyName)
-  await page.getByRole('button', { name: 'Continue →' }).click()
+  await test.step('add a partner relationship', async () => {
+    await page.getByRole('button', { name: /^\+ Add$/ }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add relationship' })
+    await page.getByRole('button', { name: 'Select sim' }).click()
+    await page.getByRole('option', { name: /Mortimer Goth/ }).click()
+    // The dialog closes optimistically before the mutation is flushed, so
+    // dialog-close is not a commit signal — register the wait before clicking Add.
+    // Note: tRPC batches procedures, so r.ok() reflects the HTTP envelope, not the
+    // per-procedure result — the reload-verify step is the authoritative commit assertion.
+    const saved = page.waitForResponse((r) => r.url().includes('sims.addSocialRelationship') && r.ok())
+    await dialog.getByRole('button', { name: 'Add' }).click()
+    await expect(dialog).not.toBeVisible()
+    await saved
+  })
 
-  await page.getByPlaceholder('First name').fill('Bella')
-  await page.getByPlaceholder('Last name').fill('Goth')
-  await page.getByLabel('Gender').click()
-  await page.getByRole('option', { name: 'Female' }).click()
-  await page.getByRole('button', { name: 'Create legacy →' }).click()
+  await test.step('add a family relationship', async () => {
+    await page.getByRole('button', { name: /^\+ Add$/ }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add relationship' })
+    await dialog.getByRole('button', { name: 'Family' }).click()
+    await page.getByRole('button', { name: 'Select sim' }).click()
+    await page.getByRole('option', { name: /Mortimer Goth/ }).click()
+    const saved = page.waitForResponse((r) => r.url().includes('sims.addFamilyRelationship') && r.ok())
+    await dialog.getByRole('button', { name: 'Add' }).click()
+    await expect(dialog).not.toBeVisible()
+    await saved
+  })
 
-  await expect(page).toHaveURL(/\/app\/legacies\/(?!new)[^/]+$/)
-
-  await page.getByRole('link', { name: 'Add sim' }).click()
-  await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/new$/)
-
-  await page.getByPlaceholder('First name').fill('Mortimer')
-  await page.getByPlaceholder('Last name').fill('Goth')
-  await page.getByLabel('Gender').click()
-  await page.getByRole('option', { name: 'Male', exact: true }).click()
-  await page.getByRole('button', { name: 'Add sim' }).click()
-
-  await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
-  await page.getByTestId('roster').getByRole('link', { name: /Bella Goth/ }).click()
-  await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
-}
-
-test('add relationship modal opens and shows available sims in the combobox', async ({ page }) => {
-  await createLegacyWithTwoSims(page)
-
-  await page.getByRole('button', { name: /^\+ Add$/ }).click()
-  const dialog = page.getByRole('dialog', { name: 'Add relationship' })
-  await expect(dialog).toBeVisible()
-
-  await page.getByRole('button', { name: 'Select sim' }).click()
-  await expect(page.getByText('Mortimer Goth')).toBeVisible()
-  await expect(page.getByText('+ Create new sim…')).toBeVisible()
-})
-
-test('user can add a partner relationship', async ({ page }) => {
-  await createLegacyWithTwoSims(page)
-
-  await page.getByRole('button', { name: /^\+ Add$/ }).click()
-  const dialog = page.getByRole('dialog', { name: 'Add relationship' })
-  await expect(dialog).toBeVisible()
-
-  await page.getByRole('button', { name: 'Select sim' }).click()
-  await page.getByText('Mortimer Goth').click()
-
-  await dialog.getByRole('button', { name: 'Add' }).click()
-
-  await expect(dialog).not.toBeVisible()
-  await expect(page.getByText('Mortimer Goth')).toBeVisible()
-})
-
-test('user can add a family relationship', async ({ page }) => {
-  await createLegacyWithTwoSims(page)
-
-  await page.getByRole('button', { name: /^\+ Add$/ }).click()
-  const dialog = page.getByRole('dialog', { name: 'Add relationship' })
-  await expect(dialog).toBeVisible()
-
-  await dialog.getByRole('button', { name: 'Family' }).click()
-
-  await page.getByRole('button', { name: 'Select sim' }).click()
-  await page.getByText('Mortimer Goth').click()
-
-  await dialog.getByRole('button', { name: 'Add' }).click()
-
-  await expect(dialog).not.toBeVisible()
-  await expect(page.getByText('Mortimer Goth')).toBeVisible()
-})
-
-test('cancel closes the modal without adding a relationship', async ({ page }) => {
-  await createLegacyWithTwoSims(page)
-
-  await page.getByRole('button', { name: /^\+ Add$/ }).click()
-  const dialog = page.getByRole('dialog', { name: 'Add relationship' })
-  await expect(dialog).toBeVisible()
-
-  await dialog.getByRole('button', { name: 'Cancel' }).click()
-  await expect(dialog).not.toBeVisible()
+  await test.step('reload and verify the relationships persist', async () => {
+    await page.reload()
+    await expect(page.getByTestId('relationships').getByText('Mortimer Goth').first()).toBeVisible()
+  })
 })

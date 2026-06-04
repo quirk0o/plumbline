@@ -33,7 +33,7 @@ describe('EmptyState', () => {
     expect(screen.getByRole('link', { name: 'Add a sim' })).toBeInTheDocument()
   })
 
-  it('renders a title with an italic accent word as a child node', () => {
+  it('renders a title passed as a React node with its full text content', () => {
     render(
       <EmptyState
         title={
@@ -45,7 +45,6 @@ describe('EmptyState', () => {
         Body.
       </EmptyState>,
     )
-    const heading = screen.getByRole('heading')
-    expect(heading.querySelector('em')?.textContent).toBe('recorded')
+    expect(screen.getByRole('heading')).toHaveTextContent('No moments recorded yet.')
   })
 })

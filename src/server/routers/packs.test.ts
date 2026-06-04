@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { PackType } from '@prisma/client'
 import { authedCaller, unauthCaller } from '@/test/caller'
-import { createTestUser, cleanupUser, getAnyPack } from '@/test/helpers'
+import { createTestUser, cleanupUser, getAnyPack, getBaseGamePack } from '@/test/helpers'
 import { db } from '@/server/db'
 
 describe('packs.getAll', () => {
@@ -84,8 +84,7 @@ describe('packs.toggle', () => {
   })
 
   it('throws NOT_FOUND for a BASE_GAME pack', async () => {
-    const basePack = await db.pack.findFirst({ where: { type: PackType.BASE_GAME } })
-    if (!basePack) return
+    const basePack = await getBaseGamePack()
     const caller = authedCaller(userId)
     await expect(caller.packs.toggle({ packId: basePack.id })).rejects.toMatchObject({
       code: 'NOT_FOUND',
@@ -109,6 +108,8 @@ describe('packs.toggle', () => {
 
   it('throws a validation error for a non-CUID packId', async () => {
     const caller = authedCaller(userId)
-    await expect(caller.packs.toggle({ packId: 'not-a-cuid' })).rejects.toThrow()
+    await expect(caller.packs.toggle({ packId: 'not-a-cuid' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    })
   })
 })

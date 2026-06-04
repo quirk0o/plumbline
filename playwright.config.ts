@@ -20,7 +20,10 @@ export default defineConfig({
     { name: 'teardown', testMatch: '**/teardown/*.ts' },
     {
       name: 'chromium',
-      testMatch: ['**/packs.spec.ts', '**/legacy-wizard.spec.ts', '**/add-sims-to-legacy.spec.ts', '**/sim-detail.spec.ts', '**/add-relationship-modal.spec.ts', '**/milestones.spec.ts'],
+      // Glob (with auth carved out) so new authed specs — e.g. milestones.spec.ts —
+      // are picked up automatically instead of being silently skipped.
+      testMatch: '**/*.spec.ts',
+      testIgnore: '**/auth.spec.ts',
       use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
       dependencies: ['setup'],
     },

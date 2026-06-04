@@ -63,6 +63,8 @@ describe('getObject', () => {
     s3Mock
       .on(GetObjectCommand)
       .rejects({ name: 'InternalError', $metadata: { httpStatusCode: 500 } })
-    await expect(getObject('uploads/user-1/boom.png')).rejects.toBeTruthy()
+    await expect(getObject('uploads/user-1/boom.png')).rejects.toMatchObject({
+      name: 'InternalError',
+    })
   })
 })

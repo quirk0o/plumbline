@@ -99,7 +99,10 @@ userId`, throwing `NOT_FOUND` otherwise (existing don't-leak-existence pattern).
   `sim.householdId`; `null` = move out to unhoused. Sim and target must share a
   legacy. Move to current household is a no-op.
 
-No `delete`, no `list` query (YAGNI; reads are server-side).
+No `delete` (YAGNI). Chronicle-page reads stay server-side; the only query is
+**`listByLegacy`** (`{ legacyId }` → `{ id, name }[]`, ownership-checked), added
+for the create-sim modal, which self-fetches all its reference data via tRPC
+queries and sits too deep in the component tree for prop threading.
 
 **Page data** (`src/app/app/legacies/[slug]/page.tsx`): extend the existing query to
 fetch households with `world` and resident sims (id, names, imageUrl, isHeir,
@@ -110,9 +113,13 @@ form merge the household's current world into the options when the filter would
 exclude it (same preserve-current rule as lots).
 
 **`sims.create` changes:** drop the auto-create-household block; accept optional
-`householdId` (validated against the legacy; omitted → unhoused) and optional
-`foundHousehold: boolean` (wizard founder path: creates "The ⟨lastName⟩ Household",
-assigns the sim, becomes active as the legacy's first household).
+`householdId` (validated against the legacy; omitted → unhoused).
+
+**`legacies.create` changes:** the wizard creates the founder through this
+procedure's nested `founder` input (not `sims.create`), so the founder input
+gains optional `foundHousehold: boolean` — when set, the transaction creates
+"The ⟨lastName⟩ Household" (`foundedGeneration: 1`), assigns the founder to it,
+and sets it as the legacy's active household.
 
 **After every mutation:** `router.refresh()`. The page re-renders; hero stats,
 roster, and the open drawer (which re-reads its household by id from fresh props)
@@ -187,8 +194,8 @@ form (it needs the live last-name value from form state): "Settle them into a
 household — we'll found 'The ⟨LastName⟩ Household' with them as its first resident.
 You can rename it anytime." Checked by default; the household-name preview tracks
 the last-name field; the submitted form data includes `foundHousehold`. Add-sim page
-and create-sim modal fetch and pass `households`; they never set
-`offerFoundHousehold`.
+and create-sim modal fetch and pass `households` (the page server-side, the
+modal via `households.listByLegacy`); they never set `offerFoundHousehold`.
 
 Brand guardrails: no white page surfaces, green = interactive only, amber only for
 heir/founder/now-playing accents, plumbob `aria-hidden`, gentle motion with

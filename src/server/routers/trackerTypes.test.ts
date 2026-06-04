@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { authedCaller, unauthCaller } from '@/test/caller'
-import { createTestUser, cleanupUser } from '@/test/helpers'
+import { createTestUser, cleanupUser, getAnyBuiltInTrackerType } from '@/test/helpers'
 import { db } from '@/server/db'
 
 describe('trackerTypes.list', () => {
@@ -84,8 +84,7 @@ describe('trackerTypes.delete', () => {
   })
 
   it('throws FORBIDDEN when deleting a built-in type', async () => {
-    const builtIn = await db.trackerType.findFirst({ where: { isBuiltIn: true } })
-    if (!builtIn) return
+    const builtIn = await getAnyBuiltInTrackerType()
     await expect(
       authedCaller(userId).trackerTypes.delete({ id: builtIn.id })
     ).rejects.toMatchObject({ code: 'FORBIDDEN' })

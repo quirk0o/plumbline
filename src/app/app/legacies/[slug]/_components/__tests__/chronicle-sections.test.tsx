@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { ChronicleSections } from '../chronicle-sections/chronicle-sections'
 import type {
   ChronicleSim,
@@ -109,33 +109,32 @@ const baseProps = {
 }
 
 describe('ChronicleSections', () => {
-  it('renders all four sections with the expected ids', () => {
-    const { container } = render(<ChronicleSections {...baseProps} />)
-
-    for (const id of ['hero', 'succession', 'milestones', 'sims']) {
-      const el = container.querySelector(`[data-section="${id}"]`)
-      expect(el, `section ${id}`).not.toBeNull()
-      expect(el?.id).toBe(id)
-    }
+  it('renders all four sections as anchor targets', () => {
+    render(<ChronicleSections {...baseProps} />)
+    // SectionNav locates sections via id — assert each section carries the correct id.
+    expect(screen.getByTestId('section-hero')).toHaveAttribute('id', 'hero')
+    expect(screen.getByTestId('section-succession')).toHaveAttribute('id', 'succession')
+    expect(screen.getByTestId('section-milestones')).toHaveAttribute('id', 'milestones')
+    expect(screen.getByTestId('roster')).toHaveAttribute('id', 'sims')
   })
 
   it('renders the section content (headings + milestone)', () => {
     render(<ChronicleSections {...baseProps} />)
     expect(
-      screen.getByRole('heading', { name: /succession line/i }),
+      screen.getByRole('heading', { name: /succession line/i, level: 2 }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /milestones/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /all sims/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /milestones/i, level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /all sims/i, level: 2 })).toBeInTheDocument()
     expect(
       screen.getByText(/Dina Caliente founds the legacy/i),
     ).toBeInTheDocument()
   })
 
   it('renders the treeSlot content inside the hero', () => {
-    const { container } = render(<ChronicleSections {...baseProps} />)
-    const hero = container.querySelector('[data-section="hero"]')
-    expect(hero).not.toBeNull()
-    const button = screen.getByRole('button', { name: /view family tree/i })
-    expect(hero?.contains(button)).toBe(true)
+    render(<ChronicleSections {...baseProps} />)
+    const heroSection = screen.getByTestId('section-hero')
+    expect(
+      within(heroSection).getByRole('button', { name: /view family tree/i }),
+    ).toBeInTheDocument()
   })
 })

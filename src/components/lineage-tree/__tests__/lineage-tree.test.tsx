@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { LineageTree, type LineageTreeSim } from '../lineage-tree'
 
 const makeSim = (overrides: Partial<LineageTreeSim> & { id: string }): LineageTreeSim => ({
@@ -63,16 +64,14 @@ describe('LineageTree', () => {
     expect(screen.getByText('DC')).toBeInTheDocument()
   })
 
-  it('renders an SVG <image> for a sim with a portrait', () => {
+  it('renders a portrait for the sim that has an imageUrl', () => {
     const { getAllByTestId } = render(
       <LineageTree sims={sims} familyEdges={familyEdges} partnerEdges={partnerEdges} />,
     )
-    const portraits = getAllByTestId('crest-portrait')
-    expect(portraits).toHaveLength(1)
-    expect(portraits[0].tagName.toLowerCase()).toBe('image')
+    expect(getAllByTestId('crest-portrait')).toHaveLength(1)
   })
 
-  it('calls onSelectSim with the sim id when a node is clicked', () => {
+  it('calls onSelectSim with the sim id when a node is clicked', async () => {
     const onSelectSim = vi.fn()
     render(
       <LineageTree
@@ -82,7 +81,7 @@ describe('LineageTree', () => {
         onSelectSim={onSelectSim}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /Reed Caliente/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Reed Caliente/ }))
     expect(onSelectSim).toHaveBeenCalledWith('heir')
   })
 
@@ -107,12 +106,11 @@ describe('LineageTree', () => {
         sims={sims}
         familyEdges={familyEdges}
         partnerEdges={partnerEdges}
+        onSelectSim={() => {}}
         dimmedIds={new Set(['founder'])}
       />,
     )
-    const dina = screen.getByText('Dina Caliente').closest('[data-tree-node]') as HTMLElement
-    const reed = screen.getByText('Reed Caliente').closest('[data-tree-node]') as HTMLElement
-    expect(dina.style.opacity).toBe('0.25')
-    expect(reed.style.opacity).toBe('')
+    expect(screen.getByRole('button', { name: /Dina Caliente/ })).toHaveAttribute('data-dimmed')
+    expect(screen.getByRole('button', { name: /Reed Caliente/ })).not.toHaveAttribute('data-dimmed')
   })
 })

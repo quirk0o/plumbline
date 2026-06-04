@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createTestUser, cleanupUser } from '@/test/helpers'
 import { db } from '@/server/db'
-import { fetchSkills } from './reference-data'
+import { fetchSkills, fetchTraitsWithConflicts, fetchAspirations, fetchCareers } from './reference-data'
 
 describe('fetchSkills', () => {
   let userId: string
@@ -31,5 +31,98 @@ describe('fetchSkills', () => {
 
     const result = await fetchSkills(userId)
     expect(result.map((s) => s.id)).toContain(packLinkedSkill.id)
+  })
+})
+
+describe('fetchTraitsWithConflicts', () => {
+  let userId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('excludes personality traits from packs the user does not own', async () => {
+    const packLinkedTrait = await db.personalityTrait.findFirst({ where: { packId: { not: null } } })
+    if (!packLinkedTrait) throw new Error('No pack-linked personality traits found. Is the DB seeded?')
+
+    const result = await fetchTraitsWithConflicts(userId)
+    expect(result.map((t) => t.id)).not.toContain(packLinkedTrait.id)
+  })
+
+  it('includes personality traits from packs the user owns', async () => {
+    const packLinkedTrait = await db.personalityTrait.findFirst({ where: { packId: { not: null } } })
+    if (!packLinkedTrait) throw new Error('No pack-linked personality traits found. Is the DB seeded?')
+
+    await db.userPack.create({ data: { userId, packId: packLinkedTrait.packId! } })
+
+    const result = await fetchTraitsWithConflicts(userId)
+    expect(result.map((t) => t.id)).toContain(packLinkedTrait.id)
+  })
+})
+
+describe('fetchAspirations', () => {
+  let userId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('excludes aspirations from packs the user does not own', async () => {
+    const packLinkedAspiration = await db.aspiration.findFirst({ where: { packId: { not: null } } })
+    if (!packLinkedAspiration) throw new Error('No pack-linked aspirations found. Is the DB seeded?')
+
+    const result = await fetchAspirations(userId)
+    expect(result.map((a) => a.id)).not.toContain(packLinkedAspiration.id)
+  })
+
+  it('includes aspirations from packs the user owns', async () => {
+    const packLinkedAspiration = await db.aspiration.findFirst({ where: { packId: { not: null } } })
+    if (!packLinkedAspiration) throw new Error('No pack-linked aspirations found. Is the DB seeded?')
+
+    await db.userPack.create({ data: { userId, packId: packLinkedAspiration.packId! } })
+
+    const result = await fetchAspirations(userId)
+    expect(result.map((a) => a.id)).toContain(packLinkedAspiration.id)
+  })
+})
+
+describe('fetchCareers', () => {
+  let userId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('excludes careers from packs the user does not own', async () => {
+    const packLinkedCareer = await db.career.findFirst({ where: { packId: { not: null } } })
+    if (!packLinkedCareer) throw new Error('No pack-linked careers found. Is the DB seeded?')
+
+    const result = await fetchCareers(userId)
+    expect(result.map((c) => c.id)).not.toContain(packLinkedCareer.id)
+  })
+
+  it('includes careers from packs the user owns', async () => {
+    const packLinkedCareer = await db.career.findFirst({ where: { packId: { not: null } } })
+    if (!packLinkedCareer) throw new Error('No pack-linked careers found. Is the DB seeded?')
+
+    await db.userPack.create({ data: { userId, packId: packLinkedCareer.packId! } })
+
+    const result = await fetchCareers(userId)
+    expect(result.map((c) => c.id)).toContain(packLinkedCareer.id)
   })
 })

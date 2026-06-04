@@ -1,5 +1,5 @@
 import { db } from '@/server/db'
-import { PackType, Gender, LifeStage } from '@prisma/client'
+import { PackType, Gender, LifeStage, Prisma } from '@prisma/client'
 import { randomUUID } from 'crypto'
 
 export async function createTestUser(overrides: { name?: string; email?: string } = {}) {
@@ -73,6 +73,56 @@ export async function getAnyCareer() {
   const career = await db.career.findFirst()
   if (!career) throw new Error('No careers found. Is the DB seeded?')
   return career
+}
+
+export async function getAnySkill(where: { maxLevel?: number } = {}) {
+  const skill = await db.skill.findFirst({ where })
+  if (!skill) throw new Error('No skill found. Is the DB seeded?')
+  return skill
+}
+
+export async function getAnyAspiration() {
+  const aspiration = await db.aspiration.findFirst()
+  if (!aspiration) throw new Error('No aspirations found. Is the DB seeded?')
+  return aspiration
+}
+
+export async function getTrackerTypeByName(name: string) {
+  const trackerType = await db.trackerType.findFirst({ where: { name } })
+  if (!trackerType) throw new Error(`No tracker type named "${name}". Is the DB seeded?`)
+  return trackerType
+}
+
+export async function getAnyBuiltInTrackerType(
+  opts: { requireComputationSpec?: boolean } = {},
+) {
+  const where = opts.requireComputationSpec
+    ? { isBuiltIn: true, computationSpec: { not: Prisma.AnyNull } }
+    : { isBuiltIn: true }
+  const trackerType = await db.trackerType.findFirst({ where })
+  if (!trackerType) throw new Error('No built-in tracker type found. Is the DB seeded?')
+  return trackerType
+}
+
+/** Game traits (the `trait` model used by tracker computation — distinct from `personalityTrait`). */
+export async function getGameTraits(count = 1) {
+  const traits = await db.trait.findMany({ take: count })
+  if (traits.length < count)
+    throw new Error(`Need ${count} game traits, found ${traits.length}. Is the DB seeded?`)
+  return traits
+}
+
+export async function getPersonalityTraits(count: number) {
+  const traits = await db.personalityTrait.findMany({ take: count })
+  if (traits.length < count)
+    throw new Error(`Need ${count} personality traits, found ${traits.length}. Is the DB seeded?`)
+  return traits
+}
+
+export async function getBaseGamePack() {
+  const pack = await db.pack.findFirst({ where: { type: PackType.BASE_GAME } })
+  if (!pack) throw new Error('No BASE_GAME pack found. Is the DB seeded?')
+  return pack
 }
 
 export async function createTestTrackerType(

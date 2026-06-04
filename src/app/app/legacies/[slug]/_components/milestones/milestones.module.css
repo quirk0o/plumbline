@@ -5,6 +5,23 @@
   margin: 0 auto;
 }
 
+/* ── Top row: heading + add milestone button ────────────────────── */
+
+.topRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.topRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.topRow > :last-child {
+  flex-shrink: 0;
+}
+
 /* ── Rows list ──────────────────────────────────────────────────── */
 
 .rows {

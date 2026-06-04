@@ -80,7 +80,7 @@ function ComposerForm({ legacyId, simsById, editing, onDone, onCancel }: Compose
           <span className={styles.label}>Story</span>
           <textarea
             className={styles.textarea}
-            rows={4}
+            rows={5}
             value={blurb}
             onChange={(e) => setBlurb(e.target.value)}
             placeholder="Tell the story in your own words…"
@@ -90,6 +90,7 @@ function ComposerForm({ legacyId, simsById, editing, onDone, onCancel }: Compose
         <div className={styles.field}>
           <span className={styles.label}>Tag the sims involved</span>
           <SimTagChips sims={allSims} value={simIds} onToggle={toggleSim} />
+          <span className={styles.tagHint}>The milestone&apos;s generation is inferred from whom you tag.</span>
         </div>
       </div>
 
@@ -120,10 +121,7 @@ export function MilestoneComposer({
 
   return (
     <>
-      <div className={styles.trigger}>
-        <span className={styles.triggerText}>Record a moment of your own.</span>
-        <Button type="button" onClick={() => setOpen(true)}>+ Add milestone</Button>
-      </div>
+      <Button type="button" size="sm" onClick={() => setOpen(true)}>+ Add milestone</Button>
 
       <Drawer open={showForm} onOpenChange={handleOpenChange}>
         <Drawer.Portal>

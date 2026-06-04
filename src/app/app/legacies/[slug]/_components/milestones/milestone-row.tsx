@@ -31,7 +31,9 @@ export function MilestoneRowContent({ milestone, simsById, slug }: MilestoneRowP
     <>
       {/* Col 1 — meta: kind + generation */}
       <div className={styles.meta}>
-        <span className={styles.kind}>{kind}</span>
+        <span className={cn(styles.kind, userAuthored && styles.kindAuthored)}>
+          {userAuthored ? `✎ ${kind}` : kind}
+        </span>
         {gen !== null && (
           <span className={styles.gen}>Gen {roman(gen)}</span>
         )}

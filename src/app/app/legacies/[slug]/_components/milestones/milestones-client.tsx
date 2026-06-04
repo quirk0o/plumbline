@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { trpc } from '@/trpc/client'
+import { SectionHeading } from '@/components/ui'
 import type { Milestone, ChronicleSim } from '../../lib/types'
 import { PinnedMilestoneRow } from './pinned-milestone-row'
 import { SortableMilestoneRow } from './sortable-milestone-row'
@@ -115,16 +116,19 @@ function MilestonesList({ initialMilestones, simsById, slug, legacyId }: Milesto
 
   return (
     <div>
-      <MilestoneComposer
-        legacyId={legacyId}
-        simsById={simsById}
-        editing={editing}
-        onDone={() => {
-          setEditing(null)
-          router.refresh()
-        }}
-        onCancelEdit={() => setEditing(null)}
-      />
+      <div className={styles.topRow}>
+        <SectionHeading eyebrow="Chronicle" title="Milestones" blurb="Births, marriages, and the moments in between." />
+        <MilestoneComposer
+          legacyId={legacyId}
+          simsById={simsById}
+          editing={editing}
+          onDone={() => {
+            setEditing(null)
+            router.refresh()
+          }}
+          onCancelEdit={() => setEditing(null)}
+        />
+      </div>
 
       {items.length === 0 ? null : (
         <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

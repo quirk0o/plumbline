@@ -24,6 +24,8 @@
   color: var(--text-subtle);
 }
 
+.kindAuthored { color: var(--color-amber-700); }
+
 .gen {
   font-size: var(--text-xs);
   font-weight: 500;

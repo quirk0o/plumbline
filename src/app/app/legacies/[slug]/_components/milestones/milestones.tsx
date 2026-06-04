@@ -1,4 +1,3 @@
-import { SectionHeading } from '@/components/ui'
 import type { Milestone, ChronicleSim } from '../../lib/types'
 import { MilestonesClient } from './milestones-client'
 import styles from './milestones.module.css'
@@ -13,11 +12,6 @@ export interface MilestonesProps {
 export function Milestones({ milestones, simsById, slug, legacyId }: MilestonesProps) {
   return (
     <div className={styles.container}>
-      <SectionHeading
-        eyebrow="Chronicle"
-        title="Milestones"
-        blurb="Births, marriages, and the moments in between."
-      />
       <MilestonesClient
         milestones={milestones}
         simsById={simsById}

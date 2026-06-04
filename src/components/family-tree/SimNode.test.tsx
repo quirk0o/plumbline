@@ -97,7 +97,7 @@ describe('SimNode', () => {
 
   it('marks the node as current when data.isFocused is true', () => {
     render(<SimNode {...makeNodeProps({ isFocused: true })} />)
-    expect(screen.getByRole('button')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button')).toHaveAttribute('aria-current', 'location')
   })
 
   it('does not mark the node as current when data.isFocused is false', () => {

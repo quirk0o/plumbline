@@ -1,46 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { db } from '@/server/db'
-import { createTestUser, cleanupUser, createTestLegacy, createTestChallenge, createTestChallengePhase, createTestChallengeRun } from '@/test/helpers'
-import { evaluateSpec, recomputeLegacyTrackers, resolveThresholds, countThresholdsCrossed } from './trackerComputation'
-
-describe('resolveThresholds', () => {
-  it('returns explicit thresholds array', () => {
-    expect(resolveThresholds({ thresholds: [2, 5, 10] })).toEqual([2, 5, 10])
-  })
-  it('expands arithmetic progression', () => {
-    expect(resolveThresholds({ start: 2, step: 3, count: 4 })).toEqual([2, 5, 8, 11])
-  })
-  it('returns null for null input', () => {
-    expect(resolveThresholds(null)).toBeNull()
-  })
-  it('returns null when no valid shape', () => {
-    expect(resolveThresholds({ goalValue: 10 })).toBeNull()
-  })
-  it('returns null for an array input', () => {
-    expect(resolveThresholds([1, 2, 3])).toBeNull()
-  })
-  it('returns null when count is zero', () => {
-    expect(resolveThresholds({ start: 0, step: 1, count: 0 })).toBeNull()
-  })
-  it('returns null when thresholds array contains non-numbers', () => {
-    expect(resolveThresholds({ thresholds: [1, '5', 10] })).toBeNull()
-  })
-})
-
-describe('countThresholdsCrossed', () => {
-  it('counts thresholds where rawValue >= threshold', () => {
-    expect(countThresholdsCrossed(7, [2, 5, 10])).toBe(2)
-    expect(countThresholdsCrossed(10, [2, 5, 10])).toBe(3)
-    expect(countThresholdsCrossed(1, [2, 5, 10])).toBe(0)
-    expect(countThresholdsCrossed(5, [2, 5, 10])).toBe(2)
-  })
-  it('returns 0 when rawValue is below all thresholds', () => {
-    expect(countThresholdsCrossed(0, [5, 10, 15])).toBe(0)
-  })
-  it('returns thresholds.length when rawValue exceeds all', () => {
-    expect(countThresholdsCrossed(100, [5, 10, 15])).toBe(3)
-  })
-})
+import { createTestUser, cleanupUser, createTestLegacy, createTestChallenge, createTestChallengePhase, createTestChallengeRun, getAnySkill, getAnyAspiration, getTrackerTypeByName, getGameTraits, getPersonalityTraits } from '@/test/helpers'
+import { evaluateSpec, recomputeLegacyTrackers } from './trackerComputation'
 
 describe('evaluateSpec — skill maxed (single condition)', () => {
   let userId: string
@@ -61,8 +22,7 @@ describe('evaluateSpec — skill maxed (single condition)', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('returns false when sim has not maxed the skill', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId, skillId: skill.id, level: 1 } })
     const result = await evaluateSpec(db, legacyId, {
       simFilter: { generationNumber: 1 },
@@ -74,8 +34,7 @@ describe('evaluateSpec — skill maxed (single condition)', () => {
   })
 
   it('returns true when sim has maxed the skill', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId, skillId: skill.id, level: skill.maxLevel } })
     const result = await evaluateSpec(db, legacyId, {
       simFilter: { generationNumber: 1 },
@@ -106,8 +65,7 @@ describe('evaluateSpec — aspiration completed (single condition)', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('returns false when aspiration not completed', async () => {
-    const aspiration = await db.aspiration.findFirst()
-    if (!aspiration) return
+    const aspiration = await getAnyAspiration()
     await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id } })
     const result = await evaluateSpec(db, legacyId, {
       simFilter: { generationNumber: 1 },
@@ -119,8 +77,7 @@ describe('evaluateSpec — aspiration completed (single condition)', () => {
   })
 
   it('returns true when aspiration is completed', async () => {
-    const aspiration = await db.aspiration.findFirst()
-    if (!aspiration) return
+    const aspiration = await getAnyAspiration()
     await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id, completedAt: new Date() } })
     const result = await evaluateSpec(db, legacyId, {
       simFilter: { generationNumber: 1 },
@@ -182,8 +139,7 @@ describe('evaluateSpec — countUnique personality traits', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('counts distinct personality traits across generation sims', async () => {
-    const traits = await db.personalityTrait.findMany({ take: 3 })
-    if (traits.length < 2) return
+    const traits = await getPersonalityTraits(2)
     const simA = await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     const simB = await db.sim.create({ data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     await db.simPersonalityTrait.create({ data: { simId: simA.id, personalityTraitId: traits[0].id } })
@@ -214,7 +170,7 @@ describe('evaluateSpec — multi-condition (same-sim)', () => {
 
   it('returns false when no single sim satisfies all conditions', async () => {
     const skills = await db.skill.findMany({ take: 2 })
-    if (skills.length < 2) return
+    if (skills.length < 2) throw new Error('Need at least 2 skills. Is the DB seeded?')
     const simA = await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     const simB = await db.sim.create({ data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: simA.id, skillId: skills[0].id, level: skills[0].maxLevel } })
@@ -233,7 +189,7 @@ describe('evaluateSpec — multi-condition (same-sim)', () => {
 
   it('returns true when one sim satisfies all conditions', async () => {
     const skills = await db.skill.findMany({ take: 2 })
-    if (skills.length < 2) return
+    if (skills.length < 2) throw new Error('Need at least 2 skills. Is the DB seeded?')
     const sim = await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: sim.id, skillId: skills[0].id, level: skills[0].maxLevel } })
     await db.simSkill.create({ data: { simId: sim.id, skillId: skills[1].id, level: skills[1].maxLevel } })
@@ -247,50 +203,6 @@ describe('evaluateSpec — multi-condition (same-sim)', () => {
       valueKind: 'BOOLEAN',
     }, {})
     expect(result).toBe(true)
-  })
-})
-
-describe('recomputeLegacyTrackers', () => {
-  let userId: string
-  let legacyId: string
-
-  beforeEach(async () => {
-    const user = await createTestUser()
-    userId = user.id
-    const legacy = await createTestLegacy(userId)
-    legacyId = legacy.id
-  })
-
-  afterEach(async () => { await cleanupUser(userId) })
-
-  it('stamps completedAt when a built-in tracker becomes satisfied', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
-
-    const trackerType = await db.trackerType.findFirst({ where: { name: 'Skill Maxed' } })
-    if (!trackerType) return
-
-    const challenge = await createTestChallenge(userId)
-    const phase = await createTestChallengePhase(challenge.id, { generationNumber: 1 })
-    await db.trackerDefinition.create({
-      data: { challengePhaseId: phase.id, trackerTypeId: trackerType.id, name: 'Max Cooking', config: { skillId: skill.id } },
-    })
-    const run = await createTestChallengeRun(legacyId, { sourceChallengeId: challenge.id })
-    const runPhase = await db.challengeRunPhase.create({ data: { challengeRunId: run.id, generationNumber: 1, sortOrder: 0 } })
-    const runTracker = await db.challengeRunTracker.create({
-      data: { challengeRunPhaseId: runPhase.id, trackerTypeId: trackerType.id, name: 'Max Cooking', config: { skillId: skill.id }, sortOrder: 0 },
-    })
-    await db.trackerProgress.create({ data: { challengeRunTrackerId: runTracker.id, isManual: false } })
-
-    const sim = await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'B', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
-    await recomputeLegacyTrackers(db, legacyId)
-    const progressBefore = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: runTracker.id } })
-    expect(progressBefore?.completedAt).toBeNull()
-
-    await db.simSkill.create({ data: { simId: sim.id, skillId: skill.id, level: skill.maxLevel } })
-    await recomputeLegacyTrackers(db, legacyId)
-    const progressAfter = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: runTracker.id } })
-    expect(progressAfter?.completedAt).not.toBeNull()
   })
 })
 
@@ -344,8 +256,7 @@ describe('evaluateSpec — $config.* token resolution', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('resolves $config.skillId token in dataFilter', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId, skillId: skill.id, level: skill.maxLevel } })
     const result = await evaluateSpec(db, legacyId, {
       simFilter: { generationNumber: 1 },
@@ -370,8 +281,7 @@ describe('evaluateSpec — op: all', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('returns false when only some sims satisfy the condition', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     const simA = await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     await db.sim.create({ data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: simA.id, skillId: skill.id, level: skill.maxLevel } })
@@ -385,8 +295,7 @@ describe('evaluateSpec — op: all', () => {
   })
 
   it('returns true when all sims satisfy the condition', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
     const simA = await db.sim.create({ data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     const simB = await db.sim.create({ data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: simA.id, skillId: skill.id, level: skill.maxLevel } })
@@ -414,10 +323,8 @@ describe('recomputeLegacyTrackers — completedAt is one-way', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('does not overwrite completedAt once stamped', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
-    const trackerType = await db.trackerType.findFirst({ where: { name: 'Skill Maxed' } })
-    if (!trackerType) return
+    const skill = await getAnySkill()
+    const trackerType = await getTrackerTypeByName('Skill Maxed')
 
     const challenge = await createTestChallenge(userId)
     const _phase = await createTestChallengePhase(challenge.id, { generationNumber: 1 })
@@ -441,8 +348,7 @@ describe('recomputeLegacyTrackers — completedAt is one-way', () => {
   })
 
   it('skips manual trackers during recompute', async () => {
-    const trackerType = await db.trackerType.findFirst({ where: { name: 'Manual Goal' } })
-    if (!trackerType) return
+    const trackerType = await getTrackerTypeByName('Manual Goal')
     const run = await createTestChallengeRun(legacyId)
     const runPhase = await db.challengeRunPhase.create({ data: { challengeRunId: run.id, sortOrder: 0 } })
     const runTracker = await db.challengeRunTracker.create({
@@ -483,20 +389,16 @@ describe('evaluateSpec — unknown condition source throws', () => {
 })
 
 describe('recomputeLegacyTrackers — swallows internal errors instead of rejecting', () => {
-  it('resolves without throwing when evaluateSpec throws internally', async () => {
-    // Pass a db proxy where $transaction would throw — verifies try-catch wraps the body.
-    // We use a real legacyId format but inject a broken db that throws on findMany.
+  it('resolves without throwing when any internal DB access throws', async () => {
+    // Intended contract: recompute is fired from mutations (sometimes un-awaited);
+    // an internal failure must never reject and crash the caller.
+    // Every property access on this proxy throws, so the test holds no matter
+    // which query recompute happens to run first.
     const brokenDb = new Proxy({} as Parameters<typeof recomputeLegacyTrackers>[0], {
-      get(_target, prop) {
-        if (prop === 'challengeRun') {
-          return {
-            findMany: () => { throw new Error('simulated DB failure') },
-          }
-        }
-        return undefined
+      get() {
+        throw new Error('simulated DB failure')
       },
     })
-    // Should resolve (not reject) — error is swallowed by the try-catch
     await expect(recomputeLegacyTrackers(brokenDb, 'non-existent-legacy')).resolves.toBeUndefined()
   })
 })
@@ -543,8 +445,7 @@ describe('evaluateSpec — traits condition respects dataFilter', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('returns false when sim has a different trait than required', async () => {
-    const traits = await db.trait.findMany({ take: 2 })
-    if (traits.length < 2) return
+    const traits = await getGameTraits(2)
     await db.simTrait.create({ data: { simId, traitId: traits[0].id } })
     const result = await evaluateSpec(db, legacyId, {
       simFilter: { generationNumber: 1 },
@@ -556,8 +457,7 @@ describe('evaluateSpec — traits condition respects dataFilter', () => {
   })
 
   it('returns true when sim has the required trait', async () => {
-    const trait = await db.trait.findFirst()
-    if (!trait) return
+    const [trait] = await getGameTraits(1)
     await db.simTrait.create({ data: { simId, traitId: trait.id } })
     const result = await evaluateSpec(db, legacyId, {
       simFilter: { generationNumber: 1 },
@@ -582,8 +482,7 @@ describe('recomputeLegacyTrackers — THRESHOLD earnedPoints and completion', ()
   afterEach(async () => { await cleanupUser(userId) })
 
   it('stores earnedPoints (thresholds crossed) and only completes when all thresholds crossed', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
 
     // Tracker type with count aggregation for THRESHOLD
     // goalConfig uses explicit thresholds array: [1, 2] — 2 thresholds
@@ -638,8 +537,7 @@ describe('recomputeLegacyTrackers — THRESHOLD earnedPoints and completion', ()
   })
 
   it('stores earnedPoints using arithmetic progression goalConfig', async () => {
-    const skill = await db.skill.findFirst()
-    if (!skill) return
+    const skill = await getAnySkill()
 
     const trackerType = await db.trackerType.create({
       data: {

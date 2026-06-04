@@ -20,7 +20,8 @@ export default defineConfig({
     { name: 'teardown', testMatch: '**/teardown/*.ts' },
     {
       name: 'chromium',
-      testMatch: ['**/packs.spec.ts', '**/legacy-wizard.spec.ts', '**/add-sims-to-legacy.spec.ts', '**/sim-detail.spec.ts', '**/add-relationship-modal.spec.ts'],
+      testMatch: '**/*.spec.ts',
+      testIgnore: '**/auth.spec.ts',
       use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
       dependencies: ['setup'],
     },

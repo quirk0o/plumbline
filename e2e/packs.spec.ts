@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test'
 
 test('user can browse and toggle pack ownership on the onboarding page', async ({ page }) => {
   await page.goto('/app/onboarding/packs')
-  await page.waitForLoadState('networkidle')
 
   await expect(page.getByRole('heading', { name: 'Which packs do you own?' })).toBeVisible()
   await expect(page.getByText('Expansion Packs')).toBeVisible()

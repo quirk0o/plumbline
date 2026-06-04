@@ -72,6 +72,3 @@ export async function getChallengeForView(userId: string, id: string) {
     },
   })
 }
-
-export type ChallengeListRow = Awaited<ReturnType<typeof listChallenges>>[number]
-export type ChallengeView = NonNullable<Awaited<ReturnType<typeof getChallengeForView>>>

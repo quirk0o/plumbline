@@ -62,7 +62,7 @@ Plus `_count: { select: { phases: true } }`, ordered by `name asc`. Invalid
 filter.
 
 **Detail query** — `findFirst` with the same access `OR`, including `phases`
-(ordered by `sortOrder`) with `trackers` and each tracker's `trackerType`.
+(ordered by `sortOrder`) with their `trackers` (ordered by `sortOrder`).
 `null` → `notFound()`.
 
 No new indexes: the access filter uses the existing `ownerId` index and the
@@ -95,9 +95,9 @@ dataset is small enough for `contains` search.
   - Title: phase `title`, else "Generation ⟨n⟩" when only `generationNumber`
     is set, else "Legacy-wide goals" when both are null.
   - Phase description, if present.
-  - Goals: one line per tracker — the tracker's display name derived from
-    `trackerType.name` plus the tracker's configured label/goal where
-    available — with a decorative plumbob-style ◆ bullet (`aria-hidden`).
+  - Goals: one line per tracker, in `sortOrder` — the tracker's `name`
+    (a required field on `TrackerDefinition`) — with a decorative
+    plumbob-style ◆ bullet (`aria-hidden`).
 - Zero phases: quiet inline note ("This challenge has no phases yet"), not a
   full empty state.
 

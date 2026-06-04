@@ -59,7 +59,7 @@ describe('buildDagreGraph', () => {
     expect(dirk.position.y).toBeGreaterThan(mortimer.position.y)
   })
 
-  it('returns a family edge with correct source, target, and id', () => {
+  it('returns a family edge with correct source and target', () => {
     const sims = [makeSim('p', 1), makeSim('c', 2)]
     const { edges } = buildDagreGraph(sims, [{ parentId: 'p', childId: 'c' }])
     expect(edges).toHaveLength(1)

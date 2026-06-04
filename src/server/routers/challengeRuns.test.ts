@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { authedCaller } from '@/test/caller'
-import { createTestUser, cleanupUser, createTestLegacy, createTestTrackerType, createTestSim } from '@/test/helpers'
+import { createTestUser, cleanupUser, createTestLegacy, createTestTrackerType, createTestSim, getAnySkill, getTrackerTypeByName, getAnyBuiltInTrackerType } from '@/test/helpers'
 import { db } from '@/server/db'
-import { Prisma } from '@prisma/client'
 import { recomputeLegacyTrackers } from '@/server/lib/trackerComputation'
 
 async function buildChallengeWithPhaseAndTracker(userId: string, trackerTypeId: string) {
@@ -223,8 +222,7 @@ describe('challengeRuns.updateProgress — additional scenarios', () => {
   afterEach(async () => { await cleanupUser(userId) })
 
   it('throws BAD_REQUEST for a non-manual tracker', async () => {
-    const builtIn = await db.trackerType.findFirst({ where: { isBuiltIn: true, computationSpec: { not: Prisma.AnyNull } } })
-    if (!builtIn) return
+    const builtIn = await getAnyBuiltInTrackerType({ requireComputationSpec: true })
     const { challenge } = await buildChallengeWithPhaseAndTracker(userId, builtIn.id)
     const run = await authedCaller(userId).challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
@@ -466,14 +464,10 @@ describe('full flow — recompute updates tracker progress after sim mutation', 
   it('updates TrackerProgress.value and stamps completedAt when the BOOLEAN condition becomes true', async () => {
     // Use the seeded "Skill Maxed" built-in tracker type — its computationSpec uses
     // aggregation: { op: 'any' } over skills with maxed: true, returning a boolean.
-    const skillMaxedType = await db.trackerType.findFirst({
-      where: { isBuiltIn: true, name: 'Skill Maxed' },
-    })
-    if (!skillMaxedType) return // guard: skip if DB not seeded
+    const skillMaxedType = await getTrackerTypeByName('Skill Maxed')
 
     // Pick any skill with maxLevel 10 so we can fully max it
-    const skill = await db.skill.findFirst({ where: { maxLevel: 10 } })
-    if (!skill) return
+    const skill = await getAnySkill({ maxLevel: 10 })
 
     const challenge = await authedCaller(userId).challenges.create({ name: `C ${Date.now()}` })
     const phase = await authedCaller(userId).challenges.addPhase({
@@ -527,8 +521,7 @@ describe('full flow — THRESHOLD tracker earns points per threshold crossed via
     // that have a specific skill at any level (minLevel: 1).
     // goalConfig thresholds [1, 2, 3] means: 1 sim earned, 2 sims earned, 3 sims earned.
     // As we add sims with that skill, recompute advances the stored value.
-    const skill = await db.skill.findFirst({ where: { maxLevel: 10 } })
-    if (!skill) return
+    const skill = await getAnySkill({ maxLevel: 10 })
 
     const thresholdTt = await db.trackerType.create({
       data: {

@@ -30,15 +30,19 @@ export function ChallengeSearch() {
   }, [urlQuery])
 
   useEffect(() => {
-    if (value === urlQuery) return
+    // The URL settles on the trimmed query; the visible input keeps the raw
+    // value the user typed. Comparing and pushing the trimmed form lets local
+    // state and the URL converge — e.g. whitespace-only deletes `q`, so
+    // trimmed '' === urlQuery '' and the effect stops re-arming — instead of
+    // re-issuing router.replace every debounce window.
+    const trimmed = value.trim()
+    if (trimmed === urlQuery) return
     const handle = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString())
-      if (value.trim()) params.set('q', value)
+      if (trimmed) params.set('q', trimmed)
       else params.delete('q')
       const qs = params.toString()
-      // Whitespace-only deletes `q`, so the resulting urlQuery is '' — record
-      // that, not the raw value, or the sync-back effect will misfire.
-      lastPushed.current = value.trim() ? value : ''
+      lastPushed.current = trimmed
       startTransition(() => {
         router.replace(qs ? `/app/challenges?${qs}` : '/app/challenges', { scroll: false })
       })

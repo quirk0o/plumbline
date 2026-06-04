@@ -85,4 +85,14 @@ describe('ChallengeSearch', () => {
     await new Promise((r) => setTimeout(r, 400))
     expect(replace).not.toHaveBeenCalled()
   })
+
+  it('settles after whitespace-only input instead of re-pushing every debounce window', async () => {
+    const user = userEvent.setup()
+    render(<ChallengeSearch />)
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search challenges' }), '   ')
+
+    await new Promise((r) => setTimeout(r, 700))
+    expect(replace.mock.calls.length).toBeLessThanOrEqual(1)
+  })
 })

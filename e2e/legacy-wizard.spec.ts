@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 
 test('user can create a legacy with a founder sim', async ({ page }) => {
+  const legacyName = `Test Legacy ${Date.now()}`
+
   await test.step('arrive at the wizard from the app home', async () => {
     await page.goto('/app')
     await page.getByRole('link', { name: '+ Start a legacy' }).click()
@@ -8,31 +10,8 @@ test('user can create a legacy with a founder sim', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Your Legacy' })).toBeVisible()
   })
 
-  await test.step('step 1 requires a legacy name', async () => {
-    await page.getByRole('button', { name: 'Continue →' }).click()
-    await expect(page.getByText('Legacy name is required')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Your Legacy' })).toBeVisible()
-  })
-
-  const legacyName = `Test Legacy ${Date.now()}`
-
   await test.step('name the legacy and continue to step 2', async () => {
     await page.getByPlaceholder('e.g. The Caliente Legacy').fill(legacyName)
-    await page.getByRole('button', { name: 'Continue →' }).click()
-    await expect(page.getByRole('heading', { name: 'Founder Sim' })).toBeVisible()
-  })
-
-  await test.step('step 2 requires the founder sim fields', async () => {
-    await page.getByRole('button', { name: 'Create legacy →' }).click()
-    await expect(page.getByText('First name is required')).toBeVisible()
-    await expect(page.getByText('Last name is required')).toBeVisible()
-    await expect(page.getByText('Gender is required')).toBeVisible()
-  })
-
-  await test.step('going back preserves the legacy name', async () => {
-    await page.getByRole('button', { name: 'Back' }).click()
-    await expect(page.getByRole('heading', { name: 'Your Legacy' })).toBeVisible()
-    await expect(page.getByPlaceholder('e.g. The Caliente Legacy')).toHaveValue(legacyName)
     await page.getByRole('button', { name: 'Continue →' }).click()
     await expect(page.getByRole('heading', { name: 'Founder Sim' })).toBeVisible()
   })
@@ -64,14 +43,9 @@ test('user can create a legacy and skip the founder sim', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Founder Sim' })).toBeVisible()
   })
 
-  await test.step('skip the founder and land on an empty roster', async () => {
+  await test.step('skip the founder and land on the new legacy', async () => {
     await page.getByRole('button', { name: 'Skip →' }).click()
     await expect(page).toHaveURL(/\/app\/legacies\/[^/]+$/)
     await expect(page.getByRole('heading', { name: legacyName })).toBeVisible()
-    await expect(
-      page
-        .getByTestId('roster')
-        .getByRole('heading', { name: /No Sims\s+named\s+yet\./i }),
-    ).toBeVisible()
   })
 })

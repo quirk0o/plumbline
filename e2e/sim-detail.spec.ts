@@ -1,25 +1,9 @@
 import { test, expect } from '@playwright/test'
-
-async function createLegacyWithSim(page: import('@playwright/test').Page) {
-  await page.goto('/app/legacies/new')
-  const legacyName = `SimDetail Test ${Date.now()}`
-  await page.getByPlaceholder('e.g. The Caliente Legacy').fill(legacyName)
-  await page.getByRole('button', { name: 'Continue →' }).click()
-
-  await page.getByPlaceholder('First name').fill('Bella')
-  await page.getByPlaceholder('Last name').fill('Goth')
-  await page.getByLabel('Gender').click()
-  await page.getByRole('option', { name: 'Female' }).click()
-  await page.getByRole('button', { name: 'Create legacy →' }).click()
-
-  // Wait for the legacy detail page — exclude /new to avoid matching the wizard URL
-  await expect(page).toHaveURL(/\/app\/legacies\/(?!new)[^/]+$/)
-  return { legacyName }
-}
+import { createLegacyWithSim } from './helpers'
 
 test("user reviews and edits a sim's details", async ({ page }) => {
   await test.step('create a legacy with a founder', async () => {
-    await createLegacyWithSim(page)
+    await createLegacyWithSim(page, 'SimDetail Test')
   })
 
   await test.step('open the sim from the roster', async () => {
@@ -46,16 +30,26 @@ test("user reviews and edits a sim's details", async ({ page }) => {
     await saved
   })
 
-  await test.step('reload and verify both edits persisted', async () => {
+  await test.step('mark the sim as deceased', async () => {
+    await page.getByRole('button', { name: '+ Mark as deceased' }).click()
+    // Keep the default cause (Old Age) and confirm. Register the wait before the
+    // click that fires the sims.update mutation.
+    const saved = page.waitForResponse((r) => r.url().includes('sims.update') && r.ok())
+    await page.getByRole('button', { name: 'Confirm' }).click()
+    await saved
+    // Confirmed-deceased state: the cause is shown and the "Mark as deceased"
+    // chip is gone, replaced by alive/change controls.
+    await expect(page.getByText('Old Age')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Mark as alive' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '+ Mark as deceased' })).toBeHidden()
+  })
+
+  await test.step('reload and verify all edits persisted', async () => {
     await page.reload()
     await expect(page.getByLabel('First name')).toHaveValue('Nova')
     await expect(page.getByRole('button', { name: 'Elder' })).toBeVisible()
-  })
-
-  await test.step('open the mark-as-deceased section', async () => {
-    await page.getByRole('button', { name: '+ Mark as deceased' }).click()
-    await expect(page.getByText('Cause of death')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Confirm' })).toBeVisible()
+    await expect(page.getByText('Old Age')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Mark as alive' })).toBeVisible()
   })
 
   await test.step('navigate back to the legacy via the breadcrumb', async () => {

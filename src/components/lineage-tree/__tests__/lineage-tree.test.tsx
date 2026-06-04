@@ -106,12 +106,11 @@ describe('LineageTree', () => {
         sims={sims}
         familyEdges={familyEdges}
         partnerEdges={partnerEdges}
+        onSelectSim={() => {}}
         dimmedIds={new Set(['founder'])}
       />,
     )
-    const dina = screen.getByText('Dina Caliente').closest('[data-tree-node]') as HTMLElement
-    const reed = screen.getByText('Reed Caliente').closest('[data-tree-node]') as HTMLElement
-    expect(dina.style.opacity).toBe('0.25')
-    expect(reed.style.opacity).toBe('')
+    expect(screen.getByRole('button', { name: /Dina Caliente/ })).toHaveAttribute('data-dimmed')
+    expect(screen.getByRole('button', { name: /Reed Caliente/ })).not.toHaveAttribute('data-dimmed')
   })
 })

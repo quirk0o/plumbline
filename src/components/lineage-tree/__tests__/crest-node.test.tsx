@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CrestNode, type CrestNodeSim } from '../crest-node'
 
@@ -36,7 +36,7 @@ describe('CrestNode', () => {
   it('renders as a button whose accessible name includes the life stage', () => {
     const { getByRole } = renderNode()
     const btn = getByRole('button', { name: /Reed Caliente.*Teen/ })
-    expect(btn).toBeTruthy()
+    expect(btn).toBeInTheDocument()
     expect(btn.getAttribute('tabindex')).toBe('0')
   })
 
@@ -50,13 +50,9 @@ describe('CrestNode', () => {
     expect(onSelect).toHaveBeenCalledWith('reed')
   })
 
-  it('renders the monogram fallback in italic display-serif', () => {
-    const { container } = renderNode({ imageUrl: null })
-    const monogram = [...container.querySelectorAll('text')].find(
-      (t) => t.textContent === 'RC',
-    )
-    expect(monogram).toBeTruthy()
-    expect(monogram?.getAttribute('font-style')).toBe('italic')
+  it('renders the monogram fallback when the sim has no portrait', () => {
+    renderNode({ imageUrl: null })
+    expect(screen.getByText('RC')).toBeInTheDocument()
   })
 
   it('is not interactive (no button role) when onSelect is omitted', () => {

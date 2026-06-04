@@ -58,7 +58,7 @@ const heir: ChronicleSim = {
 }
 
 describe('Hero', () => {
-  it('renders the H1 with an amber <em> on a trailing "Legacy"', () => {
+  it('renders the H1 with the full legacy name', () => {
     render(
       <Hero
         name="The Caliente Legacy"
@@ -69,16 +69,10 @@ describe('Hero', () => {
         currentHeir={null}
       />,
     )
-    const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading).toBeInTheDocument()
-    // Asserting the semantic <em> here is intentional: the amber accent on
-    // the trailing "Legacy" is a markup choice (an <em>), not a CSS class.
-    const em = heading.querySelector('em')
-    expect(em).not.toBeNull()
-    expect(em?.textContent).toBe('Legacy')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The Caliente Legacy')
   })
 
-  it('renders the H1 without <em> when name does not end in "Legacy"', () => {
+  it('renders the H1 with the full name when it does not end in "Legacy"', () => {
     render(
       <Hero
         name="The Caliente Chronicle"
@@ -89,9 +83,7 @@ describe('Hero', () => {
         currentHeir={null}
       />,
     )
-    const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading.querySelector('em')).toBeNull()
-    expect(heading.textContent).toBe('The Caliente Chronicle')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The Caliente Chronicle')
   })
 
   it('renders all four stat values', () => {

@@ -31,20 +31,19 @@ const partnerEdges: { simAId: string; simBId: string }[] = []
 
 describe('LineageTree accessibility', () => {
   it('is not exposed as a single opaque image', () => {
-    const { container } = render(
+    render(
       <LineageTree sims={sims} familyEdges={familyEdges} partnerEdges={partnerEdges} />,
     )
-    const svg = container.querySelector('svg')
-    expect(svg).not.toBeNull()
-    expect(svg?.getAttribute('role')).not.toBe('img')
+    // The existing getByRole('group') assertions below already confirm the svg
+    // is a labelled group, not an opaque image.
+    expect(screen.getByRole('group', { name: /family tree|tree —/i })).toBeInTheDocument()
   })
 
   it('labels the tree as a group', () => {
     render(
       <LineageTree sims={sims} familyEdges={familyEdges} partnerEdges={partnerEdges} />,
     )
-    const group = screen.getByRole('group', { name: /family tree|tree —/i })
-    expect(group).toBeTruthy()
+    expect(screen.getByRole('group', { name: /family tree|tree —/i })).toBeInTheDocument()
   })
 
   it('uses the legacy name in the group label when provided', () => {
@@ -56,7 +55,7 @@ describe('LineageTree accessibility', () => {
         legacyName="Caliente"
       />,
     )
-    expect(screen.getByRole('group', { name: /Caliente tree — 2 sims/i })).toBeTruthy()
+    expect(screen.getByRole('group', { name: /Caliente tree — 2 sims/i })).toBeInTheDocument()
   })
 
   it('exposes each sim as a button with its name when selectable', () => {
@@ -68,7 +67,7 @@ describe('LineageTree accessibility', () => {
         onSelectSim={() => {}}
       />,
     )
-    expect(screen.getByRole('button', { name: /Dina Caliente/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Reed Caliente/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Dina Caliente/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Reed Caliente/ })).toBeInTheDocument()
   })
 })

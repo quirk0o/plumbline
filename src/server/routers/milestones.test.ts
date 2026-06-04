@@ -41,6 +41,16 @@ describe('milestones.reorder', () => {
     const m = await caller.milestones.create({ legacyId, title: 'M', simIds: [] })
     await expect(caller.milestones.reorder({ id: m.id })).rejects.toBeInstanceOf(TRPCError)
   })
+
+  it("rejects reordering another user's milestone", async () => {
+    const caller = authedCaller(userId)
+    const created = await caller.milestones.create({ legacyId, title: 'Mine', simIds: [] })
+    const otherUser = await createTestUser()
+    await expect(
+      authedCaller(otherUser.id).milestones.reorder({ id: created.id, nextSortOrder: 500 }),
+    ).rejects.toBeInstanceOf(TRPCError)
+    await cleanupUser(otherUser.id)
+  })
 })
 
 describe('milestones.delete', () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { trpc } from '@/trpc/client'
 import { Button, Drawer, Eyebrow } from '@/components/ui'
 import type { Milestone, ChronicleSim } from '../../lib/types'
@@ -108,6 +108,7 @@ export function MilestoneComposer({
   legacyId, simsById, editing, onDone, onCancelEdit,
 }: MilestoneComposerProps) {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const showForm = open || editing !== null
 
   function handleOpenChange(next: boolean) {
@@ -116,12 +117,14 @@ export function MilestoneComposer({
       // Editing: clear the parent's editing target. A brand-new unsaved note
       // just closes — no router.refresh().
       if (editing !== null) onCancelEdit()
+      // Return focus to the trigger so keyboard users land somewhere meaningful.
+      requestAnimationFrame(() => triggerRef.current?.focus())
     }
   }
 
   return (
     <>
-      <Button type="button" size="sm" onClick={() => setOpen(true)}>+ Add milestone</Button>
+      <Button ref={triggerRef} type="button" size="sm" onClick={() => setOpen(true)}>+ Add milestone</Button>
 
       <Drawer open={showForm} onOpenChange={handleOpenChange}>
         <Drawer.Portal>
@@ -134,6 +137,7 @@ export function MilestoneComposer({
               editing={editing}
               onDone={() => {
                 setOpen(false)
+                requestAnimationFrame(() => triggerRef.current?.focus())
                 onDone()
               }}
               onCancel={() => handleOpenChange(false)}

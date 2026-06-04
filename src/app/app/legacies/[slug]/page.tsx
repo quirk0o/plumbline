@@ -73,7 +73,7 @@ export default async function LegacyDetailPage({ params }: Props) {
   // by milestone derivation, but we fetch all and let derive.ts filter so the
   // fetched shape stays a faithful FetchedSocialRelationship[].
   const socialRelationships = await db.socialRelationship.findMany({
-    where: { simA: { legacyId: legacy.id } },
+    where: { OR: [ { simA: { legacyId: legacy.id } }, { simB: { legacyId: legacy.id } } ] },
     select: {
       id: true,
       simAId: true,

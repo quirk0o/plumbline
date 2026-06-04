@@ -9,7 +9,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: 3px 10px 3px 3px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   cursor: pointer;
   background: transparent;
   border: 1px solid var(--border);
@@ -19,6 +19,8 @@
   font-weight: 600;
   transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
 }
+
+.chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 .selected {
   background: var(--green-glow);

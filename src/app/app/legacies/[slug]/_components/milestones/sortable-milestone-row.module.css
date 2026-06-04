@@ -33,7 +33,7 @@
   background: none;
   border: none;
   padding: var(--space-1);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-size: 16px;
   line-height: 1;
   display: flex;
@@ -47,7 +47,7 @@
    row so they stay reachable without a pointer. */
 .wrapper:hover .handle,
 .wrapper:focus-within .handle {
-  opacity: 0.5;
+  opacity: 1;
 }
 
 .handle:hover,

@@ -24,7 +24,7 @@
   color: var(--text-subtle);
 }
 
-.kindAuthored { color: var(--color-amber-700); }
+.kindAuthored { color: var(--amber-text); }
 
 .gen {
   font-size: var(--text-xs);
@@ -32,7 +32,6 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-subtle);
-  opacity: 0.7;
 }
 
 /* ── Col 2: marker ──────────────────────────────────────────────── */

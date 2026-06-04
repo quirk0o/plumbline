@@ -60,47 +60,51 @@ test.describe('Legacy milestones', () => {
    * a married-in adult with no in-legacy parent does NOT.
    */
   test('born sim gets "is born" milestone; married-in adult does not', async ({ page }) => {
-    // 1. Create a legacy with Bella Goth as the founder.
-    const legacyUrl = await createLegacyWithFounder(page, 'Bella', 'Goth')
+    let legacyUrl: string
 
-    // 2. Add Don Lothario — a married-in adult (no in-legacy parent, no family relationship).
-    await addSim(page, legacyUrl, 'Don', 'Lothario')
+    await test.step('create legacy with founder', async () => {
+      legacyUrl = await createLegacyWithFounder(page, 'Bella', 'Goth')
+    })
 
-    // 3. Add Alice Goth — she will become Bella's child.
-    await addSim(page, legacyUrl, 'Alice', 'Goth')
+    await test.step('add married-in adult', async () => {
+      // Don Lothario has no in-legacy parent — must NOT get an "is born" row.
+      await addSim(page, legacyUrl, 'Don', 'Lothario')
+    })
 
-    // 4. Navigate to Bella's sim detail page via the roster.
-    await page.goto(legacyUrl)
-    await page.getByTestId('roster').getByRole('link', { name: /Bella Goth/ }).click()
-    await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
+    await test.step('add child and link to founder', async () => {
+      // Alice Goth will be linked as Bella's child — must get an "is born" row.
+      await addSim(page, legacyUrl, 'Alice', 'Goth')
 
-    // 5. Open "Add relationship" modal and add Alice as Bella's child.
-    //    (default role is "This sim is the child" = Alice is the child, Bella is the parent)
-    await page.getByRole('button', { name: /^\+ Add$/ }).click()
-    const dialog = page.getByRole('dialog', { name: 'Add relationship' })
-    await expect(dialog).toBeVisible()
+      await page.goto(legacyUrl)
+      await page.getByTestId('roster').getByRole('link', { name: /Bella Goth/ }).click()
+      await expect(page).toHaveURL(/\/app\/legacies\/[^/]+\/sims\/[^/]+$/)
 
-    await dialog.getByRole('button', { name: 'Family' }).click()
+      await page.getByRole('button', { name: /^\+ Add$/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Add relationship' })
+      await expect(dialog).toBeVisible()
 
-    // The sim combobox trigger button label is set to the selected value once picked.
-    // Before selection, its accessible name is "Select sim".
-    await page.getByRole('button', { name: 'Select sim' }).click()
-    await page.getByText('Alice Goth').click()
+      await dialog.getByRole('button', { name: 'Family' }).click()
 
-    // Confirm role is "This sim is the child" (default) — Alice is Bella's child.
-    // No need to change it; just confirm and add.
-    await dialog.getByRole('button', { name: 'Add' }).click()
-    await expect(dialog).not.toBeVisible()
+      // The sim combobox trigger button label is set to the selected value once picked.
+      // Before selection, its accessible name is "Select sim".
+      await page.getByRole('button', { name: 'Select sim' }).click()
+      await page.getByText('Alice Goth').click()
 
-    // 6. Navigate back to the legacy page and scroll to the Milestones section.
-    await page.goto(legacyUrl)
-    await page.locator('#milestones').scrollIntoViewIfNeeded()
+      // Confirm role is "This sim is the child" (default) — Alice is Bella's child.
+      await dialog.getByRole('button', { name: 'Add' }).click()
+      await expect(dialog).not.toBeVisible()
+    })
 
-    // Alice (in-legacy child of Bella) must have a "is born" row.
-    await expect(page.getByText('Alice Goth is born')).toBeVisible()
+    await test.step('verify milestone timeline', async () => {
+      await page.goto(legacyUrl)
+      await page.locator('#milestones').scrollIntoViewIfNeeded()
 
-    // Don (married-in adult, no in-legacy parent) must NOT have an "is born" row.
-    await expect(page.getByText('Don Lothario is born')).toHaveCount(0)
+      // Alice (in-legacy child of Bella) must have a "is born" row.
+      await expect(page.getByText('Alice Goth is born')).toBeVisible()
+
+      // Don (married-in adult, no in-legacy parent) must NOT have an "is born" row.
+      await expect(page.getByText('Don Lothario is born')).toHaveCount(0)
+    })
   })
 
   /**
@@ -109,27 +113,29 @@ test.describe('Legacy milestones', () => {
    */
   test('user can create a milestone that persists, then delete it', async ({ page }) => {
     const legacyUrl = await createLegacyWithFounder(page, 'Mortimer', 'Goth', 'Milestone CRUD')
-
-    await page.goto(legacyUrl)
-    await page.locator('#milestones').scrollIntoViewIfNeeded()
-
-    // Open the composer and create a milestone.
-    await page.getByRole('button', { name: /\+ Add milestone/i }).click()
-    await page.getByLabel('Title').fill('The back-porch truce')
-    await page.getByRole('button', { name: 'Save milestone' }).click()
-
-    // The new milestone should appear in the milestones timeline.
     const milestonesSection = page.locator('#milestones')
-    await expect(milestonesSection.getByText('The back-porch truce')).toBeVisible()
 
-    // Persists after a page reload.
-    await page.reload()
-    await page.locator('#milestones').scrollIntoViewIfNeeded()
-    await expect(milestonesSection.getByText('The back-porch truce')).toBeVisible()
+    await test.step('create milestone', async () => {
+      await page.goto(legacyUrl)
+      await page.locator('#milestones').scrollIntoViewIfNeeded()
 
-    // Deleting the milestone removes it from the timeline.
-    await page.getByRole('button', { name: 'Delete The back-porch truce' }).click()
-    await expect(milestonesSection.getByText('The back-porch truce')).toHaveCount(0)
+      await page.getByRole('button', { name: /\+ Add milestone/i }).click()
+      await page.getByLabel('Title').fill('The back-porch truce')
+      await page.getByRole('button', { name: 'Save milestone' }).click()
+
+      await expect(milestonesSection.getByText('The back-porch truce')).toBeVisible()
+    })
+
+    await test.step('verify it persists after reload', async () => {
+      await page.reload()
+      await page.locator('#milestones').scrollIntoViewIfNeeded()
+      await expect(milestonesSection.getByText('The back-porch truce')).toBeVisible()
+    })
+
+    await test.step('delete it', async () => {
+      await page.getByRole('button', { name: 'Delete The back-porch truce' }).click()
+      await expect(milestonesSection.getByText('The back-porch truce')).toHaveCount(0)
+    })
   })
 
   /**
@@ -138,39 +144,39 @@ test.describe('Legacy milestones', () => {
    */
   test('user can edit a milestone title and the change persists', async ({ page }) => {
     const legacyUrl = await createLegacyWithFounder(page, 'Cassandra', 'Goth', 'Milestone Edit')
-
-    await page.goto(legacyUrl)
-    await page.locator('#milestones').scrollIntoViewIfNeeded()
-
-    // Create a Note milestone.
-    await page.getByRole('button', { name: /\+ Add milestone/i }).click()
-    await page.getByLabel('Title').fill('Original title')
-    await page.getByRole('button', { name: 'Save milestone' }).click()
-
     const milestonesSection = page.locator('#milestones')
-    await expect(milestonesSection.getByText('Original title')).toBeVisible()
 
-    // Click the Edit control for this milestone.
-    await page.getByRole('button', { name: 'Edit Original title' }).click()
+    await test.step('create milestone', async () => {
+      await page.goto(legacyUrl)
+      await page.locator('#milestones').scrollIntoViewIfNeeded()
 
-    // The composer opens pre-filled; clear and type the new title.
-    const titleInput = page.getByRole('textbox', { name: 'Title' })
-    await expect(titleInput).toHaveValue('Original title')
-    await titleInput.clear()
-    await titleInput.fill('Updated title')
+      await page.getByRole('button', { name: /\+ Add milestone/i }).click()
+      await page.getByLabel('Title').fill('Original title')
+      await page.getByRole('button', { name: 'Save milestone' }).click()
 
-    // Save the edit.
-    await page.getByRole('button', { name: 'Save milestone' }).click()
+      await expect(milestonesSection.getByText('Original title')).toBeVisible()
+    })
 
-    // The updated title should be visible; the old one should be gone.
-    await expect(milestonesSection.getByText('Updated title')).toBeVisible()
-    await expect(milestonesSection.getByText('Original title')).toHaveCount(0)
+    await test.step('edit the milestone title', async () => {
+      await page.getByRole('button', { name: 'Edit Original title' }).click()
 
-    // Change persists after a page reload.
-    await page.reload()
-    await page.locator('#milestones').scrollIntoViewIfNeeded()
-    await expect(milestonesSection.getByText('Updated title')).toBeVisible()
-    await expect(milestonesSection.getByText('Original title')).toHaveCount(0)
+      const titleInput = page.getByRole('textbox', { name: 'Title' })
+      await expect(titleInput).toHaveValue('Original title')
+      await titleInput.clear()
+      await titleInput.fill('Updated title')
+
+      await page.getByRole('button', { name: 'Save milestone' }).click()
+
+      await expect(milestonesSection.getByText('Updated title')).toBeVisible()
+      await expect(milestonesSection.getByText('Original title')).toHaveCount(0)
+    })
+
+    await test.step('verify change persists after reload', async () => {
+      await page.reload()
+      await page.locator('#milestones').scrollIntoViewIfNeeded()
+      await expect(milestonesSection.getByText('Updated title')).toBeVisible()
+      await expect(milestonesSection.getByText('Original title')).toHaveCount(0)
+    })
   })
 
   /**

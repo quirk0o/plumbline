@@ -15,6 +15,19 @@ vi.mock('next/image', () => ({
   ),
 }))
 
+vi.mock('@/trpc/client', () => ({
+  trpc: {
+    milestones: {
+      create: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      update: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      delete: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      reorder: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+    },
+  },
+}))
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+
 vi.mock('next/link', () => ({
   default: ({
     href,
@@ -69,6 +82,7 @@ const milestones: Milestone[] = [
     title: 'Dina Caliente founds the legacy',
     blurb: null,
     userAuthored: false,
+    sortOrder: 1000,
   },
 ]
 
@@ -83,6 +97,7 @@ const baseProps = {
   name: 'The Caliente Legacy',
   description: 'Three sisters, twelve generations.',
   slug: 'caliente',
+  legacyId: 'leg-caliente',
   stats: { sims: 2, generations: 2, households: 1, milestones: 1 },
   founder: dina,
   currentHeir: reed,

@@ -9,26 +9,31 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+vi.mock('@/trpc/client', () => ({
+  trpc: {
+    milestones: {
+      create: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      update: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      delete: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      reorder: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+    },
+  },
+}))
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+
 describe('Milestones — empty state', () => {
-  it('renders the designed empty state when there are no milestones', () => {
-    render(<Milestones milestones={[]} simsById={{}} slug="caliente" />)
+  it('renders the Add milestone button when there are no milestones', () => {
+    render(<Milestones milestones={[]} simsById={{}} slug="caliente" legacyId="leg-1" />)
     expect(
-      screen.getByRole('heading', { name: /No moments\s*recorded\s*yet\./i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/Births and weddings log themselves/i),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /Record a moment/i }),
+      screen.getByRole('button', { name: /Add milestone/i }),
     ).toBeInTheDocument()
   })
 
-  it('does NOT render a white "Add milestone" composer box', () => {
-    // The white composer card from the design is intentionally not ported
-    // (milestones are auto-derived; there is no manual-entry feature).
-    render(<Milestones milestones={[]} simsById={{}} slug="caliente" />)
+  it('renders the Milestones section heading', () => {
+    render(<Milestones milestones={[]} simsById={{}} slug="caliente" legacyId="leg-1" />)
     expect(
-      screen.queryByRole('button', { name: /Add milestone/i }),
-    ).toBeNull()
+      screen.getByRole('heading', { name: /milestones/i }),
+    ).toBeInTheDocument()
   })
 })

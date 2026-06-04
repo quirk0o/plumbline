@@ -17,14 +17,16 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { ChronicleSim, FetchedLegacy } from '../types'
+import type { ChronicleSim, FetchedLegacy, Milestone } from '../types'
 import {
   computeStats,
   deriveSuccession,
   deriveMilestones,
   groupByGeneration,
+  mergeMilestones,
   ringFor,
   toChronicleSim,
+  toUserMilestones,
 } from '../derive'
 
 // ---------------------------------------------------------------------------
@@ -43,6 +45,14 @@ function makeChronicleSim(overrides: Partial<ChronicleSim> & { id: string }): Ch
     aspirationName: null,
     ...overrides,
   }
+}
+
+// Every fixture sim needs updatedAt + causeOfDeath now. Default: alive,
+// updatedAt === createdAt unless a test overrides it.
+function withDeathFields<T extends { createdAt: Date }>(
+  sim: T,
+): T & { updatedAt: Date; causeOfDeath: null } {
+  return { ...sim, updatedAt: sim.createdAt, causeOfDeath: null }
 }
 
 // ---------------------------------------------------------------------------
@@ -82,7 +92,7 @@ const fixture: FetchedLegacy = {
   ],
   sims: [
     // Gen 1 — founder, not marked isHeir
-    {
+    withDeathFields({
       id: FOUNDER_ID,
       firstName: 'Mortimer',
       lastName: 'Goth',
@@ -105,9 +115,9 @@ const fixture: FetchedLegacy = {
           aspiration: { name: 'Academic' },
         },
       ],
-    },
-    // Gen 1 heir
-    {
+    }),
+    // Gen 1 heir — born to the founder
+    withDeathFields({
       id: HEIR_GEN1_ID,
       firstName: 'Bella',
       lastName: 'Goth',
@@ -117,9 +127,9 @@ const fixture: FetchedLegacy = {
       lifeStage: 'ADULT',
       createdAt: d('02'),
       aspirations: [],
-    },
-    // Spouse of heir gen 1 — no imageUrl
-    {
+    }),
+    // Spouse of heir gen 1 — married in (no in-legacy parent)
+    withDeathFields({
       id: SPOUSE1_ID,
       firstName: 'Bob',
       lastName: 'Pancakes',
@@ -136,9 +146,9 @@ const fixture: FetchedLegacy = {
           aspiration: { name: 'Chief of Mischief' },
         },
       ],
-    },
-    // Gen 2 heir
-    {
+    }),
+    // Gen 2 heir — born to Bella
+    withDeathFields({
       id: HEIR_GEN2_ID,
       firstName: 'Cassandra',
       lastName: 'Goth',
@@ -155,9 +165,9 @@ const fixture: FetchedLegacy = {
           aspiration: { name: 'Soulmate' },
         },
       ],
-    },
-    // Spouse of heir gen 2
-    {
+    }),
+    // Spouse of heir gen 2 — married in (no in-legacy parent)
+    withDeathFields({
       id: SPOUSE2_ID,
       firstName: 'Don',
       lastName: 'Lothario',
@@ -167,9 +177,9 @@ const fixture: FetchedLegacy = {
       lifeStage: 'YOUNG_ADULT',
       createdAt: d('11'),
       aspirations: [],
-    },
-    // Gen 3 heir — most recent, should be "Heir designate"
-    {
+    }),
+    // Gen 3 heir — most recent, should be "Heir designate"; born to Cassandra
+    withDeathFields({
       id: HEIR_GEN3_ID,
       firstName: 'Alexander',
       lastName: 'Goth',
@@ -192,9 +202,9 @@ const fixture: FetchedLegacy = {
           aspiration: { name: 'Nerd Brain' },
         },
       ],
-    },
-    // Sim with null generationNumber
-    {
+    }),
+    // Sim with null generationNumber — no in-legacy parent (no origin row)
+    withDeathFields({
       id: NO_GEN_SIM_ID,
       firstName: 'Vlad',
       lastName: 'Straud',
@@ -204,8 +214,18 @@ const fixture: FetchedLegacy = {
       lifeStage: 'ELDER',
       createdAt: d('15'),
       aspirations: [],
-    },
+    }),
   ],
+  familyRelationships: [
+    // Bella (gen 1 heir) is the founder Mortimer's child → born in legacy
+    { parentId: FOUNDER_ID, childId: HEIR_GEN1_ID },
+    // Cassandra (gen 2 heir) is Bella's child → born in legacy
+    { parentId: HEIR_GEN1_ID, childId: HEIR_GEN2_ID },
+    // Alexander (gen 3 heir) is Cassandra's child → born in legacy
+    { parentId: HEIR_GEN2_ID, childId: HEIR_GEN3_ID },
+    // SPOUSE1, SPOUSE2, and NO_GEN_SIM have no in-legacy parent → no origin row
+  ],
+  userMilestones: [],
   socialRelationships: [
     // Marriage 1: HEIR_GEN1 ↔ SPOUSE1 — canonical pair (heir-1 < spouse-1 alphabetically? no: "sim-heir-1" vs "sim-spouse-1")
     // "sim-heir-1" < "sim-spouse-1" so simAId = HEIR_GEN1_ID
@@ -340,40 +360,134 @@ describe('ringFor', () => {
 // ---------------------------------------------------------------------------
 
 describe('deriveMilestones', () => {
-  const milestones = deriveMilestones(fixture)
+  it('marks the founder with kind Founding, never Birth', () => {
+    const rows = deriveMilestones(fixture)
+    const founderRow = rows.find((m) => m.simIds[0] === FOUNDER_ID && m.kind !== 'Death')
+    expect(founderRow?.kind).toBe('Founding')
+    expect(founderRow?.title).toBe('Mortimer Goth founds the legacy')
+    expect(rows.some((m) => m.kind === 'Birth' && m.simIds.includes(FOUNDER_ID))).toBe(false)
+  })
 
-  it('includes one milestone per sim (births)', () => {
-    const births = milestones.filter(
-      (m) => m.kind === 'Birth' || m.kind === 'Founding',
-    )
-    expect(births).toHaveLength(fixture.sims.length)
+  it('emits a Birth only for a sim with an in-legacy parent', () => {
+    const rows = deriveMilestones(fixture)
+    const bellaBirth = rows.find((m) => m.kind === 'Birth' && m.simIds.includes(HEIR_GEN1_ID))
+    expect(bellaBirth).toBeDefined()
+    expect(bellaBirth?.title).toBe('Bella Goth is born')
+  })
+
+  it('does NOT emit any origin row for a married-in adult (no in-legacy parent)', () => {
+    const rows = deriveMilestones(fixture)
+    for (const id of [SPOUSE1_ID, SPOUSE2_ID, NO_GEN_SIM_ID]) {
+      const originRow = rows.find(
+        (m) => (m.kind === 'Birth' || m.kind === 'Founding') && m.simIds.includes(id),
+      )
+      expect(originRow, `unexpected origin row for ${id}`).toBeUndefined()
+    }
+  })
+
+  it('emits a Death row when causeOfDeath is set, independent of birth', () => {
+    const legacy: FetchedLegacy = {
+      ...fixture,
+      familyRelationships: [{ parentId: FOUNDER_ID, childId: HEIR_GEN1_ID }],
+      sims: [
+        withDeathFields({
+          id: FOUNDER_ID, firstName: 'Mortimer', lastName: 'Goth', imageUrl: null,
+          generationNumber: 1, isHeir: false, lifeStage: 'ELDER',
+          createdAt: new Date('2024-01-01T00:00:00Z'), aspirations: [],
+        }),
+        {
+          id: HEIR_GEN1_ID, firstName: 'Bella', lastName: 'Goth', imageUrl: null,
+          generationNumber: 1, isHeir: true, lifeStage: 'ELDER',
+          createdAt: new Date('2024-01-02T00:00:00Z'),
+          updatedAt: new Date('2024-06-01T00:00:00Z'),
+          causeOfDeath: 'OLD_AGE', aspirations: [],
+        },
+      ],
+      socialRelationships: [],
+      userMilestones: [],
+    }
+    const rows = deriveMilestones(legacy)
+    const bellaRows = rows.filter((m) => m.simIds.includes(HEIR_GEN1_ID))
+    expect(bellaRows.map((r) => r.kind).sort()).toEqual(['Birth', 'Death'])
+    const death = bellaRows.find((r) => r.kind === 'Death')
+    expect(death?.title).toBe('Bella Goth dies')
+    expect(death?.sortOrder).toBe(new Date('2024-06-01T00:00:00Z').getTime())
+  })
+
+  it('orders rows newest-first by sortOrder, tie-broken by id', () => {
+    const rows = deriveMilestones(fixture)
+    for (let i = 1; i < rows.length; i++) {
+      const prev = rows[i - 1]
+      const cur = rows[i]
+      const inOrder =
+        prev.sortOrder > cur.sortOrder ||
+        (prev.sortOrder === cur.sortOrder && prev.id.localeCompare(cur.id) <= 0)
+      expect(inOrder).toBe(true)
+    }
+  })
+
+  it('tie-breaks by id ascending when two milestones share the same sortOrder', () => {
+    // Two sims born at the exact same createdAt → identical sortOrder; the one
+    // with the lexicographically smaller id must come first (ascending id tie-break).
+    const SAME_TIME = new Date('2024-03-01T00:00:00.000Z')
+    const SIM_AAA = 'sim-aaa' // sorts before sim-zzz
+    const SIM_ZZZ = 'sim-zzz'
+    const legacy: FetchedLegacy = {
+      id: 'legacy-tie',
+      name: 'Tie Legacy',
+      description: null,
+      founderSimId: SIM_AAA,
+      households: [],
+      familyRelationships: [
+        // SIM_ZZZ is born into the legacy via SIM_AAA
+        { parentId: SIM_AAA, childId: SIM_ZZZ },
+      ],
+      userMilestones: [],
+      socialRelationships: [],
+      sims: [
+        {
+          id: SIM_AAA,
+          firstName: 'Alpha',
+          lastName: 'Sim',
+          imageUrl: null,
+          generationNumber: 1,
+          isHeir: false,
+          lifeStage: 'ADULT',
+          createdAt: SAME_TIME,
+          updatedAt: SAME_TIME,
+          causeOfDeath: null,
+          aspirations: [],
+        },
+        {
+          id: SIM_ZZZ,
+          firstName: 'Zeta',
+          lastName: 'Sim',
+          imageUrl: null,
+          generationNumber: 1,
+          isHeir: false,
+          lifeStage: 'ADULT',
+          createdAt: SAME_TIME,
+          updatedAt: SAME_TIME,
+          causeOfDeath: null,
+          aspirations: [],
+        },
+      ],
+    }
+    const rows = deriveMilestones(legacy)
+    // Both milestones have the same sortOrder; tie-break must order by id ASC.
+    expect(rows[0].id).toBe(`birth-${SIM_AAA}`) // 'birth-sim-aaa' < 'birth-sim-zzz'
+    expect(rows[1].id).toBe(`birth-${SIM_ZZZ}`)
   })
 
   it('includes exactly 2 marriages (de-duplicates reciprocal row)', () => {
-    const marriages = milestones.filter((m) => m.kind === 'Marriage')
+    const rows = deriveMilestones(fixture)
+    const marriages = rows.filter((m) => m.kind === 'Marriage')
     expect(marriages).toHaveLength(2)
   })
 
-  it('total count = sims + unique marriages', () => {
-    expect(milestones).toHaveLength(fixture.sims.length + 2)
-  })
-
-  it('founder row is kind "Founding"', () => {
-    const founding = milestones.find((m) => m.id === `birth-${FOUNDER_ID}`)
-    expect(founding).toBeDefined()
-    expect(founding!.kind).toBe('Founding')
-    expect(founding!.title).toContain('founds the legacy')
-  })
-
-  it('non-founder birth rows are kind "Birth"', () => {
-    const bella = milestones.find((m) => m.id === `birth-${HEIR_GEN1_ID}`)
-    expect(bella).toBeDefined()
-    expect(bella!.kind).toBe('Birth')
-    expect(bella!.title).toContain('is born')
-  })
-
   it('does NOT include DATING relationship as a milestone', () => {
-    const datingMilestone = milestones.find(
+    const rows = deriveMilestones(fixture)
+    const datingMilestone = rows.find(
       (m) =>
         m.kind === 'Marriage' &&
         m.simIds.includes(HEIR_GEN3_ID) &&
@@ -383,7 +497,8 @@ describe('deriveMilestones', () => {
   })
 
   it('marriage milestone contains both partner simIds', () => {
-    const marriage1 = milestones.find((m) =>
+    const rows = deriveMilestones(fixture)
+    const marriage1 = rows.find((m) =>
       m.id.startsWith('marriage-') &&
       m.simIds.includes(HEIR_GEN1_ID) &&
       m.simIds.includes(SPOUSE1_ID),
@@ -395,8 +510,9 @@ describe('deriveMilestones', () => {
   })
 
   it('marriage gen = min of partner generationNumbers', () => {
+    const rows = deriveMilestones(fixture)
     // Both HEIR_GEN2_ID and SPOUSE2_ID are gen 2 → min = 2
-    const marriage2 = milestones.find(
+    const marriage2 = rows.find(
       (m) =>
         m.kind === 'Marriage' &&
         m.simIds.includes(HEIR_GEN2_ID) &&
@@ -406,38 +522,9 @@ describe('deriveMilestones', () => {
     expect(marriage2!.gen).toBe(2)
   })
 
-  it('orders milestones newest-first (descending sortKey)', () => {
-    // Verify adjacent pairs are in descending order.
-    // We compare createdAt of the underlying events by checking gen 3 heir
-    // (created day 20) comes before gen 2 heir (day 10) in the output.
-    const gen3BirthIdx = milestones.findIndex(
-      (m) => m.id === `birth-${HEIR_GEN3_ID}`,
-    )
-    const gen2BirthIdx = milestones.findIndex(
-      (m) => m.id === `birth-${HEIR_GEN2_ID}`,
-    )
-    expect(gen3BirthIdx).toBeLessThan(gen2BirthIdx)
-  })
-
-  it('output order is stable (same result on two calls)', () => {
-    const milestones2 = deriveMilestones(fixture)
-    expect(milestones.map((m) => m.id)).toEqual(milestones2.map((m) => m.id))
-  })
-
-  it('assigns stable ids with expected prefix', () => {
-    const birthIds = milestones
-      .filter((m) => m.kind === 'Birth' || m.kind === 'Founding')
-      .map((m) => m.id)
-    birthIds.forEach((id) => expect(id).toMatch(/^birth-/))
-
-    const marriageIds = milestones
-      .filter((m) => m.kind === 'Marriage')
-      .map((m) => m.id)
-    marriageIds.forEach((id) => expect(id).toMatch(/^marriage-/))
-  })
-
-  it('userAuthored is always false', () => {
-    milestones.forEach((m) => expect(m.userAuthored).toBe(false))
+  it('userAuthored is always false for derived rows', () => {
+    const rows = deriveMilestones(fixture)
+    rows.forEach((m) => expect(m.userAuthored).toBe(false))
   })
 
   it('handles a marriage to a sim outside the legacy without crashing or double-spacing', () => {
@@ -449,8 +536,10 @@ describe('deriveMilestones', () => {
       description: null,
       founderSimId: PRESENT,
       households: [],
+      familyRelationships: [],
+      userMilestones: [],
       sims: [
-        {
+        withDeathFields({
           id: PRESENT,
           firstName: 'Agatha',
           lastName: 'Crumplebottom',
@@ -460,7 +549,7 @@ describe('deriveMilestones', () => {
           lifeStage: 'ELDER',
           createdAt: d('01'),
           aspirations: [],
-        },
+        }),
       ],
       socialRelationships: [
         {
@@ -591,8 +680,9 @@ describe('computeStats', () => {
 
   it('milestones count equals derived milestones list length', () => {
     expect(stats.milestones).toBe(milestones.length)
-    // And sanity-check the actual number: 7 sims + 2 marriages = 9
-    expect(stats.milestones).toBe(9)
+    // Sanity-check: 1 founding + 3 births (born-in sims only) + 2 marriages = 6.
+    // SPOUSE1, SPOUSE2, NO_GEN_SIM have no in-legacy parent → no origin row.
+    expect(stats.milestones).toBe(6)
   })
 })
 
@@ -651,5 +741,66 @@ describe('groupByGeneration', () => {
 
   it('handles empty input', () => {
     expect(groupByGeneration([])).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// toUserMilestones
+// ---------------------------------------------------------------------------
+
+describe('toUserMilestones', () => {
+  it('maps stored rows to Note milestones and infers gen from tagged sims', () => {
+    const legacy: FetchedLegacy = {
+      ...fixture,
+      userMilestones: [
+        {
+          id: 'm1',
+          title: 'The feud begins',
+          blurb: 'A scandal.',
+          sortOrder: 1_700_000_000_000,
+          sims: [{ simId: HEIR_GEN1_ID }, { simId: SPOUSE1_ID }],
+        },
+        { id: 'm2', title: 'Untagged note', blurb: null, sortOrder: 5, sims: [] },
+      ],
+    }
+    const rows = toUserMilestones(legacy)
+    expect(rows[0]).toMatchObject({
+      id: 'm1', kind: 'Note', userAuthored: true,
+      title: 'The feud begins', blurb: 'A scandal.',
+      simIds: [HEIR_GEN1_ID, SPOUSE1_ID], sortOrder: 1_700_000_000_000,
+    })
+    // gen = min of the tagged sims' generationNumbers (both gen 1 here)
+    expect(rows[0].gen).toBe(1)
+    // no tags → gen null
+    expect(rows[1].gen).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// mergeMilestones
+// ---------------------------------------------------------------------------
+
+describe('mergeMilestones', () => {
+  it('merges and sorts by sortOrder desc, tie-broken by id', () => {
+    const auto: Milestone[] = [
+      { id: 'birth-a', kind: 'Birth', gen: 1, simIds: ['a'], title: 'A', blurb: null, userAuthored: false, sortOrder: 100 },
+      { id: 'birth-b', kind: 'Birth', gen: 1, simIds: ['b'], title: 'B', blurb: null, userAuthored: false, sortOrder: 300 },
+    ]
+    const user: Milestone[] = [
+      { id: 'm1', kind: 'Note', gen: 1, simIds: [], title: 'N', blurb: null, userAuthored: true, sortOrder: 200 },
+    ]
+    const merged = mergeMilestones(auto, user)
+    expect(merged.map((m) => m.id)).toEqual(['birth-b', 'm1', 'birth-a'])
+  })
+
+  it('tie-breaks by id ascending when sortOrders are equal', () => {
+    // Three milestones all sharing the same sortOrder — output must be id-sorted ASC.
+    const milestones: Milestone[] = [
+      { id: 'zzz', kind: 'Note', gen: null, simIds: [], title: 'Z', blurb: null, userAuthored: true, sortOrder: 500 },
+      { id: 'aaa', kind: 'Birth', gen: 1, simIds: ['x'], title: 'A', blurb: null, userAuthored: false, sortOrder: 500 },
+      { id: 'mmm', kind: 'Death', gen: 1, simIds: ['x'], title: 'M', blurb: null, userAuthored: false, sortOrder: 500 },
+    ]
+    const merged = mergeMilestones(milestones, [])
+    expect(merged.map((m) => m.id)).toEqual(['aaa', 'mmm', 'zzz'])
   })
 })

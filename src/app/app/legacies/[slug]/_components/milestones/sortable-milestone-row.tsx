@@ -1,0 +1,60 @@
+'use client'
+
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Button } from '@/components/ui'
+import type { Milestone, ChronicleSim } from '../../lib/types'
+import { MilestoneRowContent } from './milestone-row'
+import styles from './sortable-milestone-row.module.css'
+
+export interface SortableMilestoneRowProps {
+  milestone: Milestone
+  simsById: Record<string, ChronicleSim>
+  slug: string
+  onEdit: () => void
+  onDelete: () => void
+}
+
+export function SortableMilestoneRow({
+  milestone, simsById, slug, onEdit, onDelete,
+}: SortableMilestoneRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: milestone.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={styles.wrapper}
+      data-testid="sortable-milestone"
+    >
+      <button
+        type="button"
+        className={styles.handle}
+        aria-label={`Reorder ${milestone.title}`}
+        {...attributes}
+        {...listeners}
+      >
+        ⠿
+      </button>
+      <div className={styles.content}>
+        <MilestoneRowContent milestone={milestone} simsById={simsById} slug={slug} />
+      </div>
+      <div className={styles.controls}>
+        <Button variant="link" size="sm" onClick={onEdit} aria-label={`Edit ${milestone.title}`}>
+          Edit
+        </Button>
+        <Button variant="link" size="sm" onClick={onDelete} aria-label={`Delete ${milestone.title}`}>
+          Delete
+        </Button>
+      </div>
+    </li>
+  )
+}

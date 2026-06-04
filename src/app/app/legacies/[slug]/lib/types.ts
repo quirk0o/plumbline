@@ -8,7 +8,7 @@
  * to match these interfaces exactly.
  */
 
-import type { LifeStage, RomanticStatus } from '@prisma/client'
+import type { CauseOfDeath, LifeStage, RomanticStatus } from '@prisma/client'
 
 // ---------------------------------------------------------------------------
 // Input types (raw Prisma rows)
@@ -35,6 +35,8 @@ export interface FetchedSim {
   isHeir: boolean
   lifeStage: LifeStage
   createdAt: Date
+  updatedAt: Date
+  causeOfDeath: CauseOfDeath | null
   aspirations: FetchedSimAspiration[]
 }
 
@@ -45,6 +47,21 @@ export interface FetchedSocialRelationship {
   simBId: string
   romanticStatus: RomanticStatus
   createdAt: Date
+}
+
+/** A parent→child link, for deciding whether a sim was born into the legacy. */
+export interface FetchedFamilyRelationship {
+  parentId: string
+  childId: string
+}
+
+/** A persisted user-authored milestone row with its tagged sim ids. */
+export interface FetchedMilestone {
+  id: string
+  title: string
+  blurb: string | null
+  sortOrder: number
+  sims: { simId: string }[]
 }
 
 /** Minimal household row fetched from Prisma. */
@@ -70,6 +87,8 @@ export interface FetchedLegacy {
    */
   socialRelationships: FetchedSocialRelationship[]
   households: FetchedHousehold[]
+  familyRelationships: FetchedFamilyRelationship[]
+  userMilestones: FetchedMilestone[]
 }
 
 // ---------------------------------------------------------------------------
@@ -104,23 +123,21 @@ export interface ChronicleSim {
   aspirationName: string | null
 }
 
-/**
- * A single entry on the derived milestone timeline.
- *
- * `userAuthored` is always `false` in this pass (all milestones are
- * auto-derived). The field is kept so future user-authored entries can
- * be distinguished without a breaking type change.
- */
 export interface Milestone {
-  /** Stable synthetic ID, e.g. "birth-{simId}" or "marriage-{aId}-{bId}". */
+  /** Stable id: synthetic for derived rows ("birth-{simId}", "death-{simId}",
+   *  "marriage-{aId}-{bId}"); the real cuid for user-authored rows. */
   id: string
-  kind: 'Founding' | 'Birth' | 'Marriage'
+  kind: 'Founding' | 'Birth' | 'Marriage' | 'Death' | 'Note'
   gen: number | null
   /** The sim(s) involved in this milestone event. */
   simIds: string[]
   title: string
   blurb: string | null
-  userAuthored: false
+  /** True for user-authored notes; also gates drag/edit/delete in the UI. */
+  userAuthored: boolean
+  /** Position on the shared time axis (epoch ms for derived rows; stored float
+   *  for user rows). Drives merge order and client-side drag math. */
+  sortOrder: number
 }
 
 /** One step in the succession line. */

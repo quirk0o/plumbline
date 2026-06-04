@@ -1,0 +1,75 @@
+/* Sortable & pinned milestone rows — both are <li> direct children of the
+   <ul>, wrapping the shared 4-column MilestoneRowContent grid. */
+
+.wrapper,
+.pinned {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+/* The 4-column grid that MilestoneRowContent expects, plus flex-fill so the
+   handle/controls bookend it. Mirrors `.row` in milestone-row.module.css. */
+.content {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 120px 40px 1fr auto;
+  gap: var(--space-6);
+  align-items: center;
+  padding: 18px 0;
+}
+
+/* The handle sits in the section's left gutter (absolute, out of flow) so the
+   row's meta column stays flush-left with the section heading. */
+.handle {
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: grab;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-xs);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Reveal the handle + controls on row hover, and on keyboard focus within the
+   row so they stay reachable without a pointer. */
+.wrapper:hover .handle,
+.wrapper:focus-within .handle {
+  opacity: 1;
+}
+
+.handle:hover,
+.handle:focus-visible {
+  opacity: 1;
+  color: var(--text);
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.wrapper:hover .controls,
+.wrapper:focus-within .controls {
+  opacity: 1;
+}

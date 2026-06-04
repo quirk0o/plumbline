@@ -1,0 +1,29 @@
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 10px 3px 3px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+
+.chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.selected {
+  background: var(--green-glow);
+  border-color: var(--green);
+  color: var(--green);
+}

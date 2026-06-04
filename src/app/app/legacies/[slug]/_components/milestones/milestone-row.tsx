@@ -12,7 +12,14 @@ export interface MilestoneRowProps {
   slug: string
 }
 
-export function MilestoneRow({ milestone, simsById, slug }: MilestoneRowProps) {
+/**
+ * The inner column content of a milestone row, rendered as a fragment so it can
+ * be composed inside exactly one `<li>` (the standalone `MilestoneRow` here, or
+ * the draggable/pinned `<li>` wrappers used by the client list). Keeping the
+ * `<li>` out of this component is what makes the list markup valid: a `<ul>`
+ * must only contain `<li>` direct children.
+ */
+export function MilestoneRowContent({ milestone, simsById, slug }: MilestoneRowProps) {
   const { kind, gen, title, blurb, userAuthored, simIds } = milestone
 
   // Resolve only the sim ids that exist in simsById
@@ -21,10 +28,12 @@ export function MilestoneRow({ milestone, simsById, slug }: MilestoneRowProps) {
     .filter((s): s is ChronicleSim => s !== undefined)
 
   return (
-    <li className={styles.row}>
+    <>
       {/* Col 1 — meta: kind + generation */}
       <div className={styles.meta}>
-        <span className={styles.kind}>{kind}</span>
+        <span className={cn(styles.kind, userAuthored && styles.kindAuthored)}>
+          {userAuthored ? `✎ ${kind}` : kind}
+        </span>
         {gen !== null && (
           <span className={styles.gen}>Gen {roman(gen)}</span>
         )}
@@ -72,6 +81,15 @@ export function MilestoneRow({ milestone, simsById, slug }: MilestoneRowProps) {
           </div>
         ))}
       </div>
+    </>
+  )
+}
+
+/** A standalone milestone row: one `<li>` wrapping the column content. */
+export function MilestoneRow({ milestone, simsById, slug }: MilestoneRowProps) {
+  return (
+    <li className={styles.row}>
+      <MilestoneRowContent milestone={milestone} simsById={simsById} slug={slug} />
     </li>
   )
 }

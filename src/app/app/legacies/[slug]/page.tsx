@@ -6,8 +6,10 @@ import {
   deriveMilestones,
   deriveSuccession,
   groupByGeneration,
+  mergeMilestones,
   selectDesignateHeir,
   toChronicleSim,
+  toUserMilestones,
 } from './lib/derive'
 import type { FetchedLegacy } from './lib/types'
 import { SectionNav } from './_components/section-nav/section-nav'
@@ -49,6 +51,8 @@ export default async function LegacyDetailPage({ params }: Props) {
           isHeir: true,
           lifeStage: true,
           createdAt: true,
+          updatedAt: true,
+          causeOfDeath: true,
           aspirations: {
             select: {
               id: true,
@@ -69,13 +73,32 @@ export default async function LegacyDetailPage({ params }: Props) {
   // by milestone derivation, but we fetch all and let derive.ts filter so the
   // fetched shape stays a faithful FetchedSocialRelationship[].
   const socialRelationships = await db.socialRelationship.findMany({
-    where: { simA: { legacyId: legacy.id } },
+    where: { OR: [ { simA: { legacyId: legacy.id } }, { simB: { legacyId: legacy.id } } ] },
     select: {
       id: true,
       simAId: true,
       simBId: true,
       romanticStatus: true,
       createdAt: true,
+    },
+  })
+
+  // Parent→child links for sims in this legacy — used to decide whether a sim
+  // was born into the legacy (has an in-legacy parent) vs. married/moved in.
+  const familyRelationships = await db.familyRelationship.findMany({
+    where: { child: { legacyId: legacy.id } },
+    select: { parentId: true, childId: true },
+  })
+
+  // Persisted, user-authored milestones for this legacy.
+  const userMilestones = await db.milestone.findMany({
+    where: { legacyId: legacy.id },
+    select: {
+      id: true,
+      title: true,
+      blurb: true,
+      sortOrder: true,
+      sims: { select: { simId: true } },
     },
   })
 
@@ -90,12 +113,17 @@ export default async function LegacyDetailPage({ params }: Props) {
     sims: legacy.sims,
     households: legacy.households,
     socialRelationships,
+    familyRelationships,
+    userMilestones,
   }
 
   const chronicleSims = fetched.sims.map((s) =>
     toChronicleSim(s, fetched.founderSimId),
   )
-  const milestones = deriveMilestones(fetched)
+  const milestones = mergeMilestones(
+    deriveMilestones(fetched),
+    toUserMilestones(fetched),
+  )
   const succession = deriveSuccession(chronicleSims, fetched.founderSimId)
   const groups = groupByGeneration(chronicleSims)
   const stats = computeStats(fetched, milestones)
@@ -116,6 +144,7 @@ export default async function LegacyDetailPage({ params }: Props) {
         name={fetched.name}
         description={fetched.description}
         slug={slug}
+        legacyId={fetched.id}
         stats={stats}
         founder={founder}
         currentHeir={currentHeir}

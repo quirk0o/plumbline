@@ -68,6 +68,7 @@ const derivedMilestone: Milestone = {
   title: 'Dina arrives in Willow Creek',
   blurb: 'The legacy begins.',
   userAuthored: false,
+  sortOrder: 1000,
 }
 
 describe('MilestoneRow', () => {

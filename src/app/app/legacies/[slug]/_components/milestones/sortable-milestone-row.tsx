@@ -2,6 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { Button } from '@/components/ui'
 import type { Milestone, ChronicleSim } from '../../lib/types'
 import { MilestoneRowContent } from './milestone-row'
 import styles from './sortable-milestone-row.module.css'
@@ -47,8 +48,12 @@ export function SortableMilestoneRow({
         <MilestoneRowContent milestone={milestone} simsById={simsById} slug={slug} />
       </div>
       <div className={styles.controls}>
-        <button type="button" onClick={onEdit} aria-label={`Edit ${milestone.title}`}>Edit</button>
-        <button type="button" onClick={onDelete} aria-label={`Delete ${milestone.title}`}>Delete</button>
+        <Button variant="link" size="sm" onClick={onEdit} aria-label={`Edit ${milestone.title}`}>
+          Edit
+        </Button>
+        <Button variant="link" size="sm" onClick={onDelete} aria-label={`Delete ${milestone.title}`}>
+          Delete
+        </Button>
       </div>
     </li>
   )

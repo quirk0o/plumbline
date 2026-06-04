@@ -31,7 +31,6 @@ export function PinnedMilestoneRow({ milestone, simsById, slug }: PinnedMileston
 
   return (
     <li ref={setNodeRef} style={style} className={styles.pinned}>
-      <span className={styles.pinnedSpacer} aria-hidden="true" />
       <div className={styles.content}>
         <MilestoneRowContent milestone={milestone} simsById={simsById} slug={slug} />
       </div>

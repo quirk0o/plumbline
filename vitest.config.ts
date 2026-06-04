@@ -15,6 +15,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    clearMocks: true,
     setupFiles: ['./src/test/setup.ts'],
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],

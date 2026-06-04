@@ -203,8 +203,8 @@ describe('sims.getById', () => {
     const caller = authedCaller(userId)
     const result = await caller.sims.getById({ id: simId })
     expect(result.id).toBe(simId)
-    expect(result.personalityTraits).toBeDefined()
-    expect(result.skills).toBeDefined()
+    expect(result.personalityTraits).toEqual([])
+    expect(result.skills).toEqual([])
   })
 
   it('throws NOT_FOUND when the sim belongs to a different user', async () => {

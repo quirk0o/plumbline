@@ -194,7 +194,7 @@ End-to-end tests using Playwright that exercise the full stack — Next.js serve
 ### Vitest Config (`vitest.config.ts`)
 
 - `environment: 'node'` by default (for integration tests)
-- `.test.tsx` files under `src/app/` and `src/components/` automatically get `jsdom` (via `environmentMatchGlobs`)
+- `.test.tsx` component tests declare `// @vitest-environment jsdom` at the top of the file (the config default is `node`)
 - `globals: true` — `expect`, `describe`, `it`, `vi` available without imports
 - `e2e/**` excluded from Vitest (those are Playwright's responsibility)
 

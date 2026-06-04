@@ -119,6 +119,13 @@ export async function getPersonalityTraits(count: number) {
   return traits
 }
 
+export async function getSkills(count: number) {
+  const skills = await db.skill.findMany({ take: count })
+  if (skills.length < count)
+    throw new Error(`Need ${count} skills, found ${skills.length}. Is the DB seeded?`)
+  return skills
+}
+
 export async function getBaseGamePack() {
   const pack = await db.pack.findFirst({ where: { type: PackType.BASE_GAME } })
   if (!pack) throw new Error('No BASE_GAME pack found. Is the DB seeded?')

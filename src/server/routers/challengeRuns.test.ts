@@ -88,7 +88,7 @@ describe('challengeRuns.getById', () => {
     const result = await authedCaller(userId).challengeRuns.getById({ id: run.id })
     expect(result.phases).toHaveLength(1)
     expect(result.phases[0].trackers).toHaveLength(1)
-    expect(result.phases[0].trackers[0].progress).toBeDefined()
+    expect(result.phases[0].trackers[0].progress).toMatchObject({ value: false, completedAt: null, isManual: true })
   })
 })
 

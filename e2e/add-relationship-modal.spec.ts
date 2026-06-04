@@ -40,8 +40,12 @@ test('user records relationships for a sim', async ({ page }) => {
     await expect(dialog).toBeVisible()
     await page.getByRole('button', { name: 'Select sim' }).click()
     await page.getByRole('option', { name: /Mortimer Goth/ }).click()
+    // The dialog closes optimistically before the mutation is flushed, so
+    // dialog-close is not a commit signal — register the wait before clicking Add.
+    const saved = page.waitForResponse((r) => r.url().includes('sims.addSocialRelationship') && r.ok())
     await dialog.getByRole('button', { name: 'Add' }).click()
     await expect(dialog).not.toBeVisible()
+    await saved
   })
 
   await test.step('add a family relationship', async () => {
@@ -50,8 +54,10 @@ test('user records relationships for a sim', async ({ page }) => {
     await dialog.getByRole('button', { name: 'Family' }).click()
     await page.getByRole('button', { name: 'Select sim' }).click()
     await page.getByRole('option', { name: /Mortimer Goth/ }).click()
+    const saved = page.waitForResponse((r) => r.url().includes('sims.addFamilyRelationship') && r.ok())
     await dialog.getByRole('button', { name: 'Add' }).click()
     await expect(dialog).not.toBeVisible()
+    await saved
   })
 
   await test.step('reload and verify the relationships persist', async () => {

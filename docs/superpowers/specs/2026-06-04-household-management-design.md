@@ -22,7 +22,7 @@ sims between households (or out to unhoused).
 | Generation filter | **Out of scope.** The prototype reacts to a page-wide gen filter; the real page has none. Section always shows all households. |
 | Resident role badges | **Derived only**: "Heir" from `Sim.isHeir`, "Founder" from `Legacy.founderSimId`. No other badges; no role field. |
 | Worlds & lots | **Seeded reference data** (`World`, `Lot` models in `prisma/seed.ts`). `Household.worldId` FK + free-form `lot` string (custom addresses preserved). |
-| World select scope | All seeded worlds, unfiltered by owned packs — matches how traits/aspirations pickers behave. |
+| World select scope | **Filtered by owned packs** (`UserPack`): base-game worlds (no `packId`) always offered, pack worlds only when the user owns the pack. A household's current world is always offered even if its pack is unowned, so existing data never disappears from the select. The server validates only that `worldId` exists — the filter is a UX concern, not an authorization rule. |
 | New sims' household | **Default unhoused** (`householdId: null`). Sim form gains an optional household picker. Auto-create "Household 1" removed. |
 | Founder housing | Wizard founder step gets a **checkbox** (default checked): found "The ⟨LastName⟩ Household" with the founder as first resident; it becomes the active household. |
 | Data flow | **Approach A**: server-fed section; drawer/forms are client components; every mutation = tRPC call + `router.refresh()` (the `NameHeirDialog` pattern). |
@@ -104,7 +104,10 @@ No `delete`, no `list` query (YAGNI; reads are server-side).
 **Page data** (`src/app/app/legacies/[slug]/page.tsx`): extend the existing query to
 fetch households with `world` and resident sims (id, names, imageUrl, isHeir,
 generationNumber, lifeStage) plus `activeHouseholdId`; also fetch the worlds
-reference list (with lots) and pass it down for the selects.
+reference list (with lots) and pass it down for the selects, filtered to base-game
+worlds plus worlds whose pack the user owns (`UserPack`). The drawer and founding
+form merge the household's current world into the options when the filter would
+exclude it (same preserve-current rule as lots).
 
 **`sims.create` changes:** drop the auto-create-household block; accept optional
 `householdId` (validated against the legacy; omitted → unhoused) and optional
@@ -224,7 +227,8 @@ reduced-motion handling (the Drawer primitive already provides it).
 - **Component tests** (Testing Library, mocked tRPC): households section (featured
   vs grid vs empty state), drawer (inline edits commit/cancel, move selects,
   set-active), founding form (required name gating, sim picker, submit payload),
-  editable primitives (commit/Esc/empty semantics). Test rendered behavior, not
+  editable primitives (commit/Esc/empty semantics), and the owned-pack world
+  filtering (base-game always offered; unowned-pack worlds excluded unless current). Test rendered behavior, not
   implementation details; no CSS-source assertions.
 - **E2E** (Playwright, one journey): sign in → found a household via the form
   (moving the founder in) → rename in the drawer → found a second household → move
@@ -236,6 +240,5 @@ reduced-motion handling (the Drawer primitive already provides it).
 - Page-wide generation filter (and the section's reaction to it)
 - Household deletion
 - Editable per-sim household roles
-- Pack-ownership filtering of the world select
 - Lot type (the prototype's "40 × 30 · Residential" line is dropped — nothing
   collects it)

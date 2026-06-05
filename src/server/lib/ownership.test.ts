@@ -1,7 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { db } from '@/server/db'
-import { createTestUser, cleanupUser, createTestLegacy, createTestSim } from '@/test/helpers'
-import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from './ownership'
+import {
+  createTestUser,
+  cleanupUser,
+  createTestLegacy,
+  createTestSim,
+  createTestHousehold,
+  createTestChallengeRun,
+} from '@/test/helpers'
+import {
+  assertLegacyOwned,
+  assertLegacyOwnedBySlug,
+  assertSimOwned,
+  assertSimsOwned,
+  assertHouseholdOwned,
+  assertMilestoneOwned,
+  assertChallengeRunOwned,
+} from './ownership'
 
 describe('assertLegacyOwned', () => {
   let userId: string
@@ -138,6 +153,60 @@ describe('assertSimsOwned', () => {
     const legacy = await createTestLegacy(userId)
     const mine = await createTestSim(legacy.id)
     await expect(assertSimsOwned(db, [mine.id, 'nonexistent-id'], userId)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    })
+  })
+})
+
+describe('entity ownership helpers (household, milestone, challenge run)', () => {
+  let userId: string
+  let otherUserId: string
+  let myLegacyId: string
+  let theirLegacyId: string
+  beforeEach(async () => {
+    ;({ id: userId } = await createTestUser())
+    ;({ id: otherUserId } = await createTestUser())
+    myLegacyId = (await createTestLegacy(userId)).id
+    theirLegacyId = (await createTestLegacy(otherUserId)).id
+  })
+  afterEach(async () => {
+    await cleanupUser(userId)
+    await cleanupUser(otherUserId)
+  })
+
+  it('assertHouseholdOwned returns the owned household and rejects a foreign one', async () => {
+    const mine = await createTestHousehold(myLegacyId)
+    const theirs = await createTestHousehold(theirLegacyId)
+    const result = await assertHouseholdOwned(db, mine.id, userId)
+    expect(result.id).toBe(mine.id)
+    expect(result.legacyId).toBe(myLegacyId)
+    await expect(assertHouseholdOwned(db, theirs.id, userId)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    })
+  })
+
+  it('assertMilestoneOwned returns the owned milestone and rejects a foreign one', async () => {
+    const mine = await db.milestone.create({
+      data: { legacyId: myLegacyId, title: 'Mine', sortOrder: 0 },
+    })
+    const theirs = await db.milestone.create({
+      data: { legacyId: theirLegacyId, title: 'Theirs', sortOrder: 0 },
+    })
+    const result = await assertMilestoneOwned(db, mine.id, userId)
+    expect(result.id).toBe(mine.id)
+    expect(result.legacyId).toBe(myLegacyId)
+    await expect(assertMilestoneOwned(db, theirs.id, userId)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    })
+  })
+
+  it('assertChallengeRunOwned returns the owned run and rejects a foreign one', async () => {
+    const mine = await createTestChallengeRun(myLegacyId)
+    const theirs = await createTestChallengeRun(theirLegacyId)
+    const result = await assertChallengeRunOwned(db, mine.id, userId)
+    expect(result.id).toBe(mine.id)
+    expect(result.legacyId).toBe(myLegacyId)
+    await expect(assertChallengeRunOwned(db, theirs.id, userId)).rejects.toMatchObject({
       code: 'NOT_FOUND',
     })
   })

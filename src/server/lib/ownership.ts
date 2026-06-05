@@ -37,3 +37,24 @@ export async function assertSimsOwned(db: PrismaClient, simIds: string[], userId
   const byId = new Map(sims.map((s) => [s.id, s]))
   return simIds.map((id) => byId.get(id)!)
 }
+
+/** Return the household if it belongs to a legacy owned by the user, else throw NOT_FOUND. */
+export async function assertHouseholdOwned(db: PrismaClient, householdId: string, userId: string) {
+  const household = await db.household.findFirst({ where: { id: householdId, legacy: { userId } } })
+  if (!household) throw new TRPCError({ code: 'NOT_FOUND', message: 'Household not found' })
+  return household
+}
+
+/** Return the milestone if it belongs to a legacy owned by the user, else throw NOT_FOUND. */
+export async function assertMilestoneOwned(db: PrismaClient, milestoneId: string, userId: string) {
+  const milestone = await db.milestone.findFirst({ where: { id: milestoneId, legacy: { userId } } })
+  if (!milestone) throw new TRPCError({ code: 'NOT_FOUND', message: 'Milestone not found' })
+  return milestone
+}
+
+/** Return the challenge run if it belongs to a legacy owned by the user, else throw NOT_FOUND. */
+export async function assertChallengeRunOwned(db: PrismaClient, runId: string, userId: string) {
+  const run = await db.challengeRun.findFirst({ where: { id: runId, legacy: { userId } } })
+  if (!run) throw new TRPCError({ code: 'NOT_FOUND', message: 'Challenge run not found' })
+  return run
+}

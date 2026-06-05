@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Gender, LifeStage, OccultType } from '@prisma/client'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { FormField, Input, Button, Combobox } from '@/components/ui'
 import { isLifeStageInRange } from '@/lib/life-stage'
 import { ImageUpload } from './image-upload'
@@ -141,7 +141,6 @@ export function SimForm({
     control,
     setValue,
     getValues,
-    watch,
     setError,
     formState: { errors: formErrors },
   } = useForm({
@@ -169,7 +168,7 @@ export function SimForm({
     }
   }, [errors, setError])
 
-  const currentLifeStage = watch('lifeStage')
+  const currentLifeStage = useWatch({ control, name: 'lifeStage' })
 
   const visibleTraits = traits.filter((t) =>
     isLifeStageInRange(currentLifeStage, t.minLifeStage, t.maxLifeStage)

@@ -19,6 +19,7 @@ const founderInput = z.object({
   aspirationId: z.string().optional(),
   careerId: z.string().optional(),
   occultType: z.nativeEnum(OccultType).optional(),
+  foundHousehold: z.boolean().optional(),
 })
 
 export const legaciesRouter = router({
@@ -47,7 +48,7 @@ export const legaciesRouter = router({
 
           if (!input.founder) return { legacy: { id: legacy.id, slug: legacy.slug, name: legacy.name } }
 
-          const { personalityTraitIds, aspirationId, careerId, ...simFields } = input.founder
+          const { personalityTraitIds, aspirationId, careerId, foundHousehold, ...simFields } = input.founder
 
           const sim = await tx.sim.create({
             data: {
@@ -73,6 +74,21 @@ export const legaciesRouter = router({
           })
 
           await tx.legacy.update({ where: { id: legacy.id }, data: { founderSimId: sim.id } })
+
+          if (foundHousehold) {
+            const household = await tx.household.create({
+              data: {
+                legacyId: legacy.id,
+                name: `The ${simFields.lastName} Household`,
+                foundedGeneration: 1,
+              },
+            })
+            await tx.sim.update({ where: { id: sim.id }, data: { householdId: household.id } })
+            await tx.legacy.update({
+              where: { id: legacy.id },
+              data: { activeHouseholdId: household.id },
+            })
+          }
 
           return { legacy: { id: legacy.id, slug: legacy.slug, name: legacy.name } }
         })

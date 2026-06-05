@@ -83,6 +83,43 @@ describe('legacies.create', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 
+  it('founds "The <LastName> Household" when foundHousehold is set', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.create({
+      name: `Founder House Test ${Date.now()}`,
+      founder: {
+        firstName: 'Dina',
+        lastName: 'Caliente',
+        gender: Gender.FEMALE,
+        foundHousehold: true,
+      },
+    })
+    const legacy = await db.legacy.findUnique({
+      where: { id: result.legacy.id },
+      include: { households: true, sims: true },
+    })
+    expect(legacy!.households).toHaveLength(1)
+    expect(legacy!.households[0].name).toBe('The Caliente Household')
+    expect(legacy!.households[0].foundedGeneration).toBe(1)
+    expect(legacy!.activeHouseholdId).toBe(legacy!.households[0].id)
+    expect(legacy!.sims[0].householdId).toBe(legacy!.households[0].id)
+  })
+
+  it('leaves the founder unhoused when foundHousehold is not set', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.legacies.create({
+      name: `Unhoused Founder Test ${Date.now()}`,
+      founder: { firstName: 'Nina', lastName: 'Caliente', gender: Gender.FEMALE },
+    })
+    const legacy = await db.legacy.findUnique({
+      where: { id: result.legacy.id },
+      include: { households: true, sims: true },
+    })
+    expect(legacy!.households).toHaveLength(0)
+    expect(legacy!.sims[0].householdId).toBeNull()
+    expect(legacy!.activeHouseholdId).toBeNull()
+  })
+
   it('throws UNAUTHORIZED without a session', async () => {
     const caller = unauthCaller()
     await expect(caller.legacies.create({ name: 'Should Fail' })).rejects.toMatchObject({

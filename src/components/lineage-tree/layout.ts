@@ -9,8 +9,8 @@
 
 /**
  * The structural subset of a sim that the layout math needs. The full sim
- * type (with names, portraits, heir flags, etc.) lives in `lineage-tree.tsx`
- * as `LineageTreeSim`; this lean shape keeps the pure layout decoupled.
+ * type (with names, portraits, heir flags, etc.) lives in `to-flow-graph.ts`
+ * as `LineageFlowSim`; this lean shape keeps the pure layout decoupled.
  */
 export type LayoutSim = {
   id: string

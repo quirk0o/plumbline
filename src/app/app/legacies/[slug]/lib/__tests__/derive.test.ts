@@ -47,12 +47,12 @@ function makeChronicleSim(overrides: Partial<ChronicleSim> & { id: string }): Ch
   }
 }
 
-// Every fixture sim needs updatedAt + causeOfDeath now. Default: alive,
-// updatedAt === createdAt unless a test overrides it.
+// Every fixture sim needs updatedAt + causeOfDeath + householdId now.
+// Default: alive, unhoused, updatedAt === createdAt unless a test overrides it.
 function withDeathFields<T extends { createdAt: Date }>(
   sim: T,
-): T & { updatedAt: Date; causeOfDeath: null } {
-  return { ...sim, updatedAt: sim.createdAt, causeOfDeath: null }
+): T & { updatedAt: Date; causeOfDeath: null; householdId: null } {
+  return { ...sim, updatedAt: sim.createdAt, causeOfDeath: null, householdId: null }
 }
 
 // ---------------------------------------------------------------------------
@@ -86,9 +86,9 @@ const fixture: FetchedLegacy = {
   description: 'A very gothic legacy.',
   founderSimId: FOUNDER_ID,
   households: [
-    { id: HOUSEHOLD1_ID },
-    { id: HOUSEHOLD2_ID },
-    { id: HOUSEHOLD3_ID },
+    { id: HOUSEHOLD1_ID, name: 'Goth Manor', worldId: null, lot: null, description: null, funds: 20000, lotValue: 50000, foundedGeneration: 1, world: null },
+    { id: HOUSEHOLD2_ID, name: 'Goth Annex', worldId: null, lot: null, description: null, funds: 5000, lotValue: 10000, foundedGeneration: 2, world: null },
+    { id: HOUSEHOLD3_ID, name: 'Goth Cottage', worldId: null, lot: null, description: null, funds: 3000, lotValue: 8000, foundedGeneration: 3, world: null },
   ],
   sims: [
     // Gen 1 — founder, not marked isHeir
@@ -400,7 +400,7 @@ describe('deriveMilestones', () => {
           generationNumber: 1, isHeir: true, lifeStage: 'ELDER',
           createdAt: new Date('2024-01-02T00:00:00Z'),
           updatedAt: new Date('2024-06-01T00:00:00Z'),
-          causeOfDeath: 'OLD_AGE', aspirations: [],
+          causeOfDeath: 'OLD_AGE', householdId: null, aspirations: [],
         },
       ],
       socialRelationships: [],
@@ -456,6 +456,7 @@ describe('deriveMilestones', () => {
           createdAt: SAME_TIME,
           updatedAt: SAME_TIME,
           causeOfDeath: null,
+          householdId: null,
           aspirations: [],
         },
         {
@@ -469,6 +470,7 @@ describe('deriveMilestones', () => {
           createdAt: SAME_TIME,
           updatedAt: SAME_TIME,
           causeOfDeath: null,
+          householdId: null,
           aspirations: [],
         },
       ],

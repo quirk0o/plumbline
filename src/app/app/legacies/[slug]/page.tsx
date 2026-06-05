@@ -40,7 +40,20 @@ export default async function LegacyDetailPage({ params }: Props) {
       name: true,
       description: true,
       founderSimId: true,
-      households: { select: { id: true } },
+      households: {
+        select: {
+          id: true,
+          name: true,
+          worldId: true,
+          lot: true,
+          description: true,
+          funds: true,
+          lotValue: true,
+          foundedGeneration: true,
+          world: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      },
       sims: {
         select: {
           id: true,
@@ -53,6 +66,7 @@ export default async function LegacyDetailPage({ params }: Props) {
           createdAt: true,
           updatedAt: true,
           causeOfDeath: true,
+          householdId: true,
           aspirations: {
             select: {
               id: true,

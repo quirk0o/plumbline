@@ -37,6 +37,7 @@ export interface FetchedSim {
   createdAt: Date
   updatedAt: Date
   causeOfDeath: CauseOfDeath | null
+  householdId: string | null
   aspirations: FetchedSimAspiration[]
 }
 
@@ -64,9 +65,17 @@ export interface FetchedMilestone {
   sims: { simId: string }[]
 }
 
-/** Minimal household row fetched from Prisma. */
+/** Household row fetched from Prisma (world name joined in). */
 export interface FetchedHousehold {
   id: string
+  name: string
+  worldId: string | null
+  lot: string | null
+  description: string | null
+  funds: number
+  lotValue: number
+  foundedGeneration: number | null
+  world: { name: string } | null
 }
 
 /** The full fetched legacy shape the derivation functions consume. */
@@ -160,4 +169,39 @@ export interface LegacyStats {
   generations: number
   households: number
   milestones: number
+}
+
+/** A sim as the households section sees them (resident rows + pickers). */
+export interface HouseholdSim {
+  id: string
+  firstName: string
+  lastName: string
+  imageUrl: string | null
+  isHeir: boolean
+  isFounder: boolean
+  generationNumber: number | null
+  lifeStage: LifeStage
+  householdId: string | null
+}
+
+/** A household with its residents resolved, ready to render. */
+export interface HouseholdView {
+  id: string
+  name: string
+  worldId: string | null
+  worldName: string | null
+  lot: string | null
+  description: string | null
+  funds: number
+  lotValue: number
+  foundedGeneration: number | null
+  isActive: boolean
+  residents: HouseholdSim[]
+}
+
+/** A world option for the world/lot selects (already pack-filtered). */
+export interface WorldOption {
+  id: string
+  name: string
+  lots: string[]
 }

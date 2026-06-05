@@ -37,7 +37,9 @@
       "Skill(superpowers:finishing-a-development-branch)",
       "Bash(gh api *)",
       "Bash(npx vitest *)",
-      "Skill(superpowers:test-driven-development)"
+      "Skill(superpowers:test-driven-development)",
+      "Bash(but status *)",
+      "Bash(but diff *)"
     ]
   }
 }

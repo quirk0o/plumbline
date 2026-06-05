@@ -1,4 +1,5 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
@@ -6,15 +7,38 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Key breaking change: middleware → proxy
 
 In Next.js 16, `middleware.ts` was renamed to `proxy.ts`. The request-interception file in this project is **`src/proxy.ts`** and it exports a named `proxy` function (not `middleware`). Never suggest renaming it or creating a `middleware.ts`. See `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`.
+
 <!-- END:nextjs-agent-rules -->
 
-# Commits
+# Version control
+
+- Use GitButler (`but`) for version-control write operations, including
+  branching, committing, pushing, and history edits.
+- Assume multiple agents may be working in this repository. Do not move, amend,
+  squash, discard, commit, push, or otherwise modify another agent's work unless
+  the user asks.
+- Use a dedicated GitButler branch for each agent session, unless the user asks
+  for a different branch structure. Commit only changes that belong to that
+  session.
+- Do not push or open pull requests unless the user asks.
+- Keep commit messages and pull request descriptions succinct: explain what
+  changed, why it changed, and any important decision.
+
+## Commits
 
 **Use conventional commits.** Follow the Conventional Commits spec for all commit messages. This ensures clear, consistent history and enables automated tooling.
 
-You must only include your specific changes in commits. Always list specific files to stage with `git add <file>`, never `git add .` or `git add -A`. This prevents accidental inclusion of unrelated changes.
+## Stacking
 
-# Merge Conflicts
+- If this session depends on another in-flight branch, stack its branch on top
+  of that dependency instead of mixing the changes.
+- If this session is working in a stack, put commits on the branch where they
+  belong.
+- Ask before moving commits onto lower, pushed, reviewed, or shared branches.
+- Use `but move` for branch stacking and restacking. Do not recreate branches
+  to simulate stacking.
+
+## Merge Conflicts
 
 Always resolve merge conflicts carefully using proper 3-way merge tooling. Never use `git checkout --ours` or `git checkout --theirs` — these silently discard the other side's changes entirely.
 
@@ -31,9 +55,14 @@ git merge-file /tmp/file-merged /tmp/file-base /tmp/file-theirs
 
 Then resolve each conflict hunk individually, choosing the better data from each side. Never blindly take one side.
 
+# Subagent-driven development
+
+Always use git butler when using sub-agent driven development. Never commit directly to the main branch. Each sub-agent project should have its own  branch, which can be merged into master when ready.
+
 # Code Quality Rules
 
 **No lint or TypeScript suppressions — ever.** The following are illegal in this codebase:
+
 - `// eslint-disable` (any form: next-line, line, block)
 - `// @ts-ignore`
 - `// @ts-expect-error`
@@ -65,6 +94,7 @@ All tests must pass before the work is considered done.
 # Local Development: Signing In
 
 Use the **magic link** flow:
+
 1. Go to `http://localhost:3000/auth/signin`
 2. Enter any email and click **Send magic link**
 3. The link is printed to the server log — check `.next/dev/logs/next-development.log` and grep for `[Auth] Magic link`

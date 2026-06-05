@@ -484,6 +484,7 @@ async function main() {
     { name: 'Outdoor Enthusiast',        category: AspirationCategory.NATURE,      bonusTraitId: await bt('One With Nature'), minLifeStage: LifeStage.YOUNG_ADULT, packId: await pack('Outdoor Retreat') },
     // Popularity
     { name: 'Friend of the World',       category: AspirationCategory.POPULARITY,  bonusTraitId: await bt('Socially Gifted'), minLifeStage: LifeStage.YOUNG_ADULT },
+    { name: 'Joke Star',                 category: AspirationCategory.POPULARITY,  bonusTraitId: await bt('Socially Gifted'), minLifeStage: LifeStage.YOUNG_ADULT },
     { name: 'Leader of the Pack',        category: AspirationCategory.POPULARITY,  bonusTraitId: await bt('Socially Gifted'), minLifeStage: LifeStage.YOUNG_ADULT, packId: await pack('Get Together') },
     { name: 'Party Animal',              category: AspirationCategory.POPULARITY,  bonusTraitId: await bt('Socially Gifted'), minLifeStage: LifeStage.YOUNG_ADULT },
     // Child-only
@@ -523,10 +524,12 @@ async function main() {
     { name: 'Fishing',        minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Fitness',        minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Gardening',      minLifeStage: LifeStage.TEEN, maxLevel: 10 },
+    { name: 'Gourmet Cooking', minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Guitar',         minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Handiness',      minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Logic',          minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Mischief',       minLifeStage: LifeStage.TEEN, maxLevel: 10 },
+    { name: 'Mixology',       minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Painting',       minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Photography',    minLifeStage: LifeStage.TEEN, maxLevel: 10 },
     { name: 'Piano',          minLifeStage: LifeStage.TEEN, maxLevel: 10 },
@@ -539,12 +542,15 @@ async function main() {
     { name: 'Baking',             minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Get to Work') },
     { name: 'DJ Mixing',          minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Get Together') },
     { name: 'Dancing',            minLifeStage: LifeStage.TEEN, maxLevel: 5,  packId: await pack('Get Together') },
+    { name: 'Singing',            minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('City Living') },
     { name: 'Flower Arranging',   minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Seasons') },
     { name: 'Skating',            minLifeStage: LifeStage.TEEN, maxLevel: 5,  packId: await pack('Seasons') },
     { name: 'Research & Debate',  minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Discover University') },
     { name: 'Fabrication',        minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Eco Lifestyle') },
     { name: 'Cross-Stitch',       minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Cottage Living') },
     { name: 'Horseback Riding',   minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Horse Ranch') },
+    { name: 'Wellness',           minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Spa Day') },
+    { name: 'Parenting',          minLifeStage: LifeStage.TEEN, maxLevel: 10, packId: await pack('Parenthood') },
   ]
 
   for (const s of skillSeed) {
@@ -564,9 +570,11 @@ async function main() {
     { name: 'Athlete',         type: CareerType.STANDARD, branchAName: 'Professional Athlete', branchBName: 'Coach' },
     { name: 'Business',        type: CareerType.STANDARD, branchAName: 'Management',          branchBName: 'Investor' },
     { name: 'Criminal',        type: CareerType.STANDARD, branchAName: 'Boss',                branchBName: 'Oracle' },
+    { name: 'Critic',          type: CareerType.STANDARD, branchAName: 'Arts Critic',         branchBName: 'Food Critic',          packId: await pack('City Living') },
     { name: 'Culinary',        type: CareerType.STANDARD, branchAName: 'Chef',                branchBName: 'Mixologist' },
     { name: 'Entertainer',     type: CareerType.STANDARD, branchAName: 'Musician',            branchBName: 'Comedian' },
     { name: 'Painter',         type: CareerType.STANDARD, branchAName: 'Master of the Real',  branchBName: 'Patron of the Arts' },
+    { name: 'Politician',      type: CareerType.STANDARD, branchAName: 'Charity Organizer',   branchBName: 'Politician',           packId: await pack('City Living') },
     { name: 'Secret Agent',    type: CareerType.STANDARD, branchAName: 'Villain',             branchBName: 'Diamond Agent' },
     { name: 'Style Influencer',type: CareerType.STANDARD, branchAName: 'Stylist',             branchBName: 'Trend Setter' },
     { name: 'Tech Guru',       type: CareerType.STANDARD, branchAName: 'eSport Gamer',        branchBName: 'Start-Up Entrepreneur' },
@@ -722,6 +730,260 @@ async function main() {
         computationSpec: tt.computationSpec ?? undefined,
         configSchema: tt.configSchema,
         goalSchema: tt.goalSchema ?? undefined,
+      },
+    })
+  }
+
+  // ── Not So Berry challenge template ───────────────────────────────────────
+  console.log('Seeding Not So Berry challenge...')
+
+  const existingNotSoBerry = await prisma.challenge.findFirst({
+    where: { name: 'Not So Berry', ownerId: null },
+  })
+
+  if (existingNotSoBerry) {
+    console.log('Not So Berry challenge already seeded, skipping.')
+  } else {
+    const ttId = async (name: string) =>
+      (await prisma.trackerType.findUniqueOrThrow({ where: { name } })).id
+    const skillMaxedTypeId = await ttId('Skill Maxed')
+    const aspirationCompletedTypeId = await ttId('Aspiration Completed')
+    const careerCompletedTypeId = await ttId('Career Completed')
+    const manualGoalTypeId = await ttId('Manual Goal')
+    const manualNumericalTypeId = await ttId('Manual Numerical Goal')
+
+    const maxSkill = async (skillName: string, sortOrder: number) => ({
+      trackerTypeId: skillMaxedTypeId,
+      name: `Max the ${skillName} skill`,
+      config: { skillId: (await prisma.skill.findUniqueOrThrow({ where: { name: skillName } })).id },
+      sortOrder,
+    })
+    const completeAspiration = async (aspirationName: string, sortOrder: number) => ({
+      trackerTypeId: aspirationCompletedTypeId,
+      name: `Complete the ${aspirationName} aspiration`,
+      config: { aspirationId: (await prisma.aspiration.findUniqueOrThrow({ where: { name: aspirationName } })).id },
+      sortOrder,
+    })
+    const masterCareer = async (careerName: string, sortOrder: number) => ({
+      trackerTypeId: careerCompletedTypeId,
+      name: `Master the ${careerName} career`,
+      config: { careerId: (await prisma.career.findUniqueOrThrow({ where: { name: careerName } })).id },
+      sortOrder,
+    })
+    const manualGoal = (name: string, description: string, sortOrder: number) => ({
+      trackerTypeId: manualGoalTypeId,
+      name,
+      description,
+      config: {},
+      sortOrder,
+    })
+    const manualCount = (name: string, description: string, goalValue: number, unit: string, sortOrder: number) => ({
+      trackerTypeId: manualNumericalTypeId,
+      name,
+      description,
+      config: {},
+      goalConfig: { goalValue, unit },
+      sortOrder,
+    })
+
+    await prisma.challenge.create({
+      data: {
+        name: 'Not So Berry',
+        description:
+          'A ten-generation legacy challenge by lilsimsie and alwaysimming. Each generation is themed around a color and comes with its own traits, career, aspiration, and skill goals. Play with a normal lifespan and keep money cheats to a minimum.',
+        isPublic: true,
+        phases: {
+          create: [
+            {
+              generationNumber: 1,
+              title: 'Generation One: Mint',
+              description:
+                'A mischievous scientist who really loves the color mint. Traits: Vegetarian, Materialistic, Jealous.',
+              sortOrder: 0,
+              trackers: {
+                create: [
+                  await masterCareer('Scientist', 0),
+                  await completeAspiration('Chief of Mischief', 1),
+                  await maxSkill('Mischief', 2),
+                  await maxSkill('Logic', 3),
+                  manualGoal(
+                    'Complete the Elements collection',
+                    'Collect all elements. Collections are not tracked automatically — mark this complete yourself.',
+                    4,
+                  ),
+                ],
+              },
+            },
+            {
+              generationNumber: 2,
+              title: 'Generation Two: Rose',
+              description:
+                'Had everything as a child but always longed for more; career-focused and afraid to commit. Traits: Hot-Headed, Snob, Romantic.',
+              sortOrder: 1,
+              trackers: {
+                create: [
+                  await masterCareer('Politician', 0),
+                  await completeAspiration('Serial Romantic', 1),
+                  await maxSkill('Charisma', 2),
+                  manualGoal('Have only one child', 'The heir must be an only child.', 3),
+                ],
+              },
+            },
+            {
+              generationNumber: 3,
+              title: 'Generation Three: Yellow',
+              description:
+                'A reclusive genius reaching for the stars. Traits: Clumsy, Ambitious, Loner.',
+              sortOrder: 2,
+              trackers: {
+                create: [
+                  await masterCareer('Astronaut', 0),
+                  await completeAspiration('Nerd Brain', 1),
+                  await maxSkill('Rocket Science', 2),
+                  await maxSkill('Handiness', 3),
+                  manualGoal('Visit Sixam', 'Travel to the alien world via the rocket ship or wormhole generator.', 4),
+                ],
+              },
+            },
+            {
+              generationNumber: 4,
+              title: 'Generation Four: Grey',
+              description:
+                'An athlete with a song in their heart and a mess in their wake. Traits: Active, Slob, Music Lover.',
+              sortOrder: 3,
+              trackers: {
+                create: [
+                  await masterCareer('Athlete', 0),
+                  await completeAspiration('Bodybuilder', 1),
+                  await maxSkill('Fitness', 2),
+                  await maxSkill('Singing', 3),
+                  await maxSkill('Parenting', 4),
+                  manualGoal(
+                    'Marry a sim with the Neat trait',
+                    'After three failed relationships, settle down with a Neat spouse.',
+                    5,
+                  ),
+                ],
+              },
+            },
+            {
+              generationNumber: 5,
+              title: 'Generation Five: Plum',
+              description:
+                'A jack of all trades who can never settle on one thing — or one place. Traits: Noncommittal, Dance Machine, Genius.',
+              sortOrder: 4,
+              trackers: {
+                create: [
+                  await completeAspiration('Renaissance Sim', 0),
+                  await maxSkill('Dancing', 1),
+                  manualCount(
+                    'Reach level 8 in six different skills',
+                    'Any six skills count toward this goal.',
+                    6,
+                    'skills',
+                    2,
+                  ),
+                  manualCount(
+                    'Work in three different careers',
+                    'Fast Food, Doctor, and Entertainer.',
+                    3,
+                    'careers',
+                    3,
+                  ),
+                  manualCount('Live in three different worlds', 'Move the household across three worlds.', 3, 'worlds', 4),
+                  manualGoal('Marry, divorce, and remarry the same sim', 'True love finds a way — eventually.', 5),
+                ],
+              },
+            },
+            {
+              generationNumber: 6,
+              title: 'Generation Six: Orange',
+              description:
+                'A villainous baker rising through the criminal underworld. Traits: Glutton, Evil, Self-Assured.',
+              sortOrder: 5,
+              trackers: {
+                create: [
+                  await masterCareer('Criminal', 0),
+                  await completeAspiration('Public Enemy', 1),
+                  await maxSkill('Baking', 2),
+                  await maxSkill('Charisma', 3),
+                  manualGoal('Have twins and no other children', 'The heir must be one of the twins.', 4),
+                ],
+              },
+            },
+            {
+              generationNumber: 7,
+              title: 'Generation Seven: Pink',
+              description:
+                'An orderly creative who leaves the corporate world to write. Traits: Neat, Creative, Unflirty.',
+              sortOrder: 6,
+              trackers: {
+                create: [
+                  await masterCareer('Business', 0),
+                  await completeAspiration('Bestselling Author', 1),
+                  await maxSkill('Writing', 2),
+                  await maxSkill('Wellness', 3),
+                  manualGoal(
+                    'Complete the Postcard collection',
+                    'Collections are not tracked automatically — mark this complete yourself.',
+                    4,
+                  ),
+                ],
+              },
+            },
+            {
+              generationNumber: 8,
+              title: 'Generation Eight: Peach',
+              description:
+                'A laid-back detective with a taste for fine food and bad jokes. Traits: Foodie, Lazy, Goofball.',
+              sortOrder: 7,
+              trackers: {
+                create: [
+                  await masterCareer('Detective', 0),
+                  await completeAspiration('Joke Star', 1),
+                  await maxSkill('Gourmet Cooking', 2),
+                  await maxSkill('Comedy', 3),
+                  manualGoal('Marry a co-worker', 'Find love on the force.', 4),
+                ],
+              },
+            },
+            {
+              generationNumber: 9,
+              title: 'Generation Nine: Green',
+              description:
+                'A socially awkward tech whiz who never turns down a party invitation. Traits: Squeamish, Cheerful, Geek.',
+              sortOrder: 8,
+              trackers: {
+                create: [
+                  await masterCareer('Tech Guru', 0),
+                  await completeAspiration('Computer Whiz', 1),
+                  await maxSkill('Programming', 2),
+                  await maxSkill('Video Gaming', 3),
+                  await maxSkill('Mixology', 4),
+                  manualCount('Make five good friends', 'Reach good friend status with five sims.', 5, 'friends', 5),
+                  manualCount('Make five enemies', 'Reach enemy status with five sims.', 5, 'enemies', 6),
+                ],
+              },
+            },
+            {
+              generationNumber: 10,
+              title: 'Generation Ten: Blue',
+              description:
+                'A devoted family sim and harsh critic closing out the legacy. Traits: Gloomy, Perfectionist, Family-Oriented.',
+              sortOrder: 9,
+              trackers: {
+                create: [
+                  await masterCareer('Critic', 0),
+                  await completeAspiration('Super Parent', 1),
+                  await maxSkill('Photography', 2),
+                  await maxSkill('Cooking', 3),
+                  await maxSkill('Parenting', 4),
+                  manualGoal('Marry your high school sweetheart', 'A teen romance that goes the distance.', 5),
+                ],
+              },
+            },
+          ],
+        },
       },
     })
   }

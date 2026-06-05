@@ -16,11 +16,18 @@
 
 ## Before you start — environment cautions
 
-1. **Work in a worktree on a feature branch** (AGENTS.md requirement for subagent-driven development; never commit to master directly). Use the `superpowers:using-git-worktrees` skill. Copy the gitignored root `.env` into the worktree or e2e auth breaks (`cp /Users/beatka/Projects/simstrack-526/.env <worktree>/.env`, same for `.env.test` if gitignored).
-2. **`prisma/seed.ts` has unrelated uncommitted changes in the main checkout** (Not So Berry challenge seeding). A worktree branched from master won't contain them — that's fine. When this branch merges, the seed.ts changes are in different regions of `main()` and should merge cleanly; if not, follow the AGENTS.md 3-way merge procedure.
-3. **Validation after every task:** `npx tsc --noEmit` and `npm run lint` must both pass before the task's commit. `npm test` runs against the test DB (`npm run db:test:setup` runs automatically via `pretest` and re-applies migrations + seed).
-4. **Conventional commits**; stage specific files only (`git add <file>`), never `git add .`.
-5. **No lint/TS suppressions, ever.** Fix the root cause.
+1. **Version control goes through GitButler (`but`) — never `git add`/`git commit`/`git checkout`/`git push`** (AGENTS.md; see the `gitbutler` skill). All work happens in the main checkout on a **dedicated GitButler branch for this session**. Before any edits:
+   - `but status -fv` to see the workspace state and other agents' in-flight branches
+   - `but branch new feat/household-management` to create this session's branch
+   Never commit to master directly; do not push or open PRs unless the user asks; do not touch changes assigned to other agents' branches.
+2. **Per-task commits** use this recipe (the `Commit` step in each task lists WHICH files belong in the commit and the message to use):
+   - `but status -fv` — find the CLI IDs of exactly the listed files
+   - `but commit feat/household-management -m "<message>" --changes <id1>,<id2>` — only those IDs
+   - Read the returned status: if a listed file still shows as unassigned after the commit, it's dependency-locked (owned by another branch) — follow the gitbutler skill's "Stacked dependency / commit-lock recovery" before proceeding.
+3. **`prisma/seed.ts` has unrelated in-flight changes** (Not So Berry challenge seeding) from another session. Task 2 appends to the same file. Check `but status -fv` first: if `prisma/seed.ts` hunks are assigned to another agent's branch, your world-seeding hunks may dependency-lock — stack this session's branch on that branch with `but move feat/household-management <other-branch>` (ask the user if unsure whose branch it is). Never commit the Not So Berry hunks as part of this session's work.
+4. **Validation after every task:** `npx tsc --noEmit` and `npm run lint` must both pass before the task's commit. `npm test` runs against the test DB (`npm run db:test:setup` runs automatically via `pretest` and re-applies migrations + seed).
+5. **Conventional commits** (message format unchanged).
+6. **No lint/TS suppressions, ever.** Fix the root cause.
 
 ## File structure (what gets created/modified)
 
@@ -190,8 +197,8 @@ Expected: no errors. (Two pre-existing call sites construct households — `sims
 - [ ] **Step 6: Commit**
 
 ```bash
-git add prisma/schema.prisma prisma/migrations
-git commit -m "feat(db): add World/Lot models, household fields, active-household pointer"
+but status -fv   # CLI IDs for: prisma/schema.prisma + the new migration folder
+but commit feat/household-management -m "feat(db): add World/Lot models, household fields, active-household pointer" --changes <ids>
 ```
 
 ---
@@ -315,8 +322,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add prisma/seed.ts src/server/routers/worlds-seed.test.ts
-git commit -m "feat(db): seed Sims 4 worlds and canonical lots"
+but status -fv   # CLI IDs for: prisma/seed.ts (only THIS session's hunks — see preamble #3), src/server/routers/worlds-seed.test.ts
+but commit feat/household-management -m "feat(db): seed Sims 4 worlds and canonical lots" --changes <ids>
 ```
 
 ---
@@ -382,11 +389,9 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add src/test/helpers.ts
-git commit -m "test: unhoused-by-default createTestSim, add createTestHousehold"
+but status -fv   # CLI IDs for: src/test/helpers.ts + any test files adjusted in Step 2
+but commit feat/household-management -m "test: unhoused-by-default createTestSim, add createTestHousehold" --changes <ids>
 ```
-
-(Include any test files you had to adjust in the same commit, listed explicitly.)
 
 ---
 
@@ -845,8 +850,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add src/server/routers/households.ts src/server/routers/households.test.ts src/server/routers/index.ts
-git commit -m "feat(api): households router — create, update, setActive, moveSim, listByLegacy"
+but status -fv   # CLI IDs for: src/server/routers/households.ts, households.test.ts, index.ts
+but commit feat/household-management -m "feat(api): households router — create, update, setActive, moveSim, listByLegacy" --changes <ids>
 ```
 
 ---
@@ -958,8 +963,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add src/server/routers/sims.ts src/server/routers/sims.test.ts
-git commit -m "feat(api): sims.create takes optional householdId, drops auto-created household"
+but status -fv   # CLI IDs for: src/server/routers/sims.ts, sims.test.ts
+but commit feat/household-management -m "feat(api): sims.create takes optional householdId, drops auto-created household" --changes <ids>
 ```
 
 ---
@@ -1064,8 +1069,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add src/server/routers/legacies.ts src/server/routers/legacies.test.ts
-git commit -m "feat(api): legacies.create founder can found their first household"
+but status -fv   # CLI IDs for: src/server/routers/legacies.ts, legacies.test.ts
+but commit feat/household-management -m "feat(api): legacies.create founder can found their first household" --changes <ids>
 ```
 
 ---
@@ -1223,8 +1228,8 @@ Run: `npx tsc --noEmit && npm run lint && npm test -- combobox`
 Expected: clean; any existing combobox tests still pass.
 
 ```bash
-git add src/components/ui/icons/house-icon.tsx src/components/ui/icons/plus-icon.tsx src/components/ui/combobox/combobox.tsx src/components/ui/combobox/combobox.module.css src/components/ui/index.ts
-git commit -m "feat(ui): house/plus icons, combobox inline and ghost variants"
+but status -fv   # CLI IDs for: the two icon files, combobox.tsx, combobox.module.css, ui/index.ts
+but commit feat/household-management -m "feat(ui): house/plus icons, combobox inline and ghost variants" --changes <ids>
 ```
 
 ---
@@ -1800,8 +1805,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add src/components/ui/editable src/components/ui/index.ts
-git commit -m "feat(ui): EditableHeading/EditableText/EditableStat inline-edit primitives"
+but status -fv   # CLI IDs for: everything under src/components/ui/editable/ + ui/index.ts
+but commit feat/household-management -m "feat(ui): EditableHeading/EditableText/EditableStat inline-edit primitives" --changes <ids>
 ```
 
 ---
@@ -1990,8 +1995,8 @@ Expected: clean, with two foreseeable exceptions to fix here:
 - `FetchedSim` gained `householdId` — any derive/page test fixtures that construct `FetchedSim` objects need `householdId: null` added. Include those fixture updates in this commit.
 
 ```bash
-git add "src/app/app/legacies/[slug]/lib/types.ts" "src/app/app/legacies/[slug]/_components/households/lib.ts" "src/app/app/legacies/[slug]/_components/households/__tests__/lib.test.ts"
-git commit -m "feat(chronicle): household view types and select-option helpers"
+but status -fv   # CLI IDs for: lib/types.ts, households/lib.ts, households/__tests__/lib.test.ts (+ any fixture files from Step 6)
+but commit feat/household-management -m "feat(chronicle): household view types and select-option helpers" --changes <ids>
 ```
 
 ---
@@ -2614,8 +2619,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add "src/app/app/legacies/[slug]/_components/households"
-git commit -m "feat(chronicle): featured and compact household cards"
+but status -fv   # CLI IDs for: households.module.css, featured-household.tsx, household-card.tsx, __tests__/household-cards.test.tsx
+but commit feat/household-management -m "feat(chronicle): featured and compact household cards" --changes <ids>
 ```
 
 ---
@@ -3269,8 +3274,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add "src/app/app/legacies/[slug]/_components/households"
-git commit -m "feat(chronicle): ceremonial found-a-household dialog"
+but status -fv   # CLI IDs for: found-household-dialog.tsx, found-household-dialog.module.css, __tests__/found-household-dialog.test.tsx (+ dialog.tsx if className pass-through was added)
+but commit feat/household-management -m "feat(chronicle): ceremonial found-a-household dialog" --changes <ids>
 ```
 
 ---
@@ -4042,8 +4047,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add "src/app/app/legacies/[slug]/_components/households"
-git commit -m "feat(chronicle): household management drawer with inline edits and sim moves"
+but status -fv   # CLI IDs for: household-drawer.tsx, household-drawer.module.css, resident-row.tsx, __tests__/household-drawer.test.tsx
+but commit feat/household-management -m "feat(chronicle): household management drawer with inline edits and sim moves" --changes <ids>
 ```
 
 ---
@@ -4382,8 +4387,8 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add "src/app/app/legacies/[slug]/_components/households"
-git commit -m "feat(chronicle): households section wiring cards, founding dialog, drawer"
+but status -fv   # CLI IDs for: households-section.tsx, households-section.module.css, __tests__/households-section.test.tsx
+but commit feat/household-management -m "feat(chronicle): households section wiring cards, founding dialog, drawer" --changes <ids>
 ```
 
 ---
@@ -4557,11 +4562,9 @@ Run: `npx tsc --noEmit && npm run lint`
 Expected: clean.
 
 ```bash
-git add "src/app/app/legacies/[slug]/page.tsx" "src/app/app/legacies/[slug]/_components/chronicle-sections/chronicle-sections.tsx"
-git commit -m "feat(chronicle): wire households section into the legacy page"
+but status -fv   # CLI IDs for: page.tsx, chronicle-sections.tsx + any test fixture files updated in Step 3
+but commit feat/household-management -m "feat(chronicle): wire households section into the legacy page" --changes <ids>
 ```
-
-(Also stage any test fixture files updated in Step 3 — list them explicitly.)
 
 ---
 
@@ -4799,8 +4802,8 @@ Run: `npx tsc --noEmit && npm run lint && npm test`
 Expected: clean, full suite green.
 
 ```bash
-git add src/app/components/sim-form.tsx src/app/components/sim-form.module.css src/app/components/__tests__/sim-form.test.tsx src/app/app/legacies/new/legacy-wizard.tsx "src/app/app/legacies/[slug]/sims/new/page.tsx" "src/app/app/legacies/[slug]/sims/new/add-sim-client.tsx" src/app/components/create-sim-modal.tsx
-git commit -m "feat(sims): household picker and founder found-a-household checkbox"
+but status -fv   # CLI IDs for: sim-form.tsx, sim-form.module.css, __tests__/sim-form.test.tsx, legacy-wizard.tsx, sims/new/page.tsx, add-sim-client.tsx, create-sim-modal.tsx
+but commit feat/household-management -m "feat(sims): household picker and founder found-a-household checkbox" --changes <ids>
 ```
 
 ---
@@ -4900,8 +4903,8 @@ Expected: PASS. Iterate on locators if the run surfaces mismatches — fix the l
 - [ ] **Step 3: Commit**
 
 ```bash
-git add e2e/households.spec.ts
-git commit -m "test(e2e): household founding and management journey"
+but status -fv   # CLI ID for: e2e/households.spec.ts
+but commit feat/household-management -m "test(e2e): household founding and management journey" --changes <id>
 ```
 
 ---
@@ -4927,7 +4930,7 @@ With the dev server running, compare side-by-side with `/tmp/design-legacy/simtr
 
 - [ ] **Step 3: Wrap up**
 
-Use the `superpowers:finishing-a-development-branch` skill to decide merge/PR handling (the branch merges into master; remember the seed.ts merge caution from the preamble).
+Report completion and ask the user how to integrate `feat/household-management` (use the `superpowers:finishing-a-development-branch` skill to present the options). Per AGENTS.md, do NOT push or open a PR without being asked; if the user chooses merge-to-master, follow the gitbutler skill's recipe (`git push origin <branch>:master` then `but pull`) — only after explicit approval, and mind the in-flight seed.ts branch from the preamble.
 
 ---
 

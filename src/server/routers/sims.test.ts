@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { Gender, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
+import { Gender, FamilyRelationshipType, RomanticStatus, LifeStage } from '@prisma/client'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import {
   createTestUser,
@@ -14,6 +14,7 @@ import {
   getAnyCareer,
   getTrackerTypeByName,
   getPersonalityTraits,
+  createTestPersonalityTrait,
   createTestChallenge,
   createTestChallengePhase,
   createTestChallengeRun,
@@ -535,6 +536,18 @@ describe('sims.addTrait / sims.removeTrait', () => {
     await expect(
       authedCaller(userId).sims.addTrait({ simId, traitId: traits[6].id })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('throws BAD_REQUEST when adding a trait not valid for the sim life stage', async () => {
+    const youngAdultTrait = await createTestPersonalityTrait({ minLifeStage: LifeStage.YOUNG_ADULT })
+    await db.sim.update({ where: { id: simId }, data: { lifeStage: LifeStage.CHILD } })
+    try {
+      await expect(
+        authedCaller(userId).sims.addTrait({ simId, traitId: youngAdultTrait.id })
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+    } finally {
+      await db.personalityTrait.delete({ where: { id: youngAdultTrait.id } })
+    }
   })
 })
 

@@ -136,6 +136,18 @@ export async function getPersonalityTraits(count: number) {
   return traits
 }
 
+export async function createTestPersonalityTrait(
+  overrides: { minLifeStage?: LifeStage; maxLifeStage?: LifeStage } = {},
+) {
+  return db.personalityTrait.create({
+    data: {
+      name: `test-trait-${randomUUID()}`,
+      minLifeStage: overrides.minLifeStage ?? null,
+      maxLifeStage: overrides.maxLifeStage ?? null,
+    },
+  })
+}
+
 export async function getSkills(count: number) {
   const skills = await db.skill.findMany({ take: count })
   if (skills.length < count)

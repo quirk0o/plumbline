@@ -2,26 +2,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import type { PrismaClient } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
-
-/** Throw unless the legacy exists and is owned by the user. */
-async function assertOwnedLegacy(db: PrismaClient, legacyId: string, userId: string) {
-  const legacy = await db.legacy.findFirst({
-    where: { id: legacyId, userId },
-    select: { id: true, activeHouseholdId: true },
-  })
-  if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
-  return legacy
-}
-
-/** Return the owned household's id + legacyId, or throw NOT_FOUND. */
-async function findOwnedHousehold(db: PrismaClient, id: string, userId: string) {
-  const household = await db.household.findFirst({
-    where: { id, legacy: { userId } },
-    select: { id: true, legacyId: true },
-  })
-  if (!household) throw new TRPCError({ code: 'NOT_FOUND', message: 'Household not found' })
-  return household
-}
+import { assertLegacyOwned, assertSimOwned, assertHouseholdOwned } from '../lib/ownership'
 
 /** Throw unless the world exists. The select filters by owned packs as a UX
  *  concern; the server only requires that the world is real. */
@@ -46,7 +27,7 @@ export const householdsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const simIds = [...new Set(input.simIds)]
-      const legacy = await assertOwnedLegacy(ctx.db, input.legacyId, userId)
+      const legacy = await assertLegacyOwned(ctx.db, input.legacyId, userId)
       if (input.worldId) await assertWorldExists(ctx.db, input.worldId)
       if (simIds.length > 0) {
         const count = await ctx.db.sim.count({
@@ -109,7 +90,7 @@ export const householdsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const { householdId, ...fields } = input
-      await findOwnedHousehold(ctx.db, householdId, userId)
+      await assertHouseholdOwned(ctx.db, householdId, userId)
       if (fields.worldId) await assertWorldExists(ctx.db, fields.worldId)
       return ctx.db.household.update({ where: { id: householdId }, data: fields })
     }),
@@ -118,7 +99,7 @@ export const householdsRouter = router({
     .input(z.object({ householdId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const household = await findOwnedHousehold(ctx.db, input.householdId, userId)
+      const household = await assertHouseholdOwned(ctx.db, input.householdId, userId)
       await ctx.db.legacy.update({
         where: { id: household.legacyId },
         data: { activeHouseholdId: household.id },
@@ -130,11 +111,7 @@ export const householdsRouter = router({
     .input(z.object({ simId: z.string(), toHouseholdId: z.string().nullable() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({
-        where: { id: input.simId, legacy: { userId } },
-        select: { id: true, legacyId: true, householdId: true },
-      })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const sim = await assertSimOwned(ctx.db, input.simId, userId)
 
       if (input.toHouseholdId) {
         const target = await ctx.db.household.findFirst({
@@ -160,7 +137,7 @@ export const householdsRouter = router({
     .input(z.object({ legacyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      await assertOwnedLegacy(ctx.db, input.legacyId, userId)
+      await assertLegacyOwned(ctx.db, input.legacyId, userId)
       return ctx.db.household.findMany({
         where: { legacyId: input.legacyId },
         select: { id: true, name: true },

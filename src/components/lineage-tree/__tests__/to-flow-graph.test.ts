@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, assert } from 'vitest'
 import { computeLineageLayout, CREST_ANCHORS } from '../layout'
 import { toFlowGraph, type LineageFlowSim } from '../to-flow-graph'
 import type { Node } from '@xyflow/react'
@@ -95,15 +95,32 @@ describe('toFlowGraph', () => {
     const f2Node = byId.get('f2')
     const c1Node = byId.get('c1')
     const f1Node = byId.get('f1')
-    expect(isCrestNode(f2Node!) && f2Node.data.isDimmed).toBe(true)
-    expect(isCrestNode(c1Node!) && c1Node.data.isSelected).toBe(true)
-    expect(isCrestNode(f1Node!) && f1Node.data.isFounder).toBe(true)
-    expect(isCrestNode(f1Node!) && f1Node.data.isFocused).toBe(true)
+
+    assert(f2Node && isCrestNode(f2Node))
+    expect(f2Node.data.isDimmed).toBe(true)
+
+    assert(c1Node && isCrestNode(c1Node))
+    expect(c1Node.data.isSelected).toBe(true)
+
+    assert(f1Node && isCrestNode(f1Node))
+    expect(f1Node.data.isFounder).toBe(true)
+    expect(f1Node.data.isFocused).toBe(true)
   })
 
-  it('skips edges referencing sims missing from the layout', () => {
-    const graph2 = toFlowGraph(layout, sims, [...familyEdges, { parentId: 'ghost', childId: 'c1' }], {})
+  it('skips descent edges referencing parents or children missing from the layout', () => {
+    const graph2 = toFlowGraph(
+      layout,
+      sims,
+      [...familyEdges, { parentId: 'ghost', childId: 'c1' }, { parentId: 'f1', childId: 'ghost' }],
+      {},
+    )
     expect(graph2.edges.filter((e) => e.type === 'descent')).toHaveLength(1)
+  })
+
+  it('skips marriage edges for couples whose sims are filtered out', () => {
+    const graph2 = toFlowGraph(layout, sims.filter((s) => s.id !== 'f2'), familyEdges, {})
+    expect(graph2.edges.filter((e) => e.type === 'marriage')).toHaveLength(0)
+    expect(graph2.nodes.some((n) => n.id === 'f2')).toBe(false)
   })
 
   it('produces a "GEN —" label row for null-generation sims', () => {

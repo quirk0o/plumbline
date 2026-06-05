@@ -15,6 +15,7 @@ import type { Edge, Node } from '@xyflow/react'
 import type { LifeStage } from '@prisma/client'
 import {
   CREST_ANCHORS,
+  NODE_HEIGHT,
   type LineageFamilyEdge,
   type LineageLayout,
 } from './layout'
@@ -78,7 +79,7 @@ export function toFlowGraph(
     return {
       id: `gen-${gen ?? 'null'}`,
       type: 'genLabel',
-      position: { x: 6, y: rowY + 45 - 42 },
+      position: { x: 6, y: rowY + NODE_HEIGHT / 2 - 42 },
       data: { label: gen === null ? 'GEN —' : `GEN ${roman(gen)}` },
       ...STATIC_NODE,
     }
@@ -133,6 +134,7 @@ export function toFlowGraph(
     const pa = layout.byId[a]
     const pb = layout.byId[b]
     if (!pa || !pb) return []
+    if (!simById.has(a) || !simById.has(b)) return []
     const [left, right] = pa.x <= pb.x ? [a, b] : [b, a]
     return [{
       id: `marriage-${a}-${b}`,

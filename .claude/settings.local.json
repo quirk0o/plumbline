@@ -39,7 +39,8 @@
       "Bash(npx vitest *)",
       "Skill(superpowers:test-driven-development)",
       "Bash(but status *)",
-      "Bash(but diff *)"
+      "Bash(but diff *)",
+      "Bash(but pull *)"
     ]
   }
 }

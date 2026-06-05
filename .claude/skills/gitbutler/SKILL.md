@@ -48,6 +48,7 @@ but <mutation> ...
 - Tear off a branch: `but move <branch-name-or-id> zz` (`zz` = unassigned; branch name or branch CLI ID)
 - Push: `but push` or `but push <branch-id>`
 - Pull: `but pull --check` then `but pull`
+- Merge to master (remote target): `git push origin <branch>:master` then `but pull` — `but merge` only works with `gb-local` targets, not `origin`
 
 ## Task Recipes
 

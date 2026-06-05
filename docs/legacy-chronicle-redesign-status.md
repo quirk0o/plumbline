@@ -194,6 +194,25 @@ dark, keyboard) passed.
 - **Node click no longer navigates** — selection drives the inspector; the
   inspector's "Open profile →" navigates.
 
+## ✅ Completed in the 2026-06-05 xyflow re-platform pass
+
+The tree (Atlas + sim-detail mini tree) now renders on `@xyflow/react` via
+`LineageFlow` (`src/components/lineage-tree/lineage-flow.tsx`); layout still
+comes from the untouched `computeLineageLayout`. A pure adapter
+(`to-flow-graph.ts`) emits `crest` / `genLabel` / `union` nodes and
+`marriage` / `descent` edges (decorative ones aria-hidden via `domAttributes`).
+The Crest medallion is now HTML (`crest-flow-node.tsx`): `PortraitAvatar`
+portraits (optimized `next/image` + `onError` monogram fallback) inside a real
+`<button>`, `Plumbob` heir crown. Hand-rolled `usePanZoom`, the SVG
+shell/connectors/defs, and the dagre `family-tree/` stack are deleted;
+`@dagrejs/dagre` uninstalled — xyflow now serves both trees. Pinch-zoom and
+pan-on-scroll come from xyflow. Executed subagent-driven with per-task spec +
+quality review; unit suite green; e2e green except one pre-existing
+challenges-spec auth/data race (unrelated); live browser QA light+dark,
+keyboard, axe 0 violations on the tree route.
+
+---
+
 ## 🔭 Follow-ups (tracked, not blocking)
 
 - **Inspector focus is not returned to the activating node on close.** Focus
@@ -204,15 +223,13 @@ dark, keyboard) passed.
   — e.g. a Lemons sim shows 3 parents, one of them an unassigned-generation sim).
   `sims.getById.childOf` returns all parent relationships without type filtering;
   consider filtering to BIOLOGICAL/ADOPTIVE if that proves to be a data issue.
-- **Sim portraits with a stale/missing `imageUrl` show a broken image** rather
-  than falling back to the monogram (the Crest fallback only triggers on a
-  *null* `imageUrl`). Surfaced by a Lemons-legacy sim whose DB `imageUrl` points
-  at a file absent from the worktree's `public/uploads/`. Data/env issue, but a
-  `<image onError>` → monogram fallback would harden it.
-- **Keyboard focus on an off-screen tree node does not pan it into view.** The
-  zoom controls are keyboard-operable, but focusing a node that's currently
-  panned/zoomed out of frame won't bring it on-screen (SVG `<g>` has no
-  `scrollIntoView`). A future enhancement could pan the viewport to a focused node.
+- ~~**Sim portraits with a stale/missing `imageUrl` show a broken image** rather
+  than falling back to the monogram.~~ **RESOLVED (2026-06-05):** `PortraitAvatar`
+  now has an `onError` → monogram fallback; broken/missing `imageUrl` no longer
+  shows a broken image.
+- ~~**Keyboard focus on an off-screen tree node does not pan it into view.**~~
+  **RESOLVED (2026-06-05):** `LineageFlow` calls `setCenter` on node focus when
+  the node lies outside the current viewport, panning it smoothly into view.
 - **No filter pill for null-generation ("GEN —") sims.** Sims without a
   generation appear in a trailing row but can't be isolated via the pills.
 - **Skip-link focus management.** The link appears on Tab and scrolls to
@@ -225,6 +242,16 @@ dark, keyboard) passed.
   renamed "All sims"; a single `"Bella Goth"` link that now resolves to the
   hero/succession/milestone portrait links + roster card). These predate and are
   independent of this pass; the unit/integration suite is fully green.
+- **Heir/founder medallions show a double amber ring with a light gap.**
+  `PortraitAvatar`'s accent ring sits inside the `.medallionAccent` border,
+  producing two concentric amber rings with a visible gap between them. Needs a
+  design pass — consider a `ring="none"` variant on `PortraitAvatar` for use
+  inside the Crest medallion (where the border already carries the amber accent).
+- **Wheel-scroll over the 280 px sim-detail mini tree captures page scroll.**
+  xyflow's `preventScrolling` default is `true`, so scrolling the page while
+  hovering the mini tree is blocked. This matches the old embed behaviour, but
+  the new embed also intercepts pinch-zoom. Consider
+  `preventScrolling={false}` for the mini-tree embed (`family-tree-mini.tsx`).
 
 ---
 

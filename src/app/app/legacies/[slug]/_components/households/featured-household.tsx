@@ -70,7 +70,7 @@ export interface FeaturedHouseholdProps {
  *  parchment stat rail with the manage CTA on the right. */
 export function FeaturedHousehold({ household: h, onManage }: FeaturedHouseholdProps) {
   return (
-    <div className={styles.featured}>
+    <div className={styles.featured} data-testid="featured-household">
       <div className={styles.featuredMain}>
         <div className={styles.featuredTopRow}>
           <NowPlayingPill />

@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import type { LifeStage } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import { TraitPicker, type Trait } from '@/app/components/trait-picker'
 import styles from './page.module.css'
 
 interface SimProp {
   id: string
+  lifeStage: string
   personalityTraits: { personalityTrait: { id: string; name: string } }[]
 }
 
@@ -43,7 +45,7 @@ export function TraitEditor({ sim, traits }: { sim: SimProp; traits: Trait[] }) 
 
   const localTraits = localTraitIds.map((id) => {
     const found = traits.find((t) => t.id === id)
-    return found ?? { id, name: id, category: null, conflictsWith: [] }
+    return found ?? { id, name: id, category: null, minLifeStage: null, maxLifeStage: null, conflictsWith: [] }
   })
 
   return (
@@ -82,6 +84,7 @@ export function TraitEditor({ sim, traits }: { sim: SimProp; traits: Trait[] }) 
               onChange={handlePickerChange}
               max={6}
               scrollableGrid
+              lifeStage={sim.lifeStage as LifeStage}
             />
           </div>
         </div>

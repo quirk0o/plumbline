@@ -252,6 +252,17 @@ keyboard, axe 0 violations on the tree route.
   hovering the mini tree is blocked. This matches the old embed behaviour, but
   the new embed also intercepts pinch-zoom. Consider
   `preventScrolling={false}` for the mini-tree embed (`family-tree-mini.tsx`).
+- **Selection/search rebuild all node data objects.** `selectedId` and
+  `dimmedIds` are deps of the `toFlowGraph` memo, so every search keystroke or
+  selection click reallocates all N crest node `data` objects and re-renders
+  every node. Fine at current tree sizes; if GEDCOM import lands, distribute
+  the flags via context/store reads inside `CrestFlowNode` so only affected
+  nodes re-render (code-review finding, 2026-06-05).
+- **Mini-tree accessible label uses the focused sim's `lastName` as the family
+  name.** A renamed legacy or married-in sim announces the surname, not the
+  legacy's actual name. Arguably the intended per-sim semantic; if not,
+  `getMiniTreeData` can return `legacy.name` (one extra select field) and
+  `family-tree-mini.tsx` can pass it through (code-review finding, 2026-06-05).
 
 ---
 

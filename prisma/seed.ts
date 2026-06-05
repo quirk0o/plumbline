@@ -148,6 +148,9 @@ async function main() {
     return p.id
   }
 
+  const packByCode = async (code: string) =>
+    (await prisma.pack.findUniqueOrThrow({ where: { code } })).id
+
   // ── Personality Traits ────────────────────────────────────────────────────
   const personalityTraitSeed: Array<{
     name: string
@@ -986,6 +989,55 @@ async function main() {
         },
       },
     })
+  }
+
+  // ── Worlds & canonical lots ───────────────────────────────────────────────
+  console.log('Seeding worlds and lots...')
+
+  // Pack linkage by pack code; null = base game / free update.
+  const worldSeed: Array<{ name: string; packCode: string | null; lots: string[] }> = [
+    { name: 'Willow Creek',      packCode: null,   lots: ['165 Sim Lane', '1 Goth Hill', '21 Culpepper House', '3 Forrester Lane', '15 Crawdad Quarter'] },
+    { name: 'Oasis Springs',     packCode: null,   lots: ['4 Affluista Way', '21 Crick Cabana', '55 Oak Arbor', '9 Acolyte Lane', '7 Pendula View'] },
+    { name: 'Newcrest',          packCode: null,   lots: ['1 Llama Lagoon', '2 Hightower Hollow', '3 Sandtrap Flat'] },
+    { name: 'Magnolia Promenade',packCode: 'EP01', lots: [] },
+    { name: 'Windenburg',        packCode: 'EP02', lots: ['44 Russett Way', '12 Von Haunt Estate', '8 Crumbling Isle'] },
+    { name: 'San Myshuno',       packCode: 'EP03', lots: ['1018 Culpepper Apt', '701 Stella Terrace', '7 Spice Market'] },
+    { name: 'Brindleton Bay',    packCode: 'EP04', lots: [] },
+    { name: 'Del Sol Valley',    packCode: 'EP06', lots: [] },
+    { name: 'Sulani',            packCode: 'EP07', lots: [] },
+    { name: 'Britechester',      packCode: 'EP08', lots: [] },
+    { name: 'Evergreen Harbor',  packCode: 'EP09', lots: [] },
+    { name: 'Mt. Komorebi',      packCode: 'EP10', lots: [] },
+    { name: 'Henford-on-Bagley', packCode: 'EP11', lots: [] },
+    { name: 'Copperdale',        packCode: 'EP12', lots: [] },
+    { name: 'San Sequoia',       packCode: 'EP13', lots: [] },
+    { name: 'Chestnut Ridge',    packCode: 'EP14', lots: [] },
+    { name: 'Tomarang',          packCode: 'EP15', lots: [] },
+    { name: 'Ciudad Enamorada',  packCode: 'EP16', lots: [] },
+    { name: 'Ravenwood',         packCode: 'EP17', lots: [] },
+    { name: 'Nordhaven',         packCode: 'EP18', lots: [] },
+    { name: 'Innisgreen',        packCode: 'EP19', lots: [] },
+    { name: 'Forgotten Hollow',  packCode: 'GP04', lots: [] },
+    { name: 'StrangerVille',     packCode: 'GP07', lots: [] },
+    { name: 'Glimmerbrook',      packCode: 'GP08', lots: [] },
+    { name: 'Moonwood Mill',     packCode: 'GP12', lots: [] },
+    { name: 'Tartosa',           packCode: 'GP11', lots: [] },
+  ]
+
+  for (const w of worldSeed) {
+    const packId = w.packCode ? await packByCode(w.packCode) : null
+    const world = await prisma.world.upsert({
+      where: { name: w.name },
+      update: { packId },
+      create: { name: w.name, packId },
+    })
+    for (const lotName of w.lots) {
+      await prisma.lot.upsert({
+        where: { worldId_name: { worldId: world.id, name: lotName } },
+        update: {},
+        create: { worldId: world.id, name: lotName },
+      })
+    }
   }
 
   console.log('Seed complete.')

@@ -51,20 +51,37 @@ export async function createTestLegacy(
 
 export async function createTestSim(
   legacyId: string,
-  overrides: { firstName?: string; lastName?: string; gender?: Gender } = {},
+  overrides: {
+    firstName?: string
+    lastName?: string
+    gender?: Gender
+    householdId?: string | null
+    generationNumber?: number | null
+  } = {},
 ) {
-  let household = await db.household.findFirst({ where: { legacyId } })
-  if (!household) {
-    household = await db.household.create({ data: { name: 'Household 1', legacyId } })
-  }
   return db.sim.create({
     data: {
       legacyId,
-      householdId: household.id,
+      householdId: overrides.householdId ?? null,
+      generationNumber: overrides.generationNumber ?? null,
       firstName: overrides.firstName ?? 'Test',
       lastName: overrides.lastName ?? 'Sim',
       gender: overrides.gender ?? Gender.FEMALE,
       lifeStage: LifeStage.YOUNG_ADULT,
+    },
+  })
+}
+
+export async function createTestHousehold(
+  legacyId: string,
+  overrides: { name?: string; funds?: number; worldId?: string | null } = {},
+) {
+  return db.household.create({
+    data: {
+      legacyId,
+      name: overrides.name ?? 'Test Household',
+      funds: overrides.funds ?? 0,
+      worldId: overrides.worldId ?? null,
     },
   })
 }

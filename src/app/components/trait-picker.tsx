@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { LifeStage } from '@prisma/client'
+import { isLifeStageInRange } from '@/lib/life-stage'
 import styles from './trait-picker.module.css'
 
 export interface Trait {
@@ -19,19 +20,24 @@ interface TraitPickerProps {
   onChange: (ids: string[]) => void
   max?: number
   scrollableGrid?: boolean
+  lifeStage?: LifeStage
 }
 
 const CATEGORIES = ['All', 'Emotional', 'Hobby', 'Lifestyle', 'Social'] as const
 
-export function TraitPicker({ traits, selected, onChange, max = 6, scrollableGrid = false }: TraitPickerProps) {
+export function TraitPicker({ traits, selected, onChange, max = 6, scrollableGrid = false, lifeStage }: TraitPickerProps) {
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [search, setSearch] = useState('')
 
+  const eligible = lifeStage
+    ? traits.filter((t) => isLifeStageInRange(lifeStage, t.minLifeStage, t.maxLifeStage))
+    : traits
+
   const conflictedIds = new Set(
-    selected.flatMap((id) => traits.find((t) => t.id === id)?.conflictsWith ?? [])
+    selected.flatMap((id) => eligible.find((t) => t.id === id)?.conflictsWith ?? [])
   )
 
-  const visible = traits.filter((t) => {
+  const visible = eligible.filter((t) => {
     if (activeCategory !== 'All' && t.category !== activeCategory.toUpperCase()) return false
     if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
@@ -48,17 +54,17 @@ export function TraitPicker({ traits, selected, onChange, max = 6, scrollableGri
   function conflictingWithLabel(id: string): string | undefined {
     if (!conflictedIds.has(id)) return undefined
     const conflictingSelected = selected.find((selId) => {
-      const t = traits.find((x) => x.id === selId)
+      const t = eligible.find((x) => x.id === selId)
       return t?.conflictsWith.includes(id)
     })
-    return traits.find((t) => t.id === conflictingSelected)?.name
+    return eligible.find((t) => t.id === conflictingSelected)?.name
   }
 
   return (
     <div className={`${styles.container} ${scrollableGrid ? styles.containerScrollable : ''}`}>
       <div className={styles.chips} aria-live="polite">
         {selected.map((id) => {
-          const trait = traits.find((t) => t.id === id)
+          const trait = eligible.find((t) => t.id === id)
           if (!trait) return null
           return (
             <button

@@ -1,10 +1,13 @@
 'use client'
+import { useRouter } from 'next/navigation'
+import { ReactFlowProvider } from '@xyflow/react'
 import { trpc } from '@/trpc/client'
-import { FamilyTree } from '@/components/family-tree/FamilyTree'
+import { LineageFlow } from '@/components/lineage-tree/lineage-flow'
 
 type Props = { simId: string }
 
 export function FamilyTreeMini({ simId }: Props) {
+  const router = useRouter()
   const { data, isLoading, isError } = trpc.sims.getMiniTreeData.useQuery({ simId })
 
   if (isLoading) {
@@ -28,19 +31,22 @@ export function FamilyTreeMini({ simId }: Props) {
     return <p style={{ color: 'var(--text-muted)' }}>No recorded family yet.</p>
   }
 
-  const focusedSim = data.sims.find((s) => s.id === simId)
-  const ariaLabel = focusedSim
-    ? `Family tree for ${focusedSim.firstName} ${focusedSim.lastName}`
-    : 'Family tree'
+  const hrefById = new Map(data.sims.map((s) => [s.id, s.href]))
 
   return (
-    <FamilyTree
-      sims={data.sims}
-      familyEdges={data.familyEdges}
-      partnerEdges={data.partnerEdges}
-      focusSimId={simId}
-      style={{ height: 280 }}
-      ariaLabel={ariaLabel}
-    />
+    <ReactFlowProvider>
+      <div style={{ height: 280 }}>
+        <LineageFlow
+          sims={data.sims}
+          familyEdges={data.familyEdges}
+          partnerEdges={data.partnerEdges}
+          focusSimId={simId}
+          onSelectSim={(id) => {
+            const href = hrefById.get(id)
+            if (href) router.push(href)
+          }}
+        />
+      </div>
+    </ReactFlowProvider>
   )
 }

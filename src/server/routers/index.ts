@@ -9,6 +9,7 @@ import { trackerTypesRouter } from './trackerTypes'
 import { challengesRouter } from './challenges'
 import { challengeRunsRouter } from './challengeRuns'
 import { milestonesRouter } from './milestones'
+import { householdsRouter } from './households'
 
 export const appRouter = router({
   packs: packsRouter,
@@ -21,6 +22,7 @@ export const appRouter = router({
   challenges: challengesRouter,
   challengeRuns: challengeRunsRouter,
   milestones: milestonesRouter,
+  households: householdsRouter,
 })
 
 export type AppRouter = typeof appRouter

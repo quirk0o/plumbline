@@ -3,6 +3,7 @@ import { computeLineageLayout, CREST_ANCHORS } from '../layout'
 import { toFlowGraph, type LineageFlowSim } from '../to-flow-graph'
 import type { Node } from '@xyflow/react'
 import type { CrestNodeData, GenLabelNodeData } from '../to-flow-graph'
+import { descentPath } from '../flow-parts'
 
 const sim = (id: string, gen: number | null, extra: Partial<LineageFlowSim> = {}): LineageFlowSim => ({
   id,
@@ -128,5 +129,11 @@ describe('toFlowGraph', () => {
     const layout2 = computeLineageLayout(sims2, familyEdges, partnerEdges)
     const labels = toFlowGraph(layout2, sims2, familyEdges, {}).nodes.filter(isGenLabelNode)
     expect(labels.map((n) => n.data.label)).toEqual(['GEN I', 'GEN II', 'GEN —'])
+  })
+})
+
+describe('descentPath', () => {
+  it('draws vertical → horizontal → vertical through the midpoint (old ParentChildLine shape)', () => {
+    expect(descentPath(100, 50, 240, 170)).toBe('M 100 50 V 110 H 240 V 170')
   })
 })

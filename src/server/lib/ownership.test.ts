@@ -139,6 +139,10 @@ describe('assertSimsOwned', () => {
     expect(result.map((s) => s.id)).toEqual([sim.id, sim.id])
   })
 
+  it('returns an empty array for an empty input without throwing', async () => {
+    expect(await assertSimsOwned(db, [], userId)).toEqual([])
+  })
+
   it('throws NOT_FOUND when any sim belongs to another user', async () => {
     const legacy = await createTestLegacy(userId)
     const mine = await createTestSim(legacy.id)

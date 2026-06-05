@@ -5,6 +5,7 @@ import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 import { recomputeLegacyTrackers } from '../lib/trackerComputation'
 import { imageUrlSchema } from '../lib/image-url-schema'
+import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {
   id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
@@ -428,11 +429,20 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string(), traitId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({
-        where: { id: input.simId, legacy: { userId } },
-        include: { personalityTraits: { select: { personalityTraitId: true } } },
-      })
+      const [sim, trait] = await Promise.all([
+        ctx.db.sim.findFirst({
+          where: { id: input.simId, legacy: { userId } },
+          include: { personalityTraits: { select: { personalityTraitId: true } } },
+        }),
+        ctx.db.personalityTrait.findUnique({
+          where: { id: input.traitId },
+          select: { minLifeStage: true, maxLifeStage: true },
+        }),
+      ])
       if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      if (!trait) throw new TRPCError({ code: 'NOT_FOUND', message: 'Trait not found' })
+      if (!isLifeStageInRange(sim.lifeStage, trait.minLifeStage, trait.maxLifeStage))
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Trait not available for this life stage' })
       if (sim.personalityTraits.length >= 6)
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Maximum 6 traits allowed' })
       const currentIds = sim.personalityTraits.map((t) => t.personalityTraitId)

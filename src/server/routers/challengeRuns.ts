@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { Prisma } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { resolveThresholds, countThresholdsCrossed } from '../lib/trackerComputation'
+import { assertLegacyOwned, assertChallengeRunOwned } from '../lib/ownership'
 
 export const challengeRunsRouter = router({
   link: protectedProcedure
@@ -13,8 +14,7 @@ export const challengeRunsRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const legacy = await ctx.db.legacy.findFirst({ where: { id: input.legacyId, userId } })
-      if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
+      await assertLegacyOwned(ctx.db, input.legacyId, userId)
 
       const challenge = await ctx.db.challenge.findFirst({
         where: { id: input.challengeId, OR: [{ isPublic: true }, { ownerId: userId }] },
@@ -79,8 +79,7 @@ export const challengeRunsRouter = router({
     .input(z.object({ legacyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const legacy = await ctx.db.legacy.findFirst({ where: { id: input.legacyId, userId } })
-      if (!legacy) throw new TRPCError({ code: 'NOT_FOUND' })
+      await assertLegacyOwned(ctx.db, input.legacyId, userId)
       return ctx.db.challengeRun.findMany({
         where: { legacyId: input.legacyId },
         orderBy: { startedAt: 'desc' },
@@ -91,8 +90,9 @@ export const challengeRunsRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const run = await ctx.db.challengeRun.findFirst({
-        where: { id: input.id, legacy: { userId } },
+      await assertChallengeRunOwned(ctx.db, input.id, userId)
+      const run = await ctx.db.challengeRun.findUnique({
+        where: { id: input.id },
         include: {
           phases: {
             orderBy: { sortOrder: 'asc' },

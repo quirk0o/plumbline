@@ -16,6 +16,7 @@ import type { LifeStage } from '@prisma/client'
 import {
   CREST_ANCHORS,
   NODE_HEIGHT,
+  NODE_WIDTH,
   type LineageFamilyEdge,
   type LineageLayout,
 } from './layout'
@@ -174,6 +175,20 @@ export function toFlowGraph(
       id: n.id,
       type: 'crest' as const,
       position: { x: n.x, y: n.y },
+      // Declare the design-canonical bbox so xyflow treats this node as
+      // measured immediately (no ResizeObserver round-trip needed). Without
+      // these xyflow keeps visibility:hidden until the observer fires, which
+      // never happens in jsdom. They are also correct at runtime: the layout
+      // already positions children using exactly NODE_WIDTH × NODE_HEIGHT.
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+      // xyflow sets pointer-events:none on the wrapper when the node has no
+      // xyflow-level interaction (no dragging/selecting/clicking). The inner
+      // <button> handles selection via CrestNodeData.onSelect, so we need the
+      // wrapper to pass pointer events through. Explicitly set pointer-events:
+      // all — xyflow spreads node.style after its own computed value, so this
+      // wins regardless of draggable/selectable/focusable flags.
+      style: { pointerEvents: 'all' },
       data: {
         sim,
         isFounder: opts.founderSimId === n.id,

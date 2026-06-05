@@ -29,3 +29,9 @@
   font-weight: 600;
   letter-spacing: 0.14em;
 }
+
+/* The canvas inherits the page's dot-grid parchment; keep xyflow's pane clear. */
+.flow :global(.react-flow__pane),
+.flow :global(.react-flow) {
+  background: transparent;
+}

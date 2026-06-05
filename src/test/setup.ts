@@ -66,6 +66,36 @@ if (typeof SVGElement !== 'undefined' && !('getBBox' in SVGElement.prototype)) {
     ({ x: 0, y: 0, width: 0, height: 0 }) as DOMRect
 }
 
+// d3-zoom (xyflow's pan/zoom pane) reads `event.view.document` on mousedown;
+// user-event dispatches MouseEvents with view: null in jsdom. There is only
+// one window in jsdom, so resolving view to it is always correct here.
+// user-event defines `view` as a non-configurable instance own-property via
+// Object.defineProperty returning null. We intercept Object.defineProperty
+// on UIEvent instances so that a null `view` getter becomes window instead.
+if (typeof window !== 'undefined' && typeof UIEvent !== 'undefined') {
+  const _defineProperty = Object.defineProperty.bind(Object)
+  Object.defineProperty = function <T>(
+    obj: T,
+    prop: PropertyKey,
+    descriptor: PropertyDescriptor,
+  ): T {
+    if (
+      prop === 'view' &&
+      obj instanceof UIEvent &&
+      typeof descriptor.get === 'function' &&
+      descriptor.get() === null
+    ) {
+      return _defineProperty(obj, prop, {
+        configurable: true,
+        get() {
+          return window
+        },
+      })
+    }
+    return _defineProperty(obj, prop, descriptor)
+  } as typeof Object.defineProperty
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())

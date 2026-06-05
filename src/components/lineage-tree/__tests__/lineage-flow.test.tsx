@@ -1,0 +1,80 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { ReactFlowProvider } from '@xyflow/react'
+import { LineageFlow } from '../lineage-flow'
+import type { LineageFlowSim } from '../to-flow-graph'
+
+const sims: LineageFlowSim[] = [
+  { id: 'founder', firstName: 'Bella', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false },
+  { id: 'spouse', firstName: 'Mortimer', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false },
+  { id: 'heir', firstName: 'Cassandra', lastName: 'Goth', imageUrl: null, generationNumber: 2, lifeStage: 'TEEN', isHeir: true },
+]
+const familyEdges = [
+  { parentId: 'founder', childId: 'heir' },
+  { parentId: 'spouse', childId: 'heir' },
+]
+const partnerEdges = [{ simAId: 'founder', simBId: 'spouse' }]
+
+function renderTree(props: Partial<React.ComponentProps<typeof LineageFlow>> = {}) {
+  return render(
+    <ReactFlowProvider>
+      <div style={{ width: 800, height: 600 }}>
+        <LineageFlow
+          sims={sims}
+          familyEdges={familyEdges}
+          partnerEdges={partnerEdges}
+          legacyName="Goth"
+          {...props}
+        />
+      </div>
+    </ReactFlowProvider>,
+  )
+}
+
+describe('LineageFlow', () => {
+  it('labels the tree as a group using the legacy name', () => {
+    renderTree()
+    expect(screen.getByRole('group', { name: 'Goth tree — 3 sims' })).toBeInTheDocument()
+  })
+
+  it('falls back to "Family" in the group label', () => {
+    renderTree({ legacyName: undefined })
+    expect(screen.getByRole('group', { name: 'Family tree — 3 sims' })).toBeInTheDocument()
+  })
+
+  it('exposes each sim as a button named with name + life stage when selectable', () => {
+    renderTree({ onSelectSim: vi.fn() })
+    expect(screen.getByRole('button', { name: 'Bella Goth, Adult' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mortimer Goth, Adult' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cassandra Goth, Teen' })).toBeInTheDocument()
+  })
+
+  it('calls onSelectSim with the sim id when a node is clicked', async () => {
+    const onSelectSim = vi.fn()
+    const user = userEvent.setup()
+    renderTree({ onSelectSim })
+    await user.click(screen.getByRole('button', { name: /Cassandra Goth/ }))
+    expect(onSelectSim).toHaveBeenCalledWith('heir')
+  })
+
+  it('renders the heir crown for the heir only', () => {
+    renderTree()
+    expect(screen.getAllByTestId('heir-crown')).toHaveLength(1)
+  })
+
+  it('fades nodes whose id is in dimmedIds (search highlight)', () => {
+    const { container } = renderTree({ dimmedIds: new Set(['spouse']) })
+    expect(container.querySelectorAll('[data-tree-node][data-dimmed]')).toHaveLength(1)
+  })
+
+  it('renders nothing when there are no sims', () => {
+    const { container } = render(
+      <ReactFlowProvider>
+        <LineageFlow sims={[]} familyEdges={[]} partnerEdges={[]} />
+      </ReactFlowProvider>,
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+})

@@ -1,0 +1,278 @@
+/* ── Featured (active) household card ─────────────────────────────────── */
+
+.featured {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+}
+
+@media (max-width: 760px) {
+  .featured {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featuredMain {
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.featuredTopRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.featuredName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.featuredBlurb {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 440px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.featuredResidents {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.featuredResidentNames {
+  font-size: 12.5px;
+  color: var(--text-subtle);
+  letter-spacing: 0.04em;
+}
+
+/* Right: stat rail on parchment */
+.featuredRail {
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.railStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 18px;
+}
+
+.railStat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.railStatValue {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+}
+
+.railStatGreen {
+  color: var(--green);
+}
+
+.railStatAmber {
+  color: var(--amber-text);
+}
+
+.railStatLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.manageButton {
+  margin-top: auto;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ── Lot line (house icon + world · address) ─────────────────────────── */
+
+.lotLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+}
+
+/* ── Overlapping resident avatars ────────────────────────────────────── */
+
+.stack {
+  display: flex;
+  align-items: center;
+}
+
+.stackItem {
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-card);
+  position: relative;
+}
+
+.stackItem + .stackItem {
+  margin-left: -10px;
+}
+
+.stackOverflow {
+  margin-left: -10px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-card);
+  background: var(--bg-card-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* ── Compact household card ──────────────────────────────────────────── */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 15px 28px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.card:hover,
+.card:focus-visible {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--border-bright);
+}
+
+/* div[role=button] doesn't inherit the Button primitive's branded ring — match it. */
+.card:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-md), var(--focus-ring);
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.cardAddress {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-subtle);
+  letter-spacing: 0.02em;
+}
+
+.cardEmptyNote {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.cardFunds {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.cardFundsValue {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.cardResidentCount {
+  color: var(--text-subtle);
+}
+
+.cardManage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+}
+
+/* ── Now playing pill ────────────────────────────────────────────────── */
+
+.nowPlaying {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--green-glow);
+  color: var(--green);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

@@ -63,6 +63,15 @@ describe('fetchTraitsWithConflicts', () => {
     const result = await fetchTraitsWithConflicts(userId)
     expect(result.map((t) => t.id)).toContain(packLinkedTrait.id)
   })
+
+  it('returns minLifeStage and maxLifeStage for each trait', async () => {
+    const result = await fetchTraitsWithConflicts(userId)
+    expect(result.length).toBeGreaterThan(0)
+    for (const t of result) {
+      expect(t).toHaveProperty('minLifeStage')
+      expect(t).toHaveProperty('maxLifeStage')
+    }
+  })
 })
 
 describe('fetchAspirations', () => {
@@ -93,6 +102,15 @@ describe('fetchAspirations', () => {
 
     const result = await fetchAspirations(userId)
     expect(result.map((a) => a.id)).toContain(packLinkedAspiration.id)
+  })
+
+  it('returns minLifeStage and maxLifeStage for each aspiration', async () => {
+    const result = await fetchAspirations(userId)
+    expect(result.length).toBeGreaterThan(0)
+    for (const a of result) {
+      expect(a).toHaveProperty('minLifeStage')
+      expect(a).toHaveProperty('maxLifeStage')
+    }
   })
 })
 

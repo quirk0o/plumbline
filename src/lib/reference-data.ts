@@ -24,6 +24,8 @@ export async function fetchTraitsWithConflicts(userId: string): Promise<Trait[]>
     id: t.id,
     name: t.name,
     category: t.category,
+    minLifeStage: t.minLifeStage,
+    maxLifeStage: t.maxLifeStage,
     conflictsWith: [
       ...t.conflictsA.map((c) => c.traitBId),
       ...t.conflictsB.map((c) => c.traitAId),
@@ -36,7 +38,7 @@ export async function fetchAspirations(userId: string) {
   return db.aspiration.findMany({
     where: packFilter,
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
-    select: { id: true, name: true, category: true },
+    select: { id: true, name: true, category: true, minLifeStage: true, maxLifeStage: true },
   })
 }
 

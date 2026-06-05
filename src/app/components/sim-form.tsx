@@ -29,6 +29,8 @@ interface Aspiration {
   id: string
   name: string
   category: string
+  minLifeStage: LifeStage | null
+  maxLifeStage: LifeStage | null
 }
 
 interface Career {

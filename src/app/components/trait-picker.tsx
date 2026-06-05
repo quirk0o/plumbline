@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import type { LifeStage } from '@prisma/client'
 import styles from './trait-picker.module.css'
 
 export interface Trait {
   id: string
   name: string
   category: string | null
+  minLifeStage: LifeStage | null
+  maxLifeStage: LifeStage | null
   conflictsWith: string[]
 }
 

@@ -5,11 +5,11 @@ import userEvent from '@testing-library/user-event'
 import { TraitPicker } from '../trait-picker'
 
 const traits = [
-  { id: 'neat', name: 'Neat', category: 'LIFESTYLE', conflictsWith: ['slob'] },
-  { id: 'slob', name: 'Slob', category: 'LIFESTYLE', conflictsWith: ['neat'] },
-  { id: 'good', name: 'Good', category: 'EMOTIONAL', conflictsWith: ['evil'] },
-  { id: 'evil', name: 'Evil', category: 'EMOTIONAL', conflictsWith: ['good'] },
-  { id: 'bookworm', name: 'Bookworm', category: 'HOBBY', conflictsWith: [] },
+  { id: 'neat', name: 'Neat', category: 'LIFESTYLE', minLifeStage: null, maxLifeStage: null, conflictsWith: ['slob'] },
+  { id: 'slob', name: 'Slob', category: 'LIFESTYLE', minLifeStage: null, maxLifeStage: null, conflictsWith: ['neat'] },
+  { id: 'good', name: 'Good', category: 'EMOTIONAL', minLifeStage: null, maxLifeStage: null, conflictsWith: ['evil'] },
+  { id: 'evil', name: 'Evil', category: 'EMOTIONAL', minLifeStage: null, maxLifeStage: null, conflictsWith: ['good'] },
+  { id: 'bookworm', name: 'Bookworm', category: 'HOBBY', minLifeStage: null, maxLifeStage: null, conflictsWith: [] },
 ]
 
 describe('TraitPicker', () => {

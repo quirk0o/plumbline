@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import type { LifeStage } from '@prisma/client'
 import { SimForm, type SimFormData } from '@/app/components/sim-form'
 import { trpc } from '@/trpc/client'
 import type { Trait } from '@/app/components/trait-picker'
@@ -9,7 +10,7 @@ interface AddSimClientProps {
   legacyId: string
   slug: string
   traits: Trait[]
-  aspirations: { id: string; name: string; category: string }[]
+  aspirations: { id: string; name: string; category: string; minLifeStage: LifeStage | null; maxLifeStage: LifeStage | null }[]
   careers: { id: string; name: string; type: string }[]
 }
 

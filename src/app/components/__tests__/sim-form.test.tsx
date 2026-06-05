@@ -12,8 +12,8 @@ vi.mock('../trait-picker', () => ({
   ),
 }))
 
-const traits = [{ id: 'trait-1', name: 'Outgoing', category: 'SOCIAL', conflictsWith: [] }]
-const aspirations = [{ id: 'asp-1', name: 'Popularity', category: 'SOCIAL' }]
+const traits = [{ id: 'trait-1', name: 'Outgoing', category: 'SOCIAL', minLifeStage: null, maxLifeStage: null, conflictsWith: [] }]
+const aspirations = [{ id: 'asp-1', name: 'Popularity', category: 'SOCIAL', minLifeStage: null, maxLifeStage: null }]
 const careers = [{ id: 'car-1', name: 'Journalist', type: 'STANDARD' }]
 
 function renderForm(props?: Partial<React.ComponentProps<typeof SimForm>>) {

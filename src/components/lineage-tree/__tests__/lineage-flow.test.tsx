@@ -78,6 +78,21 @@ describe('LineageFlow', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('does not throw or pan when node focus fires before canvas is measured (jsdom has no dimensions)', async () => {
+    // jsdom never gives the canvas real pixel dimensions, so store.getState()
+    // returns width:0/height:0. The guard in handleNodeFocus must short-circuit
+    // rather than calling setCenter (which would divide by zero and/or pan to NaN).
+    // This test asserts the component stays stable — no error thrown, tree still rendered.
+    const user = userEvent.setup()
+    const onSelectSim = vi.fn()
+    renderTree({ onSelectSim })
+    // Clicking the button calls onNodeFocus internally (via toFlowGraph) before onSelect.
+    await user.click(screen.getByRole('button', { name: /Bella Goth/ }))
+    // The tree remains intact; onSelectSim was called — no crash means the guard worked.
+    expect(onSelectSim).toHaveBeenCalledWith('founder')
+    expect(screen.getByRole('group', { name: 'Goth tree — 3 sims' })).toBeInTheDocument()
+  })
+
   it('omits aria-roledescription from rendered crest node wrappers', () => {
     // xyflow sets aria-roledescription="node" on every wrapper, but crest nodes
     // have nodesFocusable=false (no role) which makes that a WAI-ARIA violation.

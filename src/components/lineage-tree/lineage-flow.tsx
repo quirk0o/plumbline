@@ -3,9 +3,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   ReactFlow,
   useReactFlow,
-  useStore,
+  useStoreApi,
   type EdgeTypes,
-  type FitViewOptions,
   type NodeTypes,
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
@@ -35,10 +34,10 @@ const nodeTypes = {
 } satisfies NodeTypes
 const edgeTypes = { marriage: MarriageEdge, descent: DescentEdge } satisfies EdgeTypes
 
-/** Fit-to-viewport capped at 100% — small legacies sit ~1:1, large scale down. */
-export const FIT_VIEW_OPTIONS: FitViewOptions = { maxZoom: 1, padding: 0.08 }
-export const MIN_ZOOM = 0.2
-export const MAX_ZOOM = 2
+// Re-export constants from the shared module so existing consumers (tree-atlas,
+// tests) keep working with the same import path.
+export { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
+import { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
 
 export type LineageFlowProps = {
   sims: LineageFlowSim[]
@@ -76,10 +75,10 @@ export function LineageFlow({
   className,
 }: LineageFlowProps) {
   const { fitView, getViewport, setCenter } = useReactFlow()
-  // Flow canvas dimensions from the xyflow store — avoids a surfaceRef that
-  // would violate the react-hooks/refs rule when passed into useMemo below.
-  const flowWidth = useStore((s) => s.width)
-  const flowHeight = useStore((s) => s.height)
+  // Read canvas dimensions lazily at call time instead of subscribing — this
+  // prevents handleNodeFocus (and the nodes/edges useMemo that depends on it)
+  // from rebuilding on every canvas resize. store is stable across renders.
+  const store = useStoreApi()
 
   const layout = useMemo(
     () => computeLineageLayout(sims, familyEdges, partnerEdges),
@@ -92,12 +91,15 @@ export function LineageFlow({
     (id: string) => {
       const node = layout.byId[id]
       if (!node) return
+      const { width, height } = store.getState()
+      // Canvas not yet measured (e.g. jsdom / pre-layout): no-op, never pan.
+      if (!width || !height) return
       const { x, y, zoom } = getViewport()
       const view = {
         left: -x / zoom,
         top: -y / zoom,
-        right: (-x + flowWidth) / zoom,
-        bottom: (-y + flowHeight) / zoom,
+        right: (-x + width) / zoom,
+        bottom: (-y + height) / zoom,
       }
       const visible =
         node.x >= view.left &&
@@ -107,7 +109,7 @@ export function LineageFlow({
       if (visible) return
       void setCenter(node.x + NODE_WIDTH / 2, node.y + NODE_HEIGHT / 2, { zoom, duration: 200 })
     },
-    [layout, getViewport, setCenter, flowWidth, flowHeight],
+    [layout, getViewport, setCenter, store],
   )
 
   const { nodes, edges } = useMemo(

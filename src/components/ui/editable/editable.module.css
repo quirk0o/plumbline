@@ -1,0 +1,145 @@
+/* The DS "dashed = editable" affordance: static text, dashed green underline
+   on hover, input swap on click. No pencils. */
+
+.displayButton {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0 0 2px;
+  cursor: text;
+  display: inline-block;
+  max-width: 100%;
+  border-bottom: 2px dashed transparent;
+  transition: border-color var(--transition-fast);
+}
+
+.displayButton:hover,
+.displayButton:focus-visible {
+  border-bottom-color: var(--green);
+  outline: none;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.headingInput {
+  display: inline-block;
+  max-width: 100%;
+  min-width: 8ch;
+  field-sizing: content;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--green);
+  outline: none;
+  padding: 0 0 2px;
+}
+
+.body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.bodyEmpty {
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+.bodyEmpty .displayButton {
+  border-bottom: 1.5px dashed var(--border-bright);
+}
+
+.bodyEmpty .displayButton:hover,
+.bodyEmpty .displayButton:focus-visible {
+  border-bottom-color: var(--green);
+}
+
+.bodyInput {
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--green);
+  outline: none;
+  padding: 0 0 3px;
+  resize: none;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.bodyTextarea {
+  field-sizing: content;
+  min-height: 3em;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Fixed-height number row so the display↔input swap never reflows. */
+.statValueRow {
+  height: 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.statValueGreen {
+  color: var(--green);
+}
+
+.statInputWrap {
+  display: inline-flex;
+  align-items: flex-end;
+  max-width: 100%;
+  border-bottom: 2px solid var(--green);
+}
+
+.statPrefix {
+  opacity: 0.6;
+}
+
+.statInput {
+  line-height: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.statLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}

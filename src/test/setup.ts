@@ -40,6 +40,32 @@ if (typeof Element !== 'undefined' && !Element.prototype.hasPointerCapture) {
   Element.prototype.releasePointerCapture = () => {}
 }
 
+// @xyflow/react measures the viewport via DOMMatrixReadOnly and element
+// offsets; jsdom implements neither. Minimal mocks per the React Flow
+// testing guide (reactflow.dev/learn/advanced-use/testing).
+if (typeof global.DOMMatrixReadOnly === 'undefined') {
+  class DOMMatrixReadOnlyMock {
+    m22: number
+    constructor(transform?: string) {
+      const scale = transform?.match(/scale\(([\d.]+)\)/)?.[1]
+      this.m22 = scale === undefined ? 1 : +scale
+    }
+  }
+  global.DOMMatrixReadOnly = DOMMatrixReadOnlyMock as unknown as typeof DOMMatrixReadOnly
+}
+
+if (typeof HTMLElement !== 'undefined') {
+  Object.defineProperties(HTMLElement.prototype, {
+    offsetHeight: { configurable: true, get(this: HTMLElement) { return parseFloat(this.style.height) || 600 } },
+    offsetWidth: { configurable: true, get(this: HTMLElement) { return parseFloat(this.style.width) || 800 } },
+  })
+}
+
+if (typeof SVGElement !== 'undefined' && !('getBBox' in SVGElement.prototype)) {
+  ;(SVGElement.prototype as unknown as { getBBox: () => DOMRect }).getBBox = () =>
+    ({ x: 0, y: 0, width: 0, height: 0 }) as DOMRect
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())

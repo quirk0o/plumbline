@@ -31,7 +31,15 @@ function DialogDescription({ className, ...props }: RadixDialog.DialogDescriptio
   return <RadixDialog.Description className={cn(styles.description, className)} {...props} />
 }
 
-export const Dialog = Object.assign(RadixDialog.Root, {
+// Wrap Root in our own component before Object.assign: assigning onto
+// RadixDialog.Root directly would MUTATE the shared Radix module object,
+// so Dialog and Drawer (both built on it) would clobber each other's
+// subcomponents — whichever module evaluated last won app-wide.
+function DialogRoot(props: RadixDialog.DialogProps) {
+  return <RadixDialog.Root {...props} />
+}
+
+export const Dialog = Object.assign(DialogRoot, {
   Trigger: RadixDialog.Trigger,
   Portal: RadixDialog.Portal,
   Overlay: DialogOverlay,

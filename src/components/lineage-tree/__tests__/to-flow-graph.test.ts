@@ -85,11 +85,18 @@ describe('toFlowGraph', () => {
     expect(lastDescent).toBeLessThan(firstMarriage)
   })
 
-  it('hides decorative edges from the a11y tree so xyflow does not leak ids', () => {
-    // xyflow's EdgeWrapper otherwise emits role="img" + "Edge from <id> to <id>".
-    // ariaRole: 'presentation' drops that role (and its auto label) entirely.
+  it('marks decorative edges aria-hidden so xyflow does not leak ids to AT', () => {
+    // xyflow's EdgeWrapper always emits an auto aria-label "Edge from <id> to
+    // <id>"; the only reliable suppression is aria-hidden on the wrapper, set
+    // via domAttributes (spread last by the wrapper, so it wins).
     for (const edge of graph.edges) {
-      expect(edge.ariaRole).toBe('presentation')
+      expect(edge.domAttributes?.['aria-hidden']).toBe('true')
+    }
+  })
+
+  it('marks decorative genLabel and union nodes aria-hidden', () => {
+    for (const node of graph.nodes.filter((n) => n.type === 'genLabel' || n.type === 'union')) {
+      expect(node.domAttributes?.['aria-hidden']).toBe('true')
     }
   })
 

@@ -11,12 +11,20 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+// Shared spies for the xyflow imperative API so tests can assert on the
+// zoom-bar wiring (hoisted, like mockUseQuery below).
+const { mockZoomIn, mockZoomOut, mockFitView } = vi.hoisted(() => ({
+  mockZoomIn: vi.fn(),
+  mockZoomOut: vi.fn(),
+  mockFitView: vi.fn(),
+}))
+
 vi.mock('@xyflow/react', () => ({
   ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useReactFlow: () => ({
-    zoomIn: vi.fn(),
-    zoomOut: vi.fn(),
-    fitView: vi.fn(),
+    zoomIn: mockZoomIn,
+    zoomOut: mockZoomOut,
+    fitView: mockFitView,
   }),
   useViewport: () => ({ zoom: 1, x: 0, y: 0 }),
 }))
@@ -27,6 +35,7 @@ vi.mock('@/components/lineage-tree/lineage-flow', () => ({
       tree
     </button>
   ),
+  // Keep in sync with the real FIT_VIEW_OPTIONS export in lineage-flow.tsx.
   FIT_VIEW_OPTIONS: { maxZoom: 1, padding: 0.08 },
 }))
 
@@ -143,5 +152,34 @@ describe('TreeAtlas (full-page route, not a dialog)', () => {
     expect(screen.queryByTestId('sim-inspector')).not.toBeInTheDocument()
     await user.click(screen.getByTestId('lineage-flow'))
     expect(screen.getByTestId('sim-inspector')).toHaveTextContent('s2')
+  })
+
+  it('hides the zoom bar (no phantom Fit control) when a gen filter has no sims', async () => {
+    const user = userEvent.setup()
+    // Gen II's only sim disappears from the data while the user has Gen II
+    // selected, so visibleSims is empty but the legacy still has sims overall.
+    const GEN_TWO_EMPTIED = {
+      ...TWO_SIMS,
+      data: {
+        ...TWO_SIMS.data,
+        sims: [TWO_SIMS.data.sims[0]], // only the Gen I sim remains
+      },
+    }
+    const { rerender } = render(<TreeAtlas {...defaultProps} />)
+
+    // Both Fit and the tree are present while Gen II has a sim.
+    await user.click(screen.getByRole('button', { name: 'Gen II' }))
+    expect(screen.getByRole('button', { name: /fit tree to view/i })).toBeInTheDocument()
+    expect(screen.getByTestId('lineage-flow')).toBeInTheDocument()
+
+    // After the Gen II sim is gone, the filter yields nothing.
+    mockUseQuery.mockReturnValue(GEN_TWO_EMPTIED)
+    rerender(<TreeAtlas {...defaultProps} />)
+
+    expect(screen.getByText(/no sims in this generation/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('lineage-flow')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /fit tree to view/i }),
+    ).not.toBeInTheDocument()
   })
 })

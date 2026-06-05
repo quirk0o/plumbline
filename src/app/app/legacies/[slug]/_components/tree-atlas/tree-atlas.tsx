@@ -81,7 +81,11 @@ function LegacyCapsule({
   )
 }
 
-/** Bottom glass bar: colour key + zoom controls (driven by the shared xyflow instance). */
+/**
+ * Bottom glass bar: colour key + zoom controls (driven by the shared xyflow
+ * instance). Must stay rendered inside <ReactFlowProvider> — its useReactFlow
+ * and useViewport hooks throw outside one.
+ */
 function AtlasBottomBar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const { zoom } = useViewport()
@@ -246,7 +250,7 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
               />
             )}
 
-            <AtlasBottomBar />
+            {visibleSims.length > 0 && <AtlasBottomBar />}
           </ReactFlowProvider>
         )}
       </div>

@@ -34,9 +34,6 @@ const nodeTypes = {
 } satisfies NodeTypes
 const edgeTypes = { marriage: MarriageEdge, descent: DescentEdge } satisfies EdgeTypes
 
-// Re-export constants from the shared module so existing consumers (tree-atlas,
-// tests) keep working with the same import path.
-export { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
 import { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
 
 export type LineageFlowProps = {
@@ -107,7 +104,11 @@ export function LineageFlow({
         node.y >= view.top &&
         node.y + NODE_HEIGHT <= view.bottom
       if (visible) return
-      void setCenter(node.x + NODE_WIDTH / 2, node.y + NODE_HEIGHT / 2, { zoom, duration: 200 })
+      // Clamp to MIN_ZOOM: fitView may legitimately sit below the interactive
+      // floor (FIT_VIEW_OPTIONS.minZoom 0.05). Panning at a sub-floor zoom sets
+      // d3's internal scale below scaleExtent, causing the next wheel gesture to
+      // visibly jump to 0.2. Clamping keeps focus-pan inside the interactive range.
+      void setCenter(node.x + NODE_WIDTH / 2, node.y + NODE_HEIGHT / 2, { zoom: Math.max(zoom, MIN_ZOOM), duration: 200 })
     },
     [layout, getViewport, setCenter, store],
   )

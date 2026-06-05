@@ -85,9 +85,24 @@ describe('LineageFlow', () => {
     // This test asserts the component stays stable — no error thrown, tree still rendered.
     const user = userEvent.setup()
     const onSelectSim = vi.fn()
-    renderTree({ onSelectSim })
+    const { container } = renderTree({ onSelectSim })
+
+    // Capture the xyflow viewport element and its transform before the click.
+    // If the guard is removed, setCenter with zero canvas dims would poison this
+    // transform with NaN (width/2 − x·zoom reduces to 0 when width=0, but
+    // panZoom.setViewport is called which updates the CSS transform and can
+    // produce translate(NaN,NaN) when the internal d3 scale is uninitialised).
+    const viewport = container.querySelector('.react-flow__viewport')
+    const transformBefore = viewport?.getAttribute('style') ?? ''
+
     // Clicking the button calls onNodeFocus internally (via toFlowGraph) before onSelect.
     await user.click(screen.getByRole('button', { name: /Bella Goth/ }))
+
+    // The viewport transform must be unchanged and must not contain NaN.
+    const transformAfter = viewport?.getAttribute('style') ?? ''
+    expect(transformAfter).toBe(transformBefore)
+    expect(transformAfter).not.toContain('NaN')
+
     // The tree remains intact; onSelectSim was called — no crash means the guard worked.
     expect(onSelectSim).toHaveBeenCalledWith('founder')
     expect(screen.getByRole('group', { name: 'Goth tree — 3 sims' })).toBeInTheDocument()

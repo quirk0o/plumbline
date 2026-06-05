@@ -29,17 +29,13 @@ vi.mock('@xyflow/react', () => ({
   useViewport: () => ({ zoom: 1, x: 0, y: 0 }),
 }))
 
-vi.mock('@/components/lineage-tree/lineage-flow', async () => {
-  const { FIT_VIEW_OPTIONS } = await import('@/components/lineage-tree/fit-options')
-  return {
-    LineageFlow: ({ onSelectSim }: { onSelectSim?: (id: string) => void }) => (
-      <button type="button" data-testid="lineage-flow" onClick={() => onSelectSim?.('s2')}>
-        tree
-      </button>
-    ),
-    FIT_VIEW_OPTIONS,
-  }
-})
+vi.mock('@/components/lineage-tree/lineage-flow', () => ({
+  LineageFlow: ({ onSelectSim }: { onSelectSim?: (id: string) => void }) => (
+    <button type="button" data-testid="lineage-flow" onClick={() => onSelectSim?.('s2')}>
+      tree
+    </button>
+  ),
+}))
 
 vi.mock('../sim-inspector', () => ({
   SimInspector: ({ simId }: { simId: string }) => (

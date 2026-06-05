@@ -6,6 +6,7 @@ import {
   cleanupUser,
   createTestLegacy,
   createTestSim,
+  createTestHousehold,
   getAnyTrait,
   getConflictingTraits,
   getAnySkill,
@@ -178,6 +179,47 @@ describe('sims.create', () => {
     expect(legacy?.founderSimId).toBeNull()
     const record = await db.sim.findUnique({ where: { id: child.id } })
     expect(record?.generationNumber).toBe(2)
+  })
+
+  it('creates the sim unhoused when no householdId is given', async () => {
+    const caller = authedCaller(userId)
+    const result = await caller.sims.create({
+      legacyId,
+      firstName: 'Free',
+      lastName: 'Spirit',
+      gender: Gender.FEMALE,
+    })
+    const record = await db.sim.findUnique({ where: { id: result.id } })
+    expect(record!.householdId).toBeNull()
+    expect(await db.household.count({ where: { legacyId } })).toBe(0)
+  })
+
+  it('assigns the sim to the given household', async () => {
+    const household = await createTestHousehold(legacyId)
+    const caller = authedCaller(userId)
+    const result = await caller.sims.create({
+      legacyId,
+      firstName: 'Housed',
+      lastName: 'Sim',
+      gender: Gender.MALE,
+      householdId: household.id,
+    })
+    expect((await db.sim.findUnique({ where: { id: result.id } }))!.householdId).toBe(household.id)
+  })
+
+  it("rejects a householdId from another legacy", async () => {
+    const otherLegacy = await createTestLegacy(userId, { slug: `other-${Date.now()}` })
+    const foreignHousehold = await createTestHousehold(otherLegacy.id)
+    const caller = authedCaller(userId)
+    await expect(
+      caller.sims.create({
+        legacyId,
+        firstName: 'X',
+        lastName: 'Y',
+        gender: Gender.MALE,
+        householdId: foreignHousehold.id,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 })
 

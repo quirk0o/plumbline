@@ -31,6 +31,7 @@ export const simsRouter = router({
         occultType: z.nativeEnum(OccultType).optional(),
         generationNumber: z.number().int().min(1).optional(),
         parentIds: z.array(z.string()).optional(),
+        householdId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -41,14 +42,17 @@ export const simsRouter = router({
       const traitIds = input.personalityTraitIds ?? []
       await assertNoTraitConflicts(ctx.db, traitIds)
 
-      let household = await ctx.db.household.findFirst({ where: { legacyId: input.legacyId } })
-      if (!household) {
-        household = await ctx.db.household.create({
-          data: { name: 'Household 1', legacyId: input.legacyId },
+      if (input.householdId) {
+        const household = await ctx.db.household.findFirst({
+          where: { id: input.householdId, legacyId: input.legacyId },
+          select: { id: true },
         })
+        if (!household) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Household must belong to this legacy' })
+        }
       }
 
-      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, parentIds: _parentIds, generationNumber: _gen, ...simFields } = input
+      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, parentIds: _parentIds, generationNumber: _gen, householdId, ...simFields } = input
 
       let generationNumber = input.generationNumber ?? null
       let parents: { id: string; generationNumber: number | null }[] = []
@@ -86,7 +90,7 @@ export const simsRouter = router({
           imageUrl: simFields.imageUrl ?? null,
           occultType: simFields.occultType ?? null,
           generationNumber,
-          householdId: household.id,
+          householdId: householdId ?? null,
           ...(personalityTraitIds?.length
             ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
             : {}),

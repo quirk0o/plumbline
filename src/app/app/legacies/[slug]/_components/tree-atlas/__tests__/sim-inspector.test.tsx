@@ -61,12 +61,10 @@ describe('SimInspector', () => {
     expect(screen.getByText(/current heir/i)).toBeInTheDocument()
   })
 
-  it('links "Open profile" to the sim detail route', () => {
+  it('links "Open profile" to the sim detail route with a named aria-label', () => {
     render(<SimInspector {...baseProps} />)
-    expect(screen.getByRole('link', { name: /open profile/i })).toHaveAttribute(
-      'href',
-      '/app/legacies/caliente/sims/reed',
-    )
+    const link = screen.getByRole('link', { name: "Open Reed Caliente's profile" })
+    expect(link).toHaveAttribute('href', '/app/legacies/caliente/sims/reed')
   })
 
   it('calls onClose from the ✕ button', async () => {

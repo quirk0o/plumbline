@@ -100,6 +100,27 @@ describe('toFlowGraph', () => {
     }
   })
 
+  it('suppresses aria-roledescription on crest nodes (nodesFocusable=false → no role → violation)', () => {
+    // xyflow sets aria-roledescription="node" on every wrapper div.
+    // Without a concrete role that attribute violates WAI-ARIA. Since crest
+    // wrappers use nodesFocusable=false (no role is emitted), we pass
+    // domAttributes: { 'aria-roledescription': undefined } so React omits it.
+    for (const node of graph.nodes.filter((n) => n.type === 'crest')) {
+      expect(node.domAttributes).toHaveProperty('aria-roledescription', undefined)
+    }
+  })
+
+  it('sets measured {width:0, height:0} on union nodes so nodesInitialized stays true', () => {
+    // Union nodes are 0×0 invisible anchors. ResizeObserver never fires for
+    // them (getDimensions returns 0 → doUpdate is false), so without an
+    // explicit measured value the internal store keeps measured.width===
+    // undefined, which makes nodesInitialized=false and silently breaks
+    // imperative fitView() calls.
+    for (const node of graph.nodes.filter((n) => n.type === 'union')) {
+      expect(node.measured).toEqual({ width: 0, height: 0 })
+    }
+  })
+
   it('flags dimmed / selected / founder / focused sims in crest data', () => {
     const flagged = toFlowGraph(layout, sims, familyEdges, {
       dimmedIds: new Set(['f2']),

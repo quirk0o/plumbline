@@ -157,6 +157,7 @@ export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimIn
             variant="outline"
             size="sm"
             fullWidth
+            aria-label={`Open ${sim.firstName} ${sim.lastName}'s profile`}
           >
             Open profile <span aria-hidden="true">→</span>
           </ButtonLink>

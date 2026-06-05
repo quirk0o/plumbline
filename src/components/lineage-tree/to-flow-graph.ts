@@ -131,6 +131,15 @@ export function toFlowGraph(
         type: 'union',
         position: { x: midX, y: topY + CREST_ANCHORS.cy },
         data: {},
+        // Declare 0×0 measured dimensions so xyflow treats the node as
+        // "measured" immediately. ResizeObserver never fires for a 0×0
+        // element, leaving measured.width/height undefined, which keeps
+        // nodesInitialized=false and silently breaks the imperative
+        // fitView() call (the nodeQueue path checks nodesInitialized before
+        // calling resolveFitView). getFitViewNodes skips nodes with falsy
+        // measured.width/height, so these 0×0 anchors are correctly
+        // excluded from fit calculations.
+        measured: { width: 0, height: 0 },
         ...STATIC_NODE,
         ...A11Y_HIDDEN,
       })
@@ -189,6 +198,13 @@ export function toFlowGraph(
       // all — xyflow spreads node.style after its own computed value, so this
       // wins regardless of draggable/selectable/focusable flags.
       style: { pointerEvents: 'all' },
+      // xyflow emits aria-roledescription="node" on every node wrapper div.
+      // Crest nodes have nodesFocusable=false (no role), so that attribute is
+      // a WAI-ARIA violation (aria-roledescription requires a concrete role).
+      // Setting it to undefined omits it from the rendered DOM — React drops
+      // undefined attribute values — while keeping the crest in the a11y tree
+      // so its inner buttons remain reachable.
+      domAttributes: { 'aria-roledescription': undefined },
       data: {
         sim,
         isFounder: opts.founderSimId === n.id,

@@ -155,6 +155,7 @@ export function LineageFlow({
         nodesFocusable={false}
         edgesFocusable={false}
         elementsSelectable={false}
+        proOptions={{ hideAttribution: true }}
       />
     </div>
   )

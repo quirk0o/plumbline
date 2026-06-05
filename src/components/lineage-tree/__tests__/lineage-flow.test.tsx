@@ -77,4 +77,18 @@ describe('LineageFlow', () => {
     )
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('omits aria-roledescription from rendered crest node wrappers', () => {
+    // xyflow sets aria-roledescription="node" on every wrapper, but crest nodes
+    // have nodesFocusable=false (no role) which makes that a WAI-ARIA violation.
+    // The suppression via domAttributes: { 'aria-roledescription': undefined }
+    // causes React to omit the attribute entirely from the rendered DOM.
+    const { container } = renderTree()
+    // Crest wrappers are identified by their xyflow data-testid pattern.
+    const crestWrappers = sims.map((s) => container.querySelector(`[data-testid="rf__node-${s.id}"]`))
+    for (const wrapper of crestWrappers) {
+      expect(wrapper).not.toBeNull()
+      expect(wrapper).not.toHaveAttribute('aria-roledescription')
+    }
+  })
 })

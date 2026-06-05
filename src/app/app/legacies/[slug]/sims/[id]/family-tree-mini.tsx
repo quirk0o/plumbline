@@ -1,4 +1,5 @@
 'use client'
+import { useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ReactFlowProvider } from '@xyflow/react'
 import { trpc } from '@/trpc/client'
@@ -9,6 +10,21 @@ type Props = { simId: string }
 export function FamilyTreeMini({ simId }: Props) {
   const router = useRouter()
   const { data, isLoading, isError } = trpc.sims.getMiniTreeData.useQuery({ simId })
+
+  // Hooks must run unconditionally — declare them before the early returns,
+  // deriving from `data?.sims ?? []` so toFlowGraph doesn't churn on a fresh
+  // Map/handler every render.
+  const hrefById = useMemo(
+    () => new Map((data?.sims ?? []).map((s) => [s.id, s.href])),
+    [data],
+  )
+  const handleSelect = useCallback(
+    (id: string) => {
+      const href = hrefById.get(id)
+      if (href) router.push(href)
+    },
+    [hrefById, router],
+  )
 
   if (isLoading) {
     return (
@@ -31,7 +47,7 @@ export function FamilyTreeMini({ simId }: Props) {
     return <p style={{ color: 'var(--text-muted)' }}>No recorded family yet.</p>
   }
 
-  const hrefById = new Map(data.sims.map((s) => [s.id, s.href]))
+  const focusedSim = data.sims.find((s) => s.id === simId)
 
   return (
     <ReactFlowProvider>
@@ -41,10 +57,8 @@ export function FamilyTreeMini({ simId }: Props) {
           familyEdges={data.familyEdges}
           partnerEdges={data.partnerEdges}
           focusSimId={simId}
-          onSelectSim={(id) => {
-            const href = hrefById.get(id)
-            if (href) router.push(href)
-          }}
+          legacyName={focusedSim?.lastName}
+          onSelectSim={handleSelect}
         />
       </div>
     </ReactFlowProvider>

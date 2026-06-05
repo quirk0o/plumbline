@@ -223,6 +223,114 @@ describe('sims.create', () => {
   })
 })
 
+describe('sims.create — atomicity', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => {
+    await cleanupUser(userId)
+  })
+
+  it('does not persist the sim when the family relationship write fails', async () => {
+    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
+    await db.sim.update({ where: { id: parent.id }, data: { generationNumber: 1 } })
+    const failingDb = db.$extends({
+      query: {
+        familyRelationship: {
+          createMany() {
+            throw new Error('injected failure: familyRelationship.createMany')
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    await expect(
+      authedCaller(userId, failingDb).sims.create({
+        legacyId,
+        firstName: 'Orphaned',
+        lastName: 'Child',
+        gender: Gender.FEMALE,
+        parentIds: [parent.id],
+      })
+    ).rejects.toThrow()
+
+    const orphan = await db.sim.findFirst({ where: { legacyId, firstName: 'Orphaned' } })
+    expect(orphan).toBeNull()
+  })
+
+  it('does not persist the sim when founder designation fails', async () => {
+    const failingDb = db.$extends({
+      query: {
+        legacy: {
+          updateMany() {
+            throw new Error('injected failure: legacy.updateMany')
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    await expect(
+      authedCaller(userId, failingDb).sims.create({
+        legacyId,
+        firstName: 'Undesignated',
+        lastName: 'Founder',
+        gender: Gender.MALE,
+      })
+    ).rejects.toThrow()
+
+    expect(await db.sim.count({ where: { legacyId } })).toBe(0)
+    const legacy = await db.legacy.findUnique({ where: { id: legacyId } })
+    expect(legacy?.founderSimId).toBeNull()
+  })
+
+  it('does not overwrite a founder designated concurrently mid-create', async () => {
+    // Simulate the race: a rival founder is committed (separate connection)
+    // between the pre-transaction founder check and the founder write.
+    let rivalId: string | undefined
+    const racingDb = db.$extends({
+      query: {
+        sim: {
+          async create({ args, query }) {
+            const rival = await db.sim.create({
+              data: {
+                legacyId,
+                firstName: 'Rival',
+                lastName: 'Founder',
+                gender: Gender.FEMALE,
+                lifeStage: LifeStage.YOUNG_ADULT,
+                generationNumber: 1,
+              },
+            })
+            rivalId = rival.id
+            await db.legacy.update({ where: { id: legacyId }, data: { founderSimId: rival.id } })
+            return query(args)
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    await expect(
+      authedCaller(userId, racingDb).sims.create({
+        legacyId,
+        firstName: 'Latecomer',
+        lastName: 'Founder',
+        gender: Gender.MALE,
+      })
+    ).rejects.toThrow()
+
+    const legacy = await db.legacy.findUnique({ where: { id: legacyId } })
+    expect(legacy?.founderSimId).toBe(rivalId)
+    expect(await db.sim.count({ where: { legacyId, firstName: 'Latecomer' } })).toBe(0)
+  })
+})
+
 describe('sims.getById', () => {
   let userId: string
   let legacyId: string
@@ -346,6 +454,34 @@ describe('sims.update', () => {
     } finally {
       await cleanupUser(other.id)
     }
+  })
+
+  it('keeps the active aspiration when swapping to an invalid aspiration fails', async () => {
+    const aspiration = await getAnyAspiration()
+    await db.simAspiration.create({ data: { simId, aspirationId: aspiration.id } })
+
+    await expect(
+      authedCaller(userId).sims.update({ id: simId, aspirationId: 'clnonexistentaspiration0000' })
+    ).rejects.toThrow()
+
+    const rows = await db.simAspiration.findMany({ where: { simId, completedAt: null } })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].aspirationId).toBe(aspiration.id)
+  })
+
+  it('keeps the active career when swapping to an invalid career fails', async () => {
+    const career = await getAnyCareer()
+    await db.simCareer.create({
+      data: { simId, careerId: career.id, employmentType: 'EMPLOYED', startedAt: new Date() },
+    })
+
+    await expect(
+      authedCaller(userId).sims.update({ id: simId, careerId: 'clnonexistentcareer00000000' })
+    ).rejects.toThrow()
+
+    const rows = await db.simCareer.findMany({ where: { simId, endedAt: null } })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].careerId).toBe(career.id)
   })
 })
 

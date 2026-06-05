@@ -77,49 +77,58 @@ export const simsRouter = router({
       const willBeFounder = !legacy.founderSimId && parents.length === 0
       if (willBeFounder && generationNumber === null) generationNumber = 1
 
-      const newSim = await ctx.db.sim.create({
-        data: {
-          legacyId: input.legacyId,
-          firstName: simFields.firstName,
-          lastName: simFields.lastName,
-          gender: simFields.gender,
-          lifeStage: simFields.lifeStage,
-          pronounSubject: simFields.pronounSubject ?? null,
-          pronounObject: simFields.pronounObject ?? null,
-          pronounPossessive: simFields.pronounPossessive ?? null,
-          imageUrl: simFields.imageUrl ?? null,
-          occultType: simFields.occultType ?? null,
-          generationNumber,
-          householdId: householdId ?? null,
-          ...(personalityTraitIds?.length
-            ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
-            : {}),
-          ...(aspirationId ? { aspirations: { create: { aspirationId } } } : {}),
-          ...(careerId
-            ? { careers: { create: { careerId, employmentType: EmploymentType.EMPLOYED, startedAt: new Date() } } }
-            : {}),
-        },
+      return ctx.db.$transaction(async (tx) => {
+        const newSim = await tx.sim.create({
+          data: {
+            legacyId: input.legacyId,
+            firstName: simFields.firstName,
+            lastName: simFields.lastName,
+            gender: simFields.gender,
+            lifeStage: simFields.lifeStage,
+            pronounSubject: simFields.pronounSubject ?? null,
+            pronounObject: simFields.pronounObject ?? null,
+            pronounPossessive: simFields.pronounPossessive ?? null,
+            imageUrl: simFields.imageUrl ?? null,
+            occultType: simFields.occultType ?? null,
+            generationNumber,
+            householdId: householdId ?? null,
+            ...(personalityTraitIds?.length
+              ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
+              : {}),
+            ...(aspirationId ? { aspirations: { create: { aspirationId } } } : {}),
+            ...(careerId
+              ? { careers: { create: { careerId, employmentType: EmploymentType.EMPLOYED, startedAt: new Date() } } }
+              : {}),
+          },
+        })
+
+        if (parents.length > 0) {
+          await tx.familyRelationship.createMany({
+            data: parents.map((parent) => ({
+              parentId: parent.id,
+              childId: newSim.id,
+              type: FamilyRelationshipType.BIOLOGICAL,
+            })),
+            skipDuplicates: true,
+          })
+        }
+
+        if (willBeFounder) {
+          // willBeFounder came from a pre-transaction read, so only claim the
+          // founder slot if it is still empty; failing here rolls back the
+          // whole create instead of silently overwriting a concurrently
+          // designated founder.
+          const claimed = await tx.legacy.updateMany({
+            where: { id: legacy.id, founderSimId: null },
+            data: { founderSimId: newSim.id },
+          })
+          if (claimed.count === 0) {
+            throw new TRPCError({ code: 'CONFLICT', message: 'Legacy already has a founder' })
+          }
+        }
+
+        return newSim
       })
-
-      if (parents.length > 0) {
-        await ctx.db.familyRelationship.createMany({
-          data: parents.map((parent) => ({
-            parentId: parent.id,
-            childId: newSim.id,
-            type: FamilyRelationshipType.BIOLOGICAL,
-          })),
-          skipDuplicates: true,
-        })
-      }
-
-      if (willBeFounder) {
-        await ctx.db.legacy.update({
-          where: { id: legacy.id },
-          data: { founderSimId: newSim.id },
-        })
-      }
-
-      return newSim
     }),
 
   getById: protectedProcedure
@@ -364,41 +373,35 @@ export const simsRouter = router({
 
       const { id, aspirationId, careerId, ...fields } = input
 
-      if (aspirationId !== undefined) {
-        await ctx.db.simAspiration.deleteMany({ where: { simId: id, completedAt: null } })
-        if (aspirationId) await ctx.db.simAspiration.create({ data: { simId: id, aspirationId } })
-      }
-
-      if (careerId !== undefined) {
-        await ctx.db.simCareer.deleteMany({ where: { simId: id, endedAt: null } })
-        if (careerId) {
-          await ctx.db.simCareer.create({
-            data: { simId: id, careerId, employmentType: EmploymentType.EMPLOYED, startedAt: new Date() },
-          })
+      const result = await ctx.db.$transaction(async (tx) => {
+        if (aspirationId !== undefined) {
+          await tx.simAspiration.deleteMany({ where: { simId: id, completedAt: null } })
+          if (aspirationId) await tx.simAspiration.create({ data: { simId: id, aspirationId } })
         }
-      }
 
-      let result: Awaited<ReturnType<typeof ctx.db.sim.update>>
-      if (input.isHeir === true) {
-        if (sim.generationNumber !== null && sim.generationNumber !== undefined) {
-          result = await ctx.db.$transaction(async (tx) => {
-            await tx.sim.updateMany({
-              where: {
-                legacyId: sim.legacyId,
-                generationNumber: sim.generationNumber,
-                isHeir: true,
-                NOT: { id: input.id },
-              },
-              data: { isHeir: false },
+        if (careerId !== undefined) {
+          await tx.simCareer.deleteMany({ where: { simId: id, endedAt: null } })
+          if (careerId) {
+            await tx.simCareer.create({
+              data: { simId: id, careerId, employmentType: EmploymentType.EMPLOYED, startedAt: new Date() },
             })
-            return tx.sim.update({ where: { id }, data: fields })
-          })
-        } else {
-          result = await ctx.db.sim.update({ where: { id }, data: fields })
+          }
         }
-      } else {
-        result = await ctx.db.sim.update({ where: { id }, data: fields })
-      }
+
+        if (input.isHeir === true && sim.generationNumber !== null) {
+          await tx.sim.updateMany({
+            where: {
+              legacyId: sim.legacyId,
+              generationNumber: sim.generationNumber,
+              isHeir: true,
+              NOT: { id: input.id },
+            },
+            data: { isHeir: false },
+          })
+        }
+
+        return tx.sim.update({ where: { id }, data: fields })
+      })
 
       const recomputeFields = ['generationNumber', 'lifeStage', 'isHeir', 'causeOfDeath', 'occultType'] as const
       const needsRecompute = recomputeFields.some((f) => input[f] !== undefined)

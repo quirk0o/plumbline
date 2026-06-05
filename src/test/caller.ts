@@ -5,9 +5,9 @@ import type { Session } from 'next-auth'
 
 const createCaller = createCallerFactory(appRouter)
 
-export function authedCaller(userId: string) {
+export function authedCaller(userId: string, dbClient: typeof db = db) {
   const session = { user: { id: userId } } as Session & { user: { id: string } }
-  return createCaller({ db, session })
+  return createCaller({ db: dbClient, session })
 }
 
 export function unauthCaller() {

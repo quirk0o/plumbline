@@ -136,8 +136,9 @@ export const simsRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({
-        where: { id: input.id, legacy: { userId } },
+      await assertSimOwned(ctx.db, input.id, userId)
+      const sim = await ctx.db.sim.findUnique({
+        where: { id: input.id },
         include: {
           personalityTraits: { include: { personalityTrait: true } },
           aspirations: { include: { aspiration: true } },
@@ -369,8 +370,7 @@ export const simsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.id, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const sim = await assertSimOwned(ctx.db, input.id, userId)
 
       const { id, aspirationId, careerId, ...fields } = input
 

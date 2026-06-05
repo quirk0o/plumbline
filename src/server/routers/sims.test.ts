@@ -1767,3 +1767,60 @@ describe('sims.getMiniTreeData', () => {
     }
   })
 })
+
+describe('social relationship cross-tenant ownership', () => {
+  let userId: string
+  let otherUserId: string
+  let mySimId: string
+  let theirSimId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const otherUser = await createTestUser()
+    otherUserId = otherUser.id
+    const myLegacy = await createTestLegacy(userId)
+    const theirLegacy = await createTestLegacy(otherUserId)
+    mySimId = (await createTestSim(myLegacy.id)).id
+    theirSimId = (await createTestSim(theirLegacy.id)).id
+  })
+  afterEach(async () => {
+    await cleanupUser(userId)
+    await cleanupUser(otherUserId)
+  })
+
+  /** Force a relationship row between the two sims, bypassing the tRPC guard
+   *  (the procedures normalize the pair sorted, so the row must be too). */
+  async function forceCrossTenantRelationship() {
+    const [simAId, simBId] = [mySimId, theirSimId].sort()
+    await db.socialRelationship.create({
+      data: { simAId, simBId, romanticStatus: 'DATING', friendshipScore: 0, romanceScore: 0 },
+    })
+  }
+
+  it('updateSocialRelationship throws NOT_FOUND when simB belongs to another user, even if the row exists', async () => {
+    await forceCrossTenantRelationship()
+    const caller = authedCaller(userId)
+    await expect(
+      caller.sims.updateSocialRelationship({
+        simAId: mySimId,
+        simBId: theirSimId,
+        romanticStatus: 'MARRIED',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('removeSocialRelationship throws NOT_FOUND when simB belongs to another user, even if the row exists', async () => {
+    await forceCrossTenantRelationship()
+    const caller = authedCaller(userId)
+    await expect(
+      caller.sims.removeSocialRelationship({ simAId: mySimId, simBId: theirSimId }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+
+    // The cross-tenant row must be untouched.
+    const [simAId, simBId] = [mySimId, theirSimId].sort()
+    expect(
+      await db.socialRelationship.findUnique({ where: { simAId_simBId: { simAId, simBId } } }),
+    ).not.toBeNull()
+  })
+})

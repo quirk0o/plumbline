@@ -636,8 +636,7 @@ export const simsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.simAId, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      await assertSimsOwned(ctx.db, [input.simAId, input.simBId], userId)
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
       return ctx.db.socialRelationship.update({
         where: { simAId_simBId: { simAId: normalA, simBId: normalB } },
@@ -649,8 +648,7 @@ export const simsRouter = router({
     .input(z.object({ simAId: z.string(), simBId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.simAId, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      await assertSimsOwned(ctx.db, [input.simAId, input.simBId], userId)
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
       return ctx.db.socialRelationship.delete({
         where: { simAId_simBId: { simAId: normalA, simBId: normalB } },

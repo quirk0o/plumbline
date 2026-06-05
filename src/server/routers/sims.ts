@@ -5,6 +5,7 @@ import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 import { recomputeLegacyTrackers } from '../lib/trackerComputation'
 import { imageUrlSchema } from '../lib/image-url-schema'
+import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/ownership'
 import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {
@@ -37,8 +38,7 @@ export const simsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const legacy = await ctx.db.legacy.findFirst({ where: { id: input.legacyId, userId } })
-      if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
+      const legacy = await assertLegacyOwned(ctx.db, input.legacyId, userId)
 
       const traitIds = input.personalityTraitIds ?? []
       await assertNoTraitConflicts(ctx.db, traitIds)
@@ -165,8 +165,7 @@ export const simsRouter = router({
     .input(z.object({ legacyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const legacy = await ctx.db.legacy.findFirst({ where: { id: input.legacyId, userId } })
-      if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
+      await assertLegacyOwned(ctx.db, input.legacyId, userId)
       return ctx.db.sim.findMany({
         where: { legacyId: input.legacyId },
         select: { id: true, firstName: true, lastName: true, imageUrl: true },
@@ -178,10 +177,7 @@ export const simsRouter = router({
     .input(z.object({ legacySlug: z.string().min(1).max(100) }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const legacy = await ctx.db.legacy.findFirst({
-        where: { slug: input.legacySlug, userId },
-      })
-      if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
+      const legacy = await assertLegacyOwnedBySlug(ctx.db, input.legacySlug, userId)
 
       const [sims, familyEdges, partnerEdges] = await Promise.all([
         ctx.db.sim.findMany({
@@ -230,9 +226,10 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
+      await assertSimOwned(ctx.db, input.simId, userId)
 
-      const focusedSim = await ctx.db.sim.findFirst({
-        where: { id: input.simId, legacy: { userId } },
+      const focusedSim = await ctx.db.sim.findUnique({
+        where: { id: input.simId },
         select: {
           ...miniTreeSimSelect,
           legacy: { select: { slug: true } },
@@ -336,6 +333,9 @@ export const simsRouter = router({
           .filter((id) => !simMap.has(id))
       )]
       if (missingPartnerIds.length > 0) {
+        // Ownership *filter*, not a guard: partner sims outside the user's
+        // legacies are intentionally omitted from the mini tree. This is the
+        // one sanctioned inline ownership condition outside src/server/lib/ownership.ts.
         const partnerSims = await ctx.db.sim.findMany({
           where: { id: { in: missingPartnerIds }, legacy: { userId } },
           select: miniTreeSimSelect,
@@ -429,23 +429,23 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string(), traitId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const [sim, trait] = await Promise.all([
-        ctx.db.sim.findFirst({
-          where: { id: input.simId, legacy: { userId } },
-          include: { personalityTraits: { select: { personalityTraitId: true } } },
-        }),
+      const [sim, trait, currentTraits] = await Promise.all([
+        assertSimOwned(ctx.db, input.simId, userId),
         ctx.db.personalityTrait.findUnique({
           where: { id: input.traitId },
           select: { minLifeStage: true, maxLifeStage: true },
         }),
+        ctx.db.simPersonalityTrait.findMany({
+          where: { simId: input.simId },
+          select: { personalityTraitId: true },
+        }),
       ])
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
       if (!trait) throw new TRPCError({ code: 'NOT_FOUND', message: 'Trait not found' })
       if (!isLifeStageInRange(sim.lifeStage, trait.minLifeStage, trait.maxLifeStage))
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Trait not available for this life stage' })
-      if (sim.personalityTraits.length >= 6)
+      if (currentTraits.length >= 6)
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Maximum 6 traits allowed' })
-      const currentIds = sim.personalityTraits.map((t) => t.personalityTraitId)
+      const currentIds = currentTraits.map((t) => t.personalityTraitId)
       await assertNoTraitConflicts(ctx.db, [...currentIds, input.traitId])
       return ctx.db.simPersonalityTrait.create({
         data: { simId: input.simId, personalityTraitId: input.traitId },
@@ -456,8 +456,7 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string(), traitId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      await assertSimOwned(ctx.db, input.simId, userId)
       return ctx.db.simPersonalityTrait.delete({
         where: {
           simId_personalityTraitId: { simId: input.simId, personalityTraitId: input.traitId },
@@ -469,8 +468,7 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string(), skillId: z.string(), level: z.number().int().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const sim = await assertSimOwned(ctx.db, input.simId, userId)
       const skill = await ctx.db.skill.findUnique({ where: { id: input.skillId } })
       if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
       if (input.level > skill.maxLevel)
@@ -488,8 +486,7 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string(), skillId: z.string(), level: z.number().int().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const sim = await assertSimOwned(ctx.db, input.simId, userId)
       const skill = await ctx.db.skill.findUnique({ where: { id: input.skillId } })
       if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
       if (input.level > skill.maxLevel)
@@ -506,8 +503,7 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string(), skillId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({ where: { id: input.simId, legacy: { userId } } })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      await assertSimOwned(ctx.db, input.simId, userId)
       return ctx.db.simSkill.delete({
         where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
       })
@@ -526,11 +522,7 @@ export const simsRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot be their own parent' })
       }
       const userId = ctx.session.user.id
-      const [parent, child] = await Promise.all([
-        ctx.db.sim.findFirst({ where: { id: input.parentId, legacy: { userId } } }),
-        ctx.db.sim.findFirst({ where: { id: input.childId, legacy: { userId } } }),
-      ])
-      if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const [parent, child] = await assertSimsOwned(ctx.db, [input.parentId, input.childId], userId)
       if (parent.legacyId !== child.legacyId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
       }
@@ -565,11 +557,7 @@ export const simsRouter = router({
     .input(z.object({ parentId: z.string(), childId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const [parent, child] = await Promise.all([
-        ctx.db.sim.findFirst({ where: { id: input.parentId, legacy: { userId } } }),
-        ctx.db.sim.findFirst({ where: { id: input.childId, legacy: { userId } } }),
-      ])
-      if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const [, child] = await assertSimsOwned(ctx.db, [input.parentId, input.childId], userId)
       const { deleted, generationChanged } = await ctx.db.$transaction(async (tx) => {
         const deleted = await tx.familyRelationship.delete({
           where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
@@ -612,11 +600,7 @@ export const simsRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot have a relationship with themselves' })
       }
       const userId = ctx.session.user.id
-      const [simA, simB] = await Promise.all([
-        ctx.db.sim.findFirst({ where: { id: input.simAId, legacy: { userId } } }),
-        ctx.db.sim.findFirst({ where: { id: input.simBId, legacy: { userId } } }),
-      ])
-      if (!simA || !simB) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const [simA, simB] = await assertSimsOwned(ctx.db, [input.simAId, input.simBId], userId)
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
       const noGenSim =
         simA.generationNumber === null && simB.generationNumber !== null ? simA
@@ -677,11 +661,7 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string(), aspirationId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({
-        where: { id: input.simId, legacy: { userId } },
-        select: { id: true, legacyId: true },
-      })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const sim = await assertSimOwned(ctx.db, input.simId, userId)
 
       const record = await ctx.db.simAspiration.findUnique({
         where: { simId_aspirationId: { simId: input.simId, aspirationId: input.aspirationId } },
@@ -700,11 +680,7 @@ export const simsRouter = router({
     .input(z.object({ simId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const sim = await ctx.db.sim.findFirst({
-        where: { id: input.simId, legacy: { userId } },
-        select: { id: true, legacyId: true },
-      })
-      if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+      const sim = await assertSimOwned(ctx.db, input.simId, userId)
 
       const activeCareer = await ctx.db.simCareer.findFirst({
         where: { simId: input.simId, endedAt: null },

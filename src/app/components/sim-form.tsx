@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, Controller } from 'react-hook-form'
 import { FormField, Input, Button, Combobox } from '@/components/ui'
+import { isLifeStageInRange } from '@/lib/life-stage'
 import { ImageUpload } from './image-upload'
 import { TraitPicker, type Trait } from './trait-picker'
 import styles from './sim-form.module.css'
@@ -139,6 +140,8 @@ export function SimForm({
     handleSubmit,
     control,
     setValue,
+    getValues,
+    watch,
     setError,
     formState: { errors: formErrors },
   } = useForm({
@@ -166,6 +169,33 @@ export function SimForm({
     }
   }, [errors, setError])
 
+  const currentLifeStage = watch('lifeStage')
+
+  const visibleTraits = traits.filter((t) =>
+    isLifeStageInRange(currentLifeStage, t.minLifeStage, t.maxLifeStage)
+  )
+
+  const visibleAspirations = aspirations.filter((a) =>
+    isLifeStageInRange(currentLifeStage, a.minLifeStage, a.maxLifeStage)
+  )
+
+  useEffect(() => {
+    const traitIds = getValues('personalityTraitIds')
+    const validTraitIds = traitIds.filter((id) => {
+      const t = traits.find((t) => t.id === id)
+      return !t || isLifeStageInRange(currentLifeStage, t.minLifeStage, t.maxLifeStage)
+    })
+    if (validTraitIds.length !== traitIds.length) setValue('personalityTraitIds', validTraitIds)
+
+    const aspirationId = getValues('aspirationId')
+    if (aspirationId) {
+      const a = aspirations.find((a) => a.id === aspirationId)
+      if (a && !isLifeStageInRange(currentLifeStage, a.minLifeStage, a.maxLifeStage)) {
+        setValue('aspirationId', '')
+      }
+    }
+  }, [currentLifeStage, traits, aspirations, getValues, setValue])
+
   function handlePronounPreset(value: string) {
     setPronounPreset(value)
     const preset = PRONOUN_PRESETS.find((p) => p.label === value)
@@ -176,7 +206,7 @@ export function SimForm({
     }
   }
 
-  const groupedAspirations = groupBy(aspirations, (a) => a.category)
+  const groupedAspirations = groupBy(visibleAspirations, (a) => a.category)
   const groupedCareers = groupBy(careers, (c) => c.type)
 
   return (
@@ -373,7 +403,13 @@ export function SimForm({
           name="personalityTraitIds"
           control={control}
           render={({ field }) => (
-            <TraitPicker traits={traits} selected={field.value} onChange={field.onChange} max={6} />
+            <TraitPicker
+              traits={visibleTraits}
+              selected={field.value}
+              onChange={field.onChange}
+              max={6}
+              lifeStage={currentLifeStage}
+            />
           )}
         />
       </div>

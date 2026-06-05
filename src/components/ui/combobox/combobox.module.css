@@ -219,3 +219,63 @@
   font-size: var(--text-sm);
   font-family: var(--font-body);
 }
+
+/* Inline variant — reads as plain text with a dashed-green underline on
+   hover/open (the DS "dashed = editable" affordance). Used for the drawer's
+   world · lot line. */
+.inline {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px dashed transparent;
+  border-radius: 0;
+  padding: 0 0 1px;
+  width: auto;
+  justify-content: flex-start;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.inline:hover,
+.inline[aria-expanded='true'] {
+  border-bottom-color: var(--green);
+  color: var(--green);
+}
+
+/* Ghost variant — full-width dashed add-row ("+ Move a sim in"). */
+.ghost {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1.5px dashed var(--border-bright);
+  border-radius: var(--radius-base);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.ghost:hover,
+.ghost[aria-expanded='true'] {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--bg-card);
+}
+
+/* The base trigger reserves right padding for the absolutely-positioned
+   chevron; the compact variants override that padding away, so let the
+   chevron flow inline after the label instead of overlapping it. */
+.inline .chevron,
+.ghost .chevron {
+  position: static;
+  transform: none;
+}
+
+.inline .chevronOpen,
+.ghost .chevronOpen {
+  transform: rotate(180deg);
+}

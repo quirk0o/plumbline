@@ -37,7 +37,7 @@ export type ComboboxProps = {
   placeholder?: string
   error?: boolean
   size?: 'sm' | 'base' | 'lg'
-  variant?: 'default' | 'chip'
+  variant?: 'default' | 'chip' | 'inline' | 'ghost'
   disabled?: boolean
   id?: string
   'aria-label'?: string
@@ -103,11 +103,12 @@ function ComboboxRoot({
 
   const selectedLabel = value ? labelMap.get(value) : undefined
 
-  const triggerClass = [
-    styles.trigger,
-    variant === 'chip' ? styles.chip : size !== 'base' ? styles[size] : '',
-    error ? styles.error : '',
-  ]
+  const variantClass =
+    variant === 'chip' ? styles.chip
+    : variant === 'inline' ? styles.inline
+    : variant === 'ghost' ? styles.ghost
+    : size !== 'base' ? styles[size] : ''
+  const triggerClass = [styles.trigger, variantClass, error ? styles.error : '']
     .filter(Boolean)
     .join(' ')
 

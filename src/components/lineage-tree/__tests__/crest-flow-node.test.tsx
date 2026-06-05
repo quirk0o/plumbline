@@ -70,6 +70,13 @@ describe('CrestFlowNode', () => {
     expect(screen.getByRole('button', { name: /Reed Caliente/ })).toHaveAttribute('aria-current', 'location')
   })
 
+  it('fires onNodeFocus when the button receives focus', () => {
+    const onNodeFocus = vi.fn()
+    renderNode(data({ onSelect: vi.fn(), onNodeFocus }))
+    screen.getByRole('button', { name: /Reed Caliente/ }).focus()
+    expect(onNodeFocus).toHaveBeenCalledWith('s1')
+  })
+
   it('exposes the dimmed state as a data attribute', () => {
     const { container } = renderNode(data({ isDimmed: true }))
     expect(container.querySelector('[data-tree-node]')).toHaveAttribute('data-dimmed')

@@ -135,8 +135,34 @@ model Pack {
   skills            Skill[]
   careers           Career[]
   userPacks         UserPack[]
+  worlds            World[]
 
   @@map("packs")
+}
+
+model World {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  packId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pack       Pack?       @relation(fields: [packId], references: [id])
+  lots       Lot[]
+  households Household[]
+
+  @@map("worlds")
+}
+
+model Lot {
+  id      String @id @default(cuid())
+  name    String
+  worldId String
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@unique([worldId, name])
+  @@map("lots")
 }
 
 model PersonalityTrait {
@@ -313,30 +339,44 @@ model Legacy {
   description  String?
   imageUrl     String?
   userId       String
-  founderSimId String?  @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  founderSimId      String?  @unique
+  // Points at one of this legacy's own households ("Now playing"). Note the
+  // circular FK with households.legacyId: deleting a legacy cascades to its
+  // households, whose SET NULL back onto this column is a harmless no-op on
+  // the already-deleted row. Application code never deletes households today.
+  activeHouseholdId String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  founderSim    Sim?           @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
-  households    Household[]
-  sims          Sim[]          @relation("LegacyMember")
-  challengeRuns ChallengeRun[]
-  milestones    Milestone[]
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  founderSim      Sim?           @relation("LegacyFounder", fields: [founderSimId], references: [id], onDelete: SetNull)
+  activeHousehold Household?     @relation("LegacyActiveHousehold", fields: [activeHouseholdId], references: [id], onDelete: SetNull)
+  households      Household[]
+  sims            Sim[]          @relation("LegacyMember")
+  challengeRuns   ChallengeRun[]
+  milestones      Milestone[]
 
   @@unique([userId, slug])
   @@map("legacies")
 }
 
 model Household {
-  id        String   @id @default(cuid())
-  name      String
-  legacyId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String
+  legacyId          String
+  worldId           String?
+  lot               String?
+  description       String?
+  funds             Int      @default(0)
+  lotValue          Int      @default(0)
+  foundedGeneration Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  legacy Legacy @relation(fields: [legacyId], references: [id], onDelete: Cascade)
-  sims   Sim[]
+  legacy   Legacy  @relation(fields: [legacyId], references: [id], onDelete: Cascade)
+  world    World?  @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  sims     Sim[]
+  activeOf Legacy? @relation("LegacyActiveHousehold")
 
   @@map("households")
 }

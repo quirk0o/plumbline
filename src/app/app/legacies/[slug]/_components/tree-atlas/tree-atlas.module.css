@@ -52,25 +52,9 @@
   background-size: 20px 20px;
 }
 
-.surface {
+.flowSurface {
   position: absolute;
   inset: 0;
-  touch-action: none;
-  cursor: grab;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.surface:active {
-  cursor: grabbing;
-}
-
-.viewport {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: 0 0;
-  will-change: transform;
 }
 
 /* ─── Floating glass capsule (top-left legacy identity) ─────────── */

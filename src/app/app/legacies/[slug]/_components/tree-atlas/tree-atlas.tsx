@@ -1,10 +1,9 @@
 'use client'
 import { useMemo, useState } from 'react'
+import { ReactFlowProvider, useReactFlow, useViewport } from '@xyflow/react'
 import { trpc } from '@/trpc/client'
 import { Button, ButtonLink } from '@/components/ui'
-import { LineageTree } from '@/components/lineage-tree/lineage-tree'
-import { computeLineageLayout } from '@/components/lineage-tree/layout'
-import { usePanZoom } from '@/components/lineage-tree/use-pan-zoom'
+import { FIT_VIEW_OPTIONS, LineageFlow } from '@/components/lineage-tree/lineage-flow'
 import { Plumbob } from '@/components/plumbob'
 import { splitLegacyName } from '../../lib/legacy-title'
 import { AtlasToolbar, type GenFilter } from './atlas-toolbar'
@@ -82,18 +81,10 @@ function LegacyCapsule({
   )
 }
 
-/** Bottom glass bar: colour key + zoom controls. */
-function AtlasBottomBar({
-  zoomPercent,
-  onZoomIn,
-  onZoomOut,
-  onFit,
-}: {
-  zoomPercent: number
-  onZoomIn: () => void
-  onZoomOut: () => void
-  onFit: () => void
-}) {
+/** Bottom glass bar: colour key + zoom controls (driven by the shared xyflow instance). */
+function AtlasBottomBar() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow()
+  const { zoom } = useViewport()
   return (
     <div className={styles.bottomBar}>
       <div className={styles.legend} aria-hidden="true">
@@ -116,16 +107,16 @@ function AtlasBottomBar({
       </div>
       <span className={styles.divider} aria-hidden="true" />
       <div className={styles.zoomControls}>
-        <Button size="icon" variant="ghost" onClick={onZoomOut} aria-label="Zoom out">
+        <Button size="icon" variant="ghost" onClick={() => void zoomOut({ duration: 150 })} aria-label="Zoom out">
           −
         </Button>
         <span className={styles.zoomReadout} aria-live="polite">
-          {zoomPercent}%
+          {Math.round(zoom * 100)}%
         </span>
-        <Button size="icon" variant="ghost" onClick={onZoomIn} aria-label="Zoom in">
+        <Button size="icon" variant="ghost" onClick={() => void zoomIn({ duration: 150 })} aria-label="Zoom in">
           +
         </Button>
-        <Button size="sm" variant="ghost" onClick={onFit} aria-label="Fit tree to view">
+        <Button size="sm" variant="ghost" onClick={() => void fitView({ ...FIT_VIEW_OPTIONS, duration: 200 })} aria-label="Fit tree to view">
           Fit
         </Button>
       </div>
@@ -180,15 +171,6 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
     return ids
   }, [query, visibleSims])
 
-  const layout = useMemo(
-    () => computeLineageLayout(visibleSims, familyEdges, partnerEdges),
-    [visibleSims, familyEdges, partnerEdges],
-  )
-  const { transform, zoomPercent, fit, zoomIn, zoomOut, surfaceProps } = usePanZoom(
-    layout.viewBox.width,
-    layout.viewBox.height,
-  )
-
   const simCount = allSims.length
   const generationCount = generations.length
 
@@ -221,7 +203,7 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
         )}
 
         {!isLoading && !isError && allSims.length > 0 && (
-          <>
+          <ReactFlowProvider>
             <AtlasToolbar
               legacySlug={legacySlug}
               generations={generations}
@@ -231,26 +213,20 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
               onQueryChange={setQuery}
             />
 
-            <div className={styles.surface} {...surfaceProps}>
-              <div
-                className={styles.viewport}
-                style={{
-                  transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-                }}
-              >
-                {visibleSims.length > 0 ? (
-                  <LineageTree
-                    sims={visibleSims}
-                    familyEdges={familyEdges}
-                    partnerEdges={partnerEdges}
-                    founderSimId={founderSimId}
-                    legacyName={legacyName}
-                    dimmedIds={dimmedIds}
-                    selectedId={activeId ?? undefined}
-                    onSelectSim={handleSelectSim}
-                  />
-                ) : null}
-              </div>
+            <div className={styles.flowSurface}>
+              {visibleSims.length > 0 ? (
+                <LineageFlow
+                  sims={visibleSims}
+                  familyEdges={familyEdges}
+                  partnerEdges={partnerEdges}
+                  founderSimId={founderSimId}
+                  legacyName={legacyName}
+                  dimmedIds={dimmedIds}
+                  selectedId={activeId ?? undefined}
+                  onSelectSim={handleSelectSim}
+                  refitKey={genFilter}
+                />
+              ) : null}
             </div>
 
             {visibleSims.length === 0 && (
@@ -270,13 +246,8 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
               />
             )}
 
-            <AtlasBottomBar
-              zoomPercent={zoomPercent}
-              onZoomIn={zoomIn}
-              onZoomOut={zoomOut}
-              onFit={fit}
-            />
-          </>
+            <AtlasBottomBar />
+          </ReactFlowProvider>
         )}
       </div>
     </div>

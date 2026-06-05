@@ -11,12 +11,23 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-vi.mock('@/components/lineage-tree/lineage-tree', () => ({
-  LineageTree: ({ onSelectSim }: { onSelectSim?: (id: string) => void }) => (
-    <button type="button" data-testid="lineage-tree" onClick={() => onSelectSim?.('s2')}>
+vi.mock('@xyflow/react', () => ({
+  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useReactFlow: () => ({
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    fitView: vi.fn(),
+  }),
+  useViewport: () => ({ zoom: 1, x: 0, y: 0 }),
+}))
+
+vi.mock('@/components/lineage-tree/lineage-flow', () => ({
+  LineageFlow: ({ onSelectSim }: { onSelectSim?: (id: string) => void }) => (
+    <button type="button" data-testid="lineage-flow" onClick={() => onSelectSim?.('s2')}>
       tree
     </button>
   ),
+  FIT_VIEW_OPTIONS: { maxZoom: 1, padding: 0.08 },
 }))
 
 vi.mock('../sim-inspector', () => ({
@@ -97,7 +108,7 @@ describe('TreeAtlas (full-page route, not a dialog)', () => {
 
   it('shows the tree when data resolves', () => {
     render(<TreeAtlas {...defaultProps} />)
-    expect(screen.getByTestId('lineage-tree')).toBeInTheDocument()
+    expect(screen.getByTestId('lineage-flow')).toBeInTheDocument()
   })
 
   it('shows a loading state', () => {
@@ -123,14 +134,14 @@ describe('TreeAtlas (full-page route, not a dialog)', () => {
     })
     render(<TreeAtlas {...defaultProps} />)
     expect(screen.getByText(/no sims to chart yet/i)).toBeInTheDocument()
-    expect(screen.queryByTestId('lineage-tree')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('lineage-flow')).not.toBeInTheDocument()
   })
 
   it('opens the sim inspector when a node is selected', async () => {
     const user = userEvent.setup()
     render(<TreeAtlas {...defaultProps} />)
     expect(screen.queryByTestId('sim-inspector')).not.toBeInTheDocument()
-    await user.click(screen.getByTestId('lineage-tree'))
+    await user.click(screen.getByTestId('lineage-flow'))
     expect(screen.getByTestId('sim-inspector')).toHaveTextContent('s2')
   })
 })

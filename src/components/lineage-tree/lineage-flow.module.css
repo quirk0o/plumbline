@@ -30,8 +30,13 @@
   letter-spacing: 0.14em;
 }
 
-/* The canvas inherits the page's dot-grid parchment; keep xyflow's pane clear. */
-.flow :global(.react-flow__pane),
+/* The canvas inherits the page's dot-grid parchment; keep xyflow's pane clear.
+   --xy-background-color overrides the variable used by .react-flow regardless
+   of colorMode, which is more robust than directly setting background. */
 .flow :global(.react-flow) {
+  --xy-background-color: transparent;
+}
+
+.flow :global(.react-flow__pane) {
   background: transparent;
 }

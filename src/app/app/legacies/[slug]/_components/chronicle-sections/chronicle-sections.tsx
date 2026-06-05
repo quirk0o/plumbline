@@ -1,12 +1,16 @@
 import type {
   ChronicleSim,
+  HouseholdSim,
+  HouseholdView,
   LegacyStats,
   Milestone,
   RosterGroup,
   SuccessionStep,
+  WorldOption,
 } from '../../lib/types'
 import { Hero } from '../hero/hero'
 import { Succession } from '../succession/succession'
+import { HouseholdsSection } from '../households/households-section'
 import { Milestones } from '../milestones/milestones'
 import { Roster } from '../roster/roster'
 import styles from './chronicle-sections.module.css'
@@ -20,6 +24,9 @@ export interface ChronicleSectionsProps {
   founder: ChronicleSim | null
   currentHeir: ChronicleSim | null
   succession: SuccessionStep[]
+  households: HouseholdView[]
+  worlds: WorldOption[]
+  householdSims: HouseholdSim[]
   milestones: Milestone[]
   simsById: Record<string, ChronicleSim>
   groups: RosterGroup[]
@@ -42,6 +49,9 @@ export function ChronicleSections({
   founder,
   currentHeir,
   succession,
+  households,
+  worlds,
+  householdSims,
   milestones,
   simsById,
   groups,
@@ -75,6 +85,23 @@ export function ChronicleSections({
             steps={succession}
             slug={slug}
             sims={Object.values(simsById)}
+          />
+        </div>
+      </section>
+
+      <section
+        id="households"
+        data-section="households"
+        data-testid="households"
+        aria-label="Households"
+        className={styles.cardSection}
+      >
+        <div className={styles.inner}>
+          <HouseholdsSection
+            legacyId={legacyId}
+            households={households}
+            worlds={worlds}
+            sims={householdSims}
           />
         </div>
       </section>

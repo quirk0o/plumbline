@@ -23,6 +23,12 @@ vi.mock('@/trpc/client', () => ({
       delete: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
       reorder: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
     },
+    households: {
+      create: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      update: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      setActive: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+      moveSim: { useMutation: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) },
+    },
   },
 }))
 
@@ -102,6 +108,9 @@ const baseProps = {
   founder: dina,
   currentHeir: reed,
   succession,
+  households: [],
+  worlds: [],
+  householdSims: [],
   milestones,
   simsById,
   groups,
@@ -109,11 +118,12 @@ const baseProps = {
 }
 
 describe('ChronicleSections', () => {
-  it('renders all four sections as anchor targets', () => {
+  it('renders all five sections as anchor targets', () => {
     render(<ChronicleSections {...baseProps} />)
     // SectionNav locates sections via id — assert each section carries the correct id.
     expect(screen.getByTestId('section-hero')).toHaveAttribute('id', 'hero')
     expect(screen.getByTestId('section-succession')).toHaveAttribute('id', 'succession')
+    expect(screen.getByTestId('households')).toHaveAttribute('id', 'households')
     expect(screen.getByTestId('section-milestones')).toHaveAttribute('id', 'milestones')
     expect(screen.getByTestId('roster')).toHaveAttribute('id', 'sims')
   })

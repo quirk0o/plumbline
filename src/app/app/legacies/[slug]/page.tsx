@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
+import { fetchWorldOptions } from '@/server/lib/world-options'
 import {
   computeStats,
   deriveMilestones,
@@ -11,7 +12,7 @@ import {
   toChronicleSim,
   toUserMilestones,
 } from './lib/derive'
-import type { FetchedLegacy } from './lib/types'
+import type { FetchedLegacy, HouseholdSim, HouseholdView, WorldOption } from './lib/types'
 import { SectionNav } from './_components/section-nav/section-nav'
 import { ChronicleSections } from './_components/chronicle-sections/chronicle-sections'
 import { ViewTree } from './_components/view-tree/view-tree'
@@ -24,6 +25,7 @@ interface Props {
 const NAV_ITEMS = [
   { id: 'hero', label: 'Chronicle' },
   { id: 'succession', label: 'Succession' },
+  { id: 'households', label: 'Households' },
   { id: 'milestones', label: 'Milestones' },
   { id: 'sims', label: 'Family' },
 ]
@@ -40,6 +42,7 @@ export default async function LegacyDetailPage({ params }: Props) {
       name: true,
       description: true,
       founderSimId: true,
+      activeHouseholdId: true,
       households: {
         select: {
           id: true,
@@ -116,6 +119,11 @@ export default async function LegacyDetailPage({ params }: Props) {
     },
   })
 
+  // Worlds for the household selects — base-game worlds (no pack) plus worlds
+  // whose pack the user owns. A household's current world is merged back in
+  // client-side (preserve-current rule).
+  const worlds: WorldOption[] = await fetchWorldOptions(db, session.user.id)
+
   // Build a well-typed FetchedLegacy. The select above already matches the
   // FetchedSim/FetchedHousehold shapes; this assignment makes the contract
   // explicit and would fail to compile if either side drifted.
@@ -145,6 +153,31 @@ export default async function LegacyDetailPage({ params }: Props) {
 
   const founder = chronicleSims.find((s) => s.isFounder) ?? null
 
+  const householdSims: HouseholdSim[] = legacy.sims.map((s) => ({
+    id: s.id,
+    firstName: s.firstName,
+    lastName: s.lastName,
+    imageUrl: s.imageUrl,
+    isHeir: s.isHeir,
+    isFounder: s.id === legacy.founderSimId,
+    generationNumber: s.generationNumber,
+    lifeStage: s.lifeStage,
+    householdId: s.householdId,
+  }))
+  const householdViews: HouseholdView[] = legacy.households.map((h) => ({
+    id: h.id,
+    name: h.name,
+    worldId: h.worldId,
+    worldName: h.world?.name ?? null,
+    lot: h.lot,
+    description: h.description,
+    funds: h.funds,
+    lotValue: h.lotValue,
+    foundedGeneration: h.foundedGeneration,
+    isActive: h.id === legacy.activeHouseholdId,
+    residents: householdSims.filter((s) => s.householdId === h.id),
+  }))
+
   // Current heir = the same sim the succession line marks "Heir designate"
   // (highest numbered heir). Fall back to the founder when they are the only heir.
   const currentHeir =
@@ -167,6 +200,9 @@ export default async function LegacyDetailPage({ params }: Props) {
         simsById={simsById}
         groups={groups}
         treeSlot={<ViewTree legacySlug={slug} />}
+        households={householdViews}
+        worlds={worlds}
+        householdSims={householdSims}
       />
     </div>
   )

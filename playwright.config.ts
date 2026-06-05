@@ -20,7 +20,7 @@ export default defineConfig({
     { name: 'teardown', testMatch: '**/teardown/*.ts' },
     {
       name: 'chromium',
-      // Glob (with auth carved out) so new authed specs — e.g. milestones.spec.ts —
+      // Glob (with auth carved out) so new authed specs — e.g. challenges.spec.ts —
       // are picked up automatically instead of being silently skipped.
       testMatch: '**/*.spec.ts',
       testIgnore: '**/auth.spec.ts',

@@ -16,6 +16,7 @@ vi.mock('@/trpc/client', () => ({
     traits: { getAll: { useQuery: vi.fn(() => ({ data: [{ id: 't1', name: 'Creative', category: 'HOBBY', conflictsWith: [] }], isLoading: false })) } },
     aspirations: { getAll: { useQuery: vi.fn(() => ({ data: [{ id: 'a1', name: 'Painter Extraordinaire', category: 'CREATIVITY' }], isLoading: false })) } },
     careers: { getAll: { useQuery: vi.fn(() => ({ data: [{ id: 'c1', name: 'Painter', type: 'STANDARD' }], isLoading: false })) } },
+    households: { listByLegacy: { useQuery: vi.fn(() => ({ data: [], isLoading: false })) } },
     sims: { create: { useMutation: mockUseMutation } },
   },
 }))
@@ -46,6 +47,10 @@ describe('CreateSimModal', () => {
     vi.mocked(trpc.careers.getAll.useQuery).mockReset()
     vi.mocked(trpc.careers.getAll.useQuery).mockImplementation(
       () => ({ data: [{ id: 'c1', name: 'Painter', type: 'STANDARD' }], isLoading: false }) as ReturnType<typeof trpc.careers.getAll.useQuery>
+    )
+    vi.mocked(trpc.households.listByLegacy.useQuery).mockReset()
+    vi.mocked(trpc.households.listByLegacy.useQuery).mockImplementation(
+      () => ({ data: [], isLoading: false }) as ReturnType<typeof trpc.households.listByLegacy.useQuery>
     )
   })
 

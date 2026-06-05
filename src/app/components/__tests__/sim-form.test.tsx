@@ -211,4 +211,47 @@ describe('SimForm', () => {
     // Exact name match: fails if the arrow is included in the accessible name
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
   })
+
+  it('shows the household picker when households are provided and submits the choice', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    renderForm({
+      onSubmit,
+      households: [{ id: 'h1', name: 'Goth Manor' }],
+    })
+
+    await user.type(screen.getByPlaceholderText('First name'), 'Bella')
+    await user.type(screen.getByPlaceholderText('Last name'), 'Goth')
+    await user.click(screen.getByLabelText(/gender/i))
+    await user.click(await screen.findByRole('option', { name: 'Female' }))
+    await user.click(screen.getByLabelText(/household/i))
+    await user.click(await screen.findByRole('option', { name: 'Goth Manor' }))
+    await user.click(screen.getByRole('button', { name: /Save|Add sim|Create/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ householdId: 'h1' }))
+  })
+
+  it('hides the household picker when no households are provided', () => {
+    renderForm({})
+    expect(screen.queryByLabelText(/household/i)).not.toBeInTheDocument()
+  })
+
+  it('offers the found-household checkbox with a live name preview, checked by default', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    renderForm({ onSubmit, offerFoundHousehold: true })
+
+    const checkbox = screen.getByRole('checkbox', { name: /Settle them into a household/i })
+    expect(checkbox).toBeChecked()
+
+    await user.type(screen.getByPlaceholderText('Last name'), 'Caliente')
+    expect(screen.getByText(/The Caliente Household/)).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('First name'), 'Dina')
+    await user.click(screen.getByLabelText(/gender/i))
+    await user.click(await screen.findByRole('option', { name: 'Female' }))
+    await user.click(screen.getByRole('button', { name: /Save|Add sim|Create/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ foundHousehold: true }))
+  })
 })

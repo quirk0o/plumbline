@@ -141,6 +141,7 @@ export function LegacyWizard() {
               isSubmitting={createLegacy.isPending}
               submitLabel="Create legacy →"
               errors={createLegacy.error ? { root: getErrorMessage(createLegacy.error) } : undefined}
+              offerFoundHousehold
             />
           </div>
         )}

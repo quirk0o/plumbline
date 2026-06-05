@@ -112,3 +112,35 @@
     max-width: 100%;
   }
 }
+
+.foundHousehold {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--green-glow);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  cursor: pointer;
+}
+
+.foundHousehold input {
+  accent-color: var(--green);
+  margin-top: 2px;
+}
+
+.foundHouseholdTitle {
+  display: block;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.foundHouseholdHint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}

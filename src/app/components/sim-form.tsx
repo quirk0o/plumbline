@@ -24,6 +24,8 @@ export interface SimFormData {
   aspirationId?: string
   careerId?: string
   occultType?: OccultType
+  householdId?: string
+  foundHousehold?: boolean
 }
 
 interface Aspiration {
@@ -50,6 +52,10 @@ interface SimFormProps {
   isSubmitting?: boolean
   submitLabel?: string
   errors?: Partial<Record<keyof SimFormData | 'root', string>>
+  /** When provided (non-empty), an optional Household picker is shown. */
+  households?: { id: string; name: string }[]
+  /** Wizard founder context: offer the "settle into a household" checkbox. */
+  offerFoundHousehold?: boolean
 }
 
 const PRONOUN_PRESETS = [
@@ -112,6 +118,8 @@ const simFormSchema = z.object({
   aspirationId: emptyToUndefined.optional(),
   careerId: emptyToUndefined.optional(),
   occultType: z.string().transform((v) => (v || undefined) as OccultType | undefined),
+  householdId: emptyToUndefined.optional(),
+  foundHousehold: z.boolean().optional(),
 })
 
 export function SimForm({
@@ -124,6 +132,8 @@ export function SimForm({
   isSubmitting,
   submitLabel = 'Save',
   errors,
+  households,
+  offerFoundHousehold,
 }: SimFormProps) {
   const [pronounPreset, setPronounPreset] = useState(() => {
     if (!defaultValues?.pronounSubject) return ''
@@ -158,6 +168,8 @@ export function SimForm({
       aspirationId: defaultValues?.aspirationId ?? '',
       careerId: defaultValues?.careerId ?? '',
       occultType: defaultValues?.occultType ?? '',
+      householdId: defaultValues?.householdId ?? '',
+      foundHousehold: offerFoundHousehold ? true : undefined,
     },
   })
 
@@ -169,6 +181,7 @@ export function SimForm({
   }, [errors, setError])
 
   const currentLifeStage = useWatch({ control, name: 'lifeStage' })
+  const lastName = useWatch({ control, name: 'lastName' })
 
   const visibleTraits = traits.filter((t) =>
     isLifeStageInRange(currentLifeStage, t.minLifeStage, t.maxLifeStage)
@@ -336,6 +349,50 @@ export function SimForm({
                 />
               </div>
             </div>
+
+            {households && households.length > 0 && (
+              <div className={styles.pronounRow}>
+                <div className={styles.halfCol}>
+                  <Controller
+                    control={control}
+                    name="householdId"
+                    render={({ field }) => (
+                      <FormField label="Household" htmlFor="household">
+                        <Combobox
+                          id="household"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          placeholder="No household"
+                        >
+                          <Combobox.Item value="">No household</Combobox.Item>
+                          {households.map((h) => (
+                            <Combobox.Item key={h.id} value={h.id}>
+                              {h.name}
+                            </Combobox.Item>
+                          ))}
+                        </Combobox>
+                      </FormField>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+
+            {offerFoundHousehold && (
+              <label className={styles.foundHousehold}>
+                <input type="checkbox" {...register('foundHousehold')} />
+                <span>
+                  <span className={styles.foundHouseholdTitle}>Settle them into a household</span>
+                  <span className={styles.foundHouseholdHint}>
+                    We&apos;ll found{' '}
+                    {lastName.trim()
+                      ? `"The ${lastName.trim()} Household"`
+                      : 'their first household'}{' '}
+                    with them as its first resident. You can rename it anytime.
+                  </span>
+                </span>
+              </label>
+            )}
           </div>
         </div>
       </div>

@@ -17,9 +17,10 @@ export function CreateSimModal({ legacyId, onCreated, onClose }: CreateSimModalP
   const traitsQuery = trpc.traits.getAll.useQuery()
   const aspirationsQuery = trpc.aspirations.getAll.useQuery()
   const careersQuery = trpc.careers.getAll.useQuery()
+  const householdsQuery = trpc.households.listByLegacy.useQuery({ legacyId })
   const createSim = trpc.sims.create.useMutation()
 
-  const isLoading = traitsQuery.isLoading || aspirationsQuery.isLoading || careersQuery.isLoading
+  const isLoading = traitsQuery.isLoading || aspirationsQuery.isLoading || careersQuery.isLoading || householdsQuery.isLoading
 
   async function handleSubmit(data: SimFormData) {
     const sim = await createSim.mutateAsync({ legacyId, ...data })
@@ -40,6 +41,7 @@ export function CreateSimModal({ legacyId, onCreated, onClose }: CreateSimModalP
               traits={traitsQuery.data ?? []}
               aspirations={aspirationsQuery.data ?? []}
               careers={careersQuery.data ?? []}
+              households={householdsQuery.data ?? []}
               defaultValues={{ gender: Gender.FEMALE }}
               submitLabel="Create sim"
               onBack={onClose}

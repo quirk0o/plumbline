@@ -12,9 +12,10 @@ interface AddSimClientProps {
   traits: Trait[]
   aspirations: { id: string; name: string; category: string; minLifeStage: LifeStage | null; maxLifeStage: LifeStage | null }[]
   careers: { id: string; name: string; type: string }[]
+  households: { id: string; name: string }[]
 }
 
-export function AddSimClient({ legacyId, slug, traits, aspirations, careers }: AddSimClientProps) {
+export function AddSimClient({ legacyId, slug, traits, aspirations, careers, households }: AddSimClientProps) {
   const router = useRouter()
   const createSim = trpc.sims.create.useMutation()
 
@@ -32,6 +33,7 @@ export function AddSimClient({ legacyId, slug, traits, aspirations, careers }: A
       traits={traits}
       aspirations={aspirations}
       careers={careers}
+      households={households}
       onSubmit={handleSubmit}
       onBack={() => router.push(`/app/legacies/${slug}`)}
       isSubmitting={createSim.isPending}

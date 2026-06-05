@@ -18,10 +18,15 @@ export default async function AddSimPage({ params }: Props) {
   const legacy = await db.legacy.findFirst({ where: { slug, userId } })
   if (!legacy) notFound()
 
-  const [traits, aspirations, careers] = await Promise.all([
+  const [traits, aspirations, careers, households] = await Promise.all([
     fetchTraitsWithConflicts(userId),
     fetchAspirations(userId),
     fetchCareers(userId),
+    db.household.findMany({
+      where: { legacyId: legacy.id },
+      select: { id: true, name: true },
+      orderBy: { createdAt: 'asc' },
+    }),
   ])
 
   return (
@@ -34,6 +39,7 @@ export default async function AddSimPage({ params }: Props) {
           traits={traits}
           aspirations={aspirations}
           careers={careers}
+          households={households}
         />
       </div>
     </div>

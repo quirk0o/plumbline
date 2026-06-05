@@ -64,6 +64,13 @@ export type FlowGraphOptions = {
 
 const STATIC_NODE = { draggable: false, selectable: false, focusable: false, connectable: false } as const
 
+/**
+ * Drops a decorative element from the accessibility tree. xyflow's wrappers emit
+ * an auto role/aria-label leaking internal ids; `ariaRole: 'presentation'`
+ * removes the role (and with it the label) for both edges and non-sim nodes.
+ */
+const A11Y_PRESENTATION = { ariaRole: 'presentation' } as const
+
 export function toFlowGraph(
   layout: LineageLayout,
   sims: LineageFlowSim[],
@@ -82,6 +89,7 @@ export function toFlowGraph(
       position: { x: 6, y: rowY + NODE_HEIGHT / 2 - 42 },
       data: { label: gen === null ? 'GEN —' : `GEN ${roman(gen)}` },
       ...STATIC_NODE,
+      ...A11Y_PRESENTATION,
     }
   })
 
@@ -115,6 +123,7 @@ export function toFlowGraph(
         position: { x: midX, y: topY + CREST_ANCHORS.cy },
         data: {},
         ...STATIC_NODE,
+        ...A11Y_PRESENTATION,
       })
     }
     descentEdges.push({
@@ -125,6 +134,15 @@ export function toFlowGraph(
       target: childId,
       targetHandle: 'top',
       focusable: false,
+      // Suppress xyflow EdgeWrapper's auto a11y output. Non-focusable edges get
+      // role="img" + an auto label "Edge from <id> to <id>" that leaks internal
+      // union/sim ids to screen readers. The runtime suppresses the label only
+      // when ariaLabel === null, but the Edge type is `string | undefined`, so
+      // we use ariaRole instead: 'presentation' drops the role="img" wrapper,
+      // removing the decorative connector from the a11y tree entirely. (Verified
+      // against node_modules/@xyflow/react EdgeWrapper: `role: edge.ariaRole ??
+      // (isFocusable ? 'group' : 'img')`.)
+      ...A11Y_PRESENTATION,
     })
   }
 
@@ -144,6 +162,7 @@ export function toFlowGraph(
       target: right,
       targetHandle: 'left',
       focusable: false,
+      ...A11Y_PRESENTATION,
     }]
   })
 

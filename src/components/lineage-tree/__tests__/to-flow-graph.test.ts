@@ -85,6 +85,14 @@ describe('toFlowGraph', () => {
     expect(lastDescent).toBeLessThan(firstMarriage)
   })
 
+  it('hides decorative edges from the a11y tree so xyflow does not leak ids', () => {
+    // xyflow's EdgeWrapper otherwise emits role="img" + "Edge from <id> to <id>".
+    // ariaRole: 'presentation' drops that role (and its auto label) entirely.
+    for (const edge of graph.edges) {
+      expect(edge.ariaRole).toBe('presentation')
+    }
+  })
+
   it('flags dimmed / selected / founder / focused sims in crest data', () => {
     const flagged = toFlowGraph(layout, sims, familyEdges, {
       dimmedIds: new Set(['f2']),
@@ -135,5 +143,13 @@ describe('toFlowGraph', () => {
 describe('descentPath', () => {
   it('draws vertical → horizontal → vertical through the midpoint (old ParentChildLine shape)', () => {
     expect(descentPath(100, 50, 240, 170)).toBe('M 100 50 V 110 H 240 V 170')
+  })
+
+  it('keeps a single straight drop when source and target share an x (lone parent)', () => {
+    expect(descentPath(100, 50, 100, 170)).toBe('M 100 50 V 110 H 100 V 170')
+  })
+
+  it('routes through the midpoint even when the target sits above the source (inverted)', () => {
+    expect(descentPath(100, 170, 240, 50)).toBe('M 100 170 V 110 H 240 V 50')
   })
 })

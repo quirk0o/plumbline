@@ -6,6 +6,7 @@ import { formatLifeStage } from '@/lib/legacy-format'
 import { cn } from '@/lib/utils'
 import type { CrestNodeData } from './to-flow-graph'
 import styles from './crest-flow-node.module.css'
+import flowStyles from './lineage-flow.module.css'
 
 /**
  * The Crest medallion as an HTML xyflow node (140×90 bbox). Hidden handles sit
@@ -48,9 +49,9 @@ export function CrestFlowNode({ data }: { data: CrestNodeData }) {
 
   return (
     <div className={styles.crest} data-tree-node data-dimmed={isDimmed ? '' : undefined}>
-      <Handle type="target" id="top" position={Position.Top} className={styles.handle} style={{ left: 70, top: 2 }} isConnectable={false} />
-      <Handle type="target" id="left" position={Position.Left} className={styles.handle} style={{ left: 48, top: 24 }} isConnectable={false} />
-      <Handle type="source" id="right" position={Position.Right} className={styles.handle} style={{ left: 92, top: 24 }} isConnectable={false} />
+      <Handle type="target" id="top" position={Position.Top} className={flowStyles.handle} style={{ left: 70, top: 2 }} isConnectable={false} />
+      <Handle type="target" id="left" position={Position.Left} className={flowStyles.handle} style={{ left: 48, top: 24 }} isConnectable={false} />
+      <Handle type="source" id="right" position={Position.Right} className={flowStyles.handle} style={{ left: 92, top: 24 }} isConnectable={false} />
       {onSelect ? (
         <button
           type="button"

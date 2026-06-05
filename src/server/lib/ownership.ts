@@ -14,3 +14,10 @@ export async function assertLegacyOwnedBySlug(db: PrismaClient, slug: string, us
   if (!legacy) throw new TRPCError({ code: 'NOT_FOUND', message: 'Legacy not found' })
   return legacy
 }
+
+/** Return the sim if it belongs to a legacy owned by the user, else throw NOT_FOUND. */
+export async function assertSimOwned(db: PrismaClient, simId: string, userId: string) {
+  const sim = await db.sim.findFirst({ where: { id: simId, legacy: { userId } } })
+  if (!sim) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
+  return sim
+}

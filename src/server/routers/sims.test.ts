@@ -1625,6 +1625,8 @@ describe('sims.getMiniTreeData', () => {
     expect(ids).toContain(child.id)
     expect(ids).toContain(parent.id)
     expect(ids).toContain(grandparent.id)
+    const returnedChild = result.sims.find((s) => s.id === child.id)
+    expect(returnedChild).toMatchObject({ lifeStage: expect.any(String), isHeir: expect.any(Boolean) })
   })
 
   it("includes the focused sim's children", async () => {

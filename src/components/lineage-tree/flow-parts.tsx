@@ -13,14 +13,17 @@ export function GenLabelNode({ data }: { data: GenLabelNodeData }) {
 }
 
 /**
- * Invisible 0×0 anchor at a couple's marriage-bond midpoint. Descent edges
+ * Invisible 1×1 anchor at a couple's marriage-bond midpoint. Descent edges
  * start here — the bond is where children descend from. For a lone parent it
  * sits at the medallion center, occluded until the line exits below (edges
  * render beneath nodes), matching the old connector behavior.
+ *
+ * Must be 1×1, not 0×0 — see to-flow-graph.ts union node comment for the two
+ * xyflow falsy-zero pitfalls (nodesInitialized gate and handleBounds gate).
  */
 export function UnionNode() {
   return (
-    <div style={{ width: 0, height: 0 }}>
+    <div style={{ width: 1, height: 1, background: 'transparent' }}>
       <Handle type="source" id="out" position={Position.Bottom} className={styles.handle} isConnectable={false} />
     </div>
   )

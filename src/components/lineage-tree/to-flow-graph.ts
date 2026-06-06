@@ -129,17 +129,33 @@ export function toFlowGraph(
       unionNodes.push({
         id: unionId,
         type: 'union',
-        position: { x: midX, y: topY + CREST_ANCHORS.cy },
+        // 1×1 node: bottom-center handle lands at (x+0.5, y+1). Offset so
+        // that point equals the bond midpoint (midX, topY+CREST_ANCHORS.cy).
+        position: { x: midX - 0.5, y: topY + CREST_ANCHORS.cy - 1 },
         data: {},
-        // Declare 0×0 measured dimensions so xyflow treats the node as
-        // "measured" immediately. ResizeObserver never fires for a 0×0
-        // element, leaving measured.width/height undefined, which keeps
-        // nodesInitialized=false and silently breaks the imperative
-        // fitView() call (the nodeQueue path checks nodesInitialized before
-        // calling resolveFitView). getFitViewNodes skips nodes with falsy
-        // measured.width/height, so these 0×0 anchors are correctly
-        // excluded from fit calculations.
-        measured: { width: 0, height: 0 },
+        // xyflow has TWO falsy-zero pitfalls — both must be avoided:
+        //
+        // 1. nodesInitialized / fitView gate (=== undefined check):
+        //    ResizeObserver never fires for a 0×0 DOM element, leaving
+        //    measured.width/height === undefined, which keeps
+        //    nodesInitialized=false and silently breaks imperative fitView().
+        //
+        // 2. Edge-rendering / handleBounds gate (TRUTHINESS check):
+        //    updateNodeDimensions skips the handleBounds capture when
+        //    dimensions.width and dimensions.height are both falsy
+        //    (`doUpdate = !!(dimensions.width && dimensions.height && ...)`).
+        //    isNodeInitialized then tests `!!(node.measured.width || ...)` —
+        //    measured.width=0 is falsy, so the union node is never considered
+        //    initialised, and every descent edge (which uses this node as
+        //    source) is silently dropped from rendering.
+        //
+        // Fix: 1×1 so both checks pass. getFitViewNodes still excludes this
+        // node from viewport fitting because it checks for truthy
+        // measured.width (0×0 would be excluded; 1×1 is included but the
+        // 0.5px contribution to bounds is imperceptible and acceptable).
+        width: 1,
+        height: 1,
+        measured: { width: 1, height: 1 },
         ...STATIC_NODE,
         ...A11Y_HIDDEN,
       })

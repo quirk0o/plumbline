@@ -61,14 +61,23 @@ describe('toFlowGraph', () => {
     expect(edge.targetHandle).toBe('left')
   })
 
-  it('emits one union node per distinct parent set, at the bond midpoint', () => {
+  it('emits one union node per distinct parent set; bottom-center handle lands on bond midpoint', () => {
+    // The union node is 1×1. Its bottom-center handle sits at (x+0.5, y+1).
+    // We verify that these equal the bond midpoint (midX, topY+CREST_ANCHORS.cy)
+    // so the descent edge originates at exactly the right geometric point.
     const unions = graph.nodes.filter((n) => n.type === 'union')
     expect(unions).toHaveLength(1)
     const [union] = unions
     const f1 = layout.byId['f1']
     const f2 = layout.byId['f2']
     const midX = (f1.x + CREST_ANCHORS.cx + f2.x + CREST_ANCHORS.cx) / 2
-    expect(union.position).toEqual({ x: midX, y: Math.min(f1.y, f2.y) + CREST_ANCHORS.cy })
+    const topY = Math.min(f1.y, f2.y)
+    // Bottom-center of the 1×1 node = (position.x + 0.5, position.y + 1)
+    expect(union.position.x + 0.5).toBeCloseTo(midX, 5)
+    expect(union.position.y + 1).toBeCloseTo(topY + CREST_ANCHORS.cy, 5)
+    // Verify the node is 1×1 (not 0×0) so xyflow's handleBounds gate passes
+    expect(union.width).toBe(1)
+    expect(union.height).toBe(1)
   })
 
   it('emits one descent edge per child, from its union to its top handle', () => {
@@ -110,14 +119,23 @@ describe('toFlowGraph', () => {
     }
   })
 
-  it('sets measured {width:0, height:0} on union nodes so nodesInitialized stays true', () => {
-    // Union nodes are 0×0 invisible anchors. ResizeObserver never fires for
-    // them (getDimensions returns 0 → doUpdate is false), so without an
-    // explicit measured value the internal store keeps measured.width===
-    // undefined, which makes nodesInitialized=false and silently breaks
-    // imperative fitView() calls.
+  it('sets measured {width:1, height:1} on union nodes so both xyflow init gates pass', () => {
+    // Union nodes are 1×1 invisible anchors. Two xyflow gates must be passed:
+    //
+    // 1. nodesInitialized / fitView gate (=== undefined check): without an
+    //    explicit measured value, ResizeObserver keeps measured.width===
+    //    undefined → nodesInitialized=false → imperative fitView() silently
+    //    breaks.
+    //
+    // 2. handleBounds / edge-render gate (TRUTHINESS check): updateNodeDimensions
+    //    skips handleBounds capture when dimensions.width is falsy (0). Then
+    //    isNodeInitialized checks `!!(node.measured.width || ...)` — measured.
+    //    width=0 is falsy → union node fails init → ALL descent edges dropped.
+    //
+    // 1×1 passes both checks. The 0.5px contribution to fitView bounds is
+    // imperceptible.
     for (const node of graph.nodes.filter((n) => n.type === 'union')) {
-      expect(node.measured).toEqual({ width: 0, height: 0 })
+      expect(node.measured).toEqual({ width: 1, height: 1 })
     }
   })
 

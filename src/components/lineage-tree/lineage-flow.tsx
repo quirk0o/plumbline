@@ -17,6 +17,7 @@ import {
   type LineagePartnerEdge,
 } from './layout'
 import { toFlowGraph, type LineageFlowSim } from './to-flow-graph'
+import { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
 import { CrestFlowNode } from './crest-flow-node'
 import { DescentEdge, GenLabelNode, MarriageEdge, UnionNode } from './flow-parts'
 import styles from './lineage-flow.module.css'
@@ -33,8 +34,6 @@ const nodeTypes = {
   union: UnionNode,
 } satisfies NodeTypes
 const edgeTypes = { marriage: MarriageEdge, descent: DescentEdge } satisfies EdgeTypes
-
-import { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
 
 export type LineageFlowProps = {
   sims: LineageFlowSim[]
@@ -104,11 +103,13 @@ export function LineageFlow({
         node.y >= view.top &&
         node.y + NODE_HEIGHT <= view.bottom
       if (visible) return
-      // Clamp to MIN_ZOOM: fitView may legitimately sit below the interactive
-      // floor (FIT_VIEW_OPTIONS.minZoom 0.05). Panning at a sub-floor zoom sets
-      // d3's internal scale below scaleExtent, causing the next wheel gesture to
-      // visibly jump to 0.2. Clamping keeps focus-pan inside the interactive range.
-      void setCenter(node.x + NODE_WIDTH / 2, node.y + NODE_HEIGHT / 2, { zoom: Math.max(zoom, MIN_ZOOM), duration: 200 })
+      // Focus-pan must not change the user's zoom — fitView may legitimately sit
+      // below the interactive floor (fit-options minZoom 0.05), and zooming in
+      // 2.5× on keyboard focus is more disorienting than the wheel re-clamping
+      // from a sub-floor zoom, which is old-parity behavior (the deleted
+      // clampZoom did the same) and already occurs after any sub-floor fit
+      // regardless of this call.
+      void setCenter(node.x + NODE_WIDTH / 2, node.y + NODE_HEIGHT / 2, { zoom, duration: 200 })
     },
     [layout, getViewport, setCenter, store],
   )

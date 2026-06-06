@@ -93,13 +93,14 @@ describe('LineageFlow', () => {
     // panZoom.setViewport is called which updates the CSS transform and can
     // produce translate(NaN,NaN) when the internal d3 scale is uninitialised).
     const viewport = container.querySelector('.react-flow__viewport')
-    const transformBefore = viewport?.getAttribute('style') ?? ''
+    expect(viewport).not.toBeNull()
+    const transformBefore = viewport!.getAttribute('style') ?? ''
 
     // Clicking the button calls onNodeFocus internally (via toFlowGraph) before onSelect.
     await user.click(screen.getByRole('button', { name: /Bella Goth/ }))
 
     // The viewport transform must be unchanged and must not contain NaN.
-    const transformAfter = viewport?.getAttribute('style') ?? ''
+    const transformAfter = viewport!.getAttribute('style') ?? ''
     expect(transformAfter).toBe(transformBefore)
     expect(transformAfter).not.toContain('NaN')
 

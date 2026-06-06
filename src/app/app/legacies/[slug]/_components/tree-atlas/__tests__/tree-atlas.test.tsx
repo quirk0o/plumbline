@@ -57,6 +57,8 @@ vi.mock('@/trpc/client', () => ({
 
 // Import AFTER mocks are set up
 import { TreeAtlas } from '../tree-atlas'
+// Real module — intentionally unmocked so the test asserts the actual value.
+import { FIT_VIEW_OPTIONS } from '@/components/lineage-tree/fit-options'
 
 const defaultProps = {
   legacySlug: 'caliente',
@@ -150,6 +152,15 @@ describe('TreeAtlas (full-page route, not a dialog)', () => {
     expect(screen.queryByTestId('sim-inspector')).not.toBeInTheDocument()
     await user.click(screen.getByTestId('lineage-flow'))
     expect(screen.getByTestId('sim-inspector')).toHaveTextContent('s2')
+  })
+
+  it('clicking Fit tree to view calls fitView with FIT_VIEW_OPTIONS and a 200 ms duration', async () => {
+    const user = userEvent.setup()
+    render(<TreeAtlas {...defaultProps} />)
+    await user.click(screen.getByRole('button', { name: /fit tree to view/i }))
+    expect(mockFitView).toHaveBeenCalledWith(
+      expect.objectContaining({ ...FIT_VIEW_OPTIONS, duration: 200 }),
+    )
   })
 
   it('hides the zoom bar (no phantom Fit control) when a gen filter has no sims', async () => {

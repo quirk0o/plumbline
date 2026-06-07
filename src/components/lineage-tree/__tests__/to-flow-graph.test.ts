@@ -184,45 +184,95 @@ describe('toFlowGraph', () => {
     const labels = toFlowGraph(layout2, sims2, familyEdges, {}).nodes.filter(isGenLabelNode)
     expect(labels.map((n) => n.data.label)).toEqual(['GEN I', 'GEN II', 'GEN —'])
   })
+
+  describe('marriage edge styling', () => {
+    it('marks current bonds solid', () => {
+      expect(graph.edges.find((e) => e.type === 'marriage')!.data).toMatchObject({ dashed: false })
+    })
+    it('marks widowed bonds dashed', () => {
+      const s = [sim('ann', 1), sim('joe', 1)]
+      const l = computeLineageLayout(s, [], [{ simAId: 'ann', simBId: 'joe', romanticStatus: 'WIDOWED' as const }])
+      const g = toFlowGraph(l, s, [], {})
+      expect(g.edges.find((e) => e.type === 'marriage')!.data).toMatchObject({ dashed: true })
+    })
+  })
+
+  describe('diamond rule', () => {
+    it('gives the couple union a diamond', () => {
+      const unions = graph.nodes.filter((n) => n.type === 'union')
+      expect(unions).toHaveLength(1)
+      expect(unions[0].data).toMatchObject({ diamond: true })
+    })
+    it('emits no union node for a childless couple', () => {
+      const s = [sim('a', 1), sim('b', 1)]
+      const l = computeLineageLayout(s, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'MARRIED' as const }])
+      const g = toFlowGraph(l, s, [], {})
+      expect(g.nodes.filter((n) => n.type === 'union')).toHaveLength(0)
+      expect(g.edges.filter((e) => e.type === 'marriage')).toHaveLength(1)
+    })
+    it('gives single-parent unions no diamond', () => {
+      const s = [sim('p', 1), sim('k', 2)]
+      const fe = [{ parentId: 'p', childId: 'k' }]
+      const g = toFlowGraph(computeLineageLayout(s, fe, []), s, fe, {})
+      expect(g.nodes.find((n) => n.type === 'union')!.data).toMatchObject({ diamond: false })
+    })
+  })
 })
 
-describe('toFlowGraph — parents not placed as an adjacent couple', () => {
-  // f1 had c1 with f2 but is now partnered with p2: the layout clusters f1+p2
-  // as the adjacent couple and places f2 elsewhere in the row. A shared union
-  // midpoint between f1 and f2 would land on/near p2's medallion, making c1
-  // read as the f1+p2 couple's child.
-  const repartneredSims = [sim('f1', 1), sim('f2', 1), sim('p2', 1), sim('c1', 2)]
-  const repartneredFamilyEdges = [
-    { parentId: 'f1', childId: 'c1' },
-    { parentId: 'f2', childId: 'c1' },
+describe('toFlowGraph — hanging unions', () => {
+  const hSims = [sim('alice', 1), sim('bob', 1), sim('dana', 1), sim('carol', 2)]
+  const hFamily = [{ parentId: 'alice', childId: 'carol' }, { parentId: 'bob', childId: 'carol' }]
+  const hPartners = [
+    { simAId: 'alice', simBId: 'bob', romanticStatus: 'EX_PARTNER' as const },
+    { simAId: 'bob', simBId: 'dana', romanticStatus: 'MARRIED' as const },
   ]
-  const repartneredPartnerEdges = [{ simAId: 'f1', simBId: 'p2', romanticStatus: 'MARRIED' as const }]
-  const repartneredLayout = computeLineageLayout(repartneredSims, repartneredFamilyEdges, repartneredPartnerEdges)
-  const repartneredGraph = toFlowGraph(repartneredLayout, repartneredSims, repartneredFamilyEdges, {})
+  const hLayout = computeLineageLayout(hSims, hFamily, hPartners)
+  const hGraph = toFlowGraph(hLayout, hSims, hFamily, {})
 
-  it('places f1+p2 as the couple with f2 apart (scenario precondition)', () => {
-    expect(repartneredLayout.couples).toEqual([{ a: 'f1', b: 'p2' }])
+  it('materialises a 1×1 diamond union node at the layout point', () => {
+    const [hu] = hLayout.hangingUnions
+    const node = hGraph.nodes.find((n) => n.type === 'union' && n.id === `union-${hu.key}`)!
+    expect(node.position.x + 0.5).toBeCloseTo(hu.x, 5)
+    expect(node.position.y + 1).toBeCloseTo(hu.y, 5)
+    expect(node.data).toMatchObject({ diamond: true })
+    expect(node.measured).toEqual({ width: 1, height: 1 })
   })
-
-  it('draws one descent edge per parent instead of a shared union between them', () => {
-    const descents = repartneredGraph.edges.filter((e) => e.type === 'descent' && e.target === 'c1')
-    expect(
-      descents.map((e) => [e.source, e.sourceHandle]).sort((a, b) => (a[0]! < b[0]! ? -1 : 1)),
-    ).toEqual([
-      ['f1', 'bottom'],
-      ['f2', 'bottom'],
+  it('connects both parents to the union with coParent elbows', () => {
+    const [hu] = hLayout.hangingUnions
+    const co = hGraph.edges.filter((e) => e.type === 'coParent')
+    expect(co.map((e) => [e.source, e.target]).sort()).toEqual([
+      ['alice', `union-${hu.key}`],
+      ['bob', `union-${hu.key}`],
     ])
-    expect(repartneredGraph.nodes.filter((n) => n.type === 'union')).toHaveLength(0)
+    for (const e of co) {
+      expect(e.sourceHandle).toBe('bottom')
+      expect(e.targetHandle).toBe('in')
+      expect(e.domAttributes?.['aria-hidden']).toBe('true')
+    }
   })
-
-  it('still uses a shared union when the parents themselves are the adjacent couple', () => {
-    // Original fixture: f1+f2 are both the couple and c1's parents.
-    expect(graphUnionCount(toFlowGraph(layout, sims, familyEdges, {}))).toBe(1)
+  it('descends the child from the union, not from either parent', () => {
+    const [hu] = hLayout.hangingUnions
+    const d = hGraph.edges.filter((e) => e.type === 'descent' && e.target === 'carol')
+    expect(d).toHaveLength(1)
+    expect(d[0].source).toBe(`union-${hu.key}`)
   })
-
-  function graphUnionCount(g: { nodes: Node[] }): number {
-    return g.nodes.filter((n) => n.type === 'union').length
-  }
+  it('paints coParent elbows after descents and before marriage bonds', () => {
+    const types = hGraph.edges.map((e) => e.type)
+    const lastDescent = types.lastIndexOf('descent')
+    const firstCoParent = types.indexOf('coParent')
+    const firstMarriage = types.indexOf('marriage')
+    expect(lastDescent).toBeLessThan(firstCoParent)
+    expect(firstCoParent).toBeLessThan(firstMarriage)
+  })
+  it('falls back to per-parent descent lines for ≥3-parent sets', () => {
+    const s = [sim('p1', 1), sim('p2', 1), sim('p3', 1), sim('k', 2)]
+    const fe = [
+      { parentId: 'p1', childId: 'k' }, { parentId: 'p2', childId: 'k' }, { parentId: 'p3', childId: 'k' },
+    ]
+    const g = toFlowGraph(computeLineageLayout(s, fe, []), s, fe, {})
+    const d = g.edges.filter((e) => e.type === 'descent' && e.target === 'k')
+    expect(d.map((e) => e.source).sort()).toEqual(['p1', 'p2', 'p3'])
+  })
 })
 
 describe('descentPath', () => {

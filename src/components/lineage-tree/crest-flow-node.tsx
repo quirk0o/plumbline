@@ -52,6 +52,7 @@ export function CrestFlowNode({ data }: { data: CrestNodeData }) {
       <Handle type="target" id="top" position={Position.Top} className={flowStyles.handle} style={{ left: 70, top: 2 }} isConnectable={false} />
       <Handle type="target" id="left" position={Position.Left} className={flowStyles.handle} style={{ left: 48, top: 24 }} isConnectable={false} />
       <Handle type="source" id="right" position={Position.Right} className={flowStyles.handle} style={{ left: 92, top: 24 }} isConnectable={false} />
+      <Handle type="source" id="bottom" position={Position.Bottom} className={flowStyles.handle} style={{ left: 70, top: 46 }} isConnectable={false} />
       {onSelect ? (
         <button
           type="button"

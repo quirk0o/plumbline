@@ -111,6 +111,11 @@ export function toFlowGraph(
     parentsByChild.set(childId, list)
   }
 
+  // Couples the layout actually placed adjacently — only these have a
+  // meaningful marriage-bond midpoint for children to descend from.
+  const pairKey = (ids: readonly string[]) => [...ids].sort().join('+')
+  const coupleKeys = new Set(layout.couples.map(({ a, b }) => pairKey([a, b])))
+
   // One invisible union node per distinct parent set, at the bond midpoint
   // (avg of parents' medallion centers; y = top parent's medallion center —
   // mirrors the old ParentChildLine source point).
@@ -118,7 +123,31 @@ export function toFlowGraph(
   const unionIdByKey = new Map<string, string>()
   const descentEdges: Edge[] = []
   for (const [childId, parentIds] of parentsByChild) {
-    const key = [...parentIds].sort().join('+')
+    const key = pairKey(parentIds)
+
+    // A shared union point is only honest when the parents sit together as
+    // the adjacent couple (or there is a single parent). Otherwise — e.g. a
+    // parent re-partnered, so the layout pairs them with someone who is NOT
+    // the child's other parent — the midpoint between the parents lands on
+    // whatever medallion happens to sit between them, and the child reads as
+    // the wrong couple's descendant. Drop one line from each parent instead.
+    const hasSharedDescentPoint =
+      parentIds.length === 1 || (parentIds.length === 2 && coupleKeys.has(key))
+    if (!hasSharedDescentPoint) {
+      for (const parentId of parentIds) {
+        descentEdges.push({
+          id: `descent-${childId}-${parentId}`,
+          type: 'descent',
+          source: parentId,
+          sourceHandle: 'bottom',
+          target: childId,
+          targetHandle: 'top',
+          focusable: false,
+          ...A11Y_HIDDEN,
+        })
+      }
+      continue
+    }
     let unionId = unionIdByKey.get(key)
     if (!unionId) {
       unionId = `union-${key}`

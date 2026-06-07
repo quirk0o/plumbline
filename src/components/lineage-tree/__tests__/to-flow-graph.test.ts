@@ -186,6 +186,45 @@ describe('toFlowGraph', () => {
   })
 })
 
+describe('toFlowGraph — parents not placed as an adjacent couple', () => {
+  // f1 had c1 with f2 but is now partnered with p2: the layout clusters f1+p2
+  // as the adjacent couple and places f2 elsewhere in the row. A shared union
+  // midpoint between f1 and f2 would land on/near p2's medallion, making c1
+  // read as the f1+p2 couple's child.
+  const repartneredSims = [sim('f1', 1), sim('f2', 1), sim('p2', 1), sim('c1', 2)]
+  const repartneredFamilyEdges = [
+    { parentId: 'f1', childId: 'c1' },
+    { parentId: 'f2', childId: 'c1' },
+  ]
+  const repartneredPartnerEdges = [{ simAId: 'f1', simBId: 'p2' }]
+  const repartneredLayout = computeLineageLayout(repartneredSims, repartneredFamilyEdges, repartneredPartnerEdges)
+  const repartneredGraph = toFlowGraph(repartneredLayout, repartneredSims, repartneredFamilyEdges, {})
+
+  it('places f1+p2 as the couple with f2 apart (scenario precondition)', () => {
+    expect(repartneredLayout.couples).toEqual([{ a: 'f1', b: 'p2' }])
+  })
+
+  it('draws one descent edge per parent instead of a shared union between them', () => {
+    const descents = repartneredGraph.edges.filter((e) => e.type === 'descent' && e.target === 'c1')
+    expect(
+      descents.map((e) => [e.source, e.sourceHandle]).sort((a, b) => (a[0]! < b[0]! ? -1 : 1)),
+    ).toEqual([
+      ['f1', 'bottom'],
+      ['f2', 'bottom'],
+    ])
+    expect(repartneredGraph.nodes.filter((n) => n.type === 'union')).toHaveLength(0)
+  })
+
+  it('still uses a shared union when the parents themselves are the adjacent couple', () => {
+    // Original fixture: f1+f2 are both the couple and c1's parents.
+    expect(graphUnionCount(toFlowGraph(layout, sims, familyEdges, {}))).toBe(1)
+  })
+
+  function graphUnionCount(g: { nodes: Node[] }): number {
+    return g.nodes.filter((n) => n.type === 'union').length
+  }
+})
+
 describe('descentPath', () => {
   it('draws vertical → horizontal → vertical through the midpoint (old ParentChildLine shape)', () => {
     expect(descentPath(100, 50, 240, 170)).toBe('M 100 50 V 110 H 240 V 170')

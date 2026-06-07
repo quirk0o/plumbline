@@ -1019,6 +1019,72 @@ describe('sims — generationNumber population', () => {
 
 })
 
+describe('sims.update — heir cohort', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('clears heirs in the generation the sim moves into, not the one it left', async () => {
+    const oldGenHeir = await db.sim.create({
+      data: { legacyId, firstName: 'OldHeir', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
+    })
+    const newGenHeir = await db.sim.create({
+      data: { legacyId, firstName: 'NewHeir', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 3, isHeir: true },
+    })
+    const mover = await db.sim.create({
+      data: { legacyId, firstName: 'Mover', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+
+    await authedCaller(userId).sims.update({ id: mover.id, generationNumber: 3, isHeir: true })
+
+    const [oldHeir, newHeir, moved] = await Promise.all([
+      db.sim.findUnique({ where: { id: oldGenHeir.id } }),
+      db.sim.findUnique({ where: { id: newGenHeir.id } }),
+      db.sim.findUnique({ where: { id: mover.id } }),
+    ])
+    expect(oldHeir?.isHeir).toBe(true)
+    expect(newHeir?.isHeir).toBe(false)
+    expect(moved?.isHeir).toBe(true)
+    expect(moved?.generationNumber).toBe(3)
+  })
+
+  it("clears heirs in the sim's current generation even when it changed concurrently", async () => {
+    const gen3Heir = await db.sim.create({
+      data: { legacyId, firstName: 'Gen3Heir', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 3, isHeir: true },
+    })
+    const target = await db.sim.create({
+      data: { legacyId, firstName: 'Target', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+    const aspiration = await getAnyAspiration()
+    // Simulate the race: a concurrent request moves the sim to generation 3
+    // (separate connection) after the mutation's pre-transaction read.
+    const racingDb = db.$extends({
+      query: {
+        simAspiration: {
+          async deleteMany({ args, query }) {
+            await db.sim.update({ where: { id: target.id }, data: { generationNumber: 3 } })
+            return query(args)
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    await authedCaller(userId, racingDb).sims.update({ id: target.id, aspirationId: aspiration.id, isHeir: true })
+
+    const heirs = await db.sim.findMany({ where: { legacyId, generationNumber: 3, isHeir: true } })
+    expect(heirs.map((h) => h.id)).toEqual([target.id])
+    expect((await db.sim.findUnique({ where: { id: gen3Heir.id } }))?.isHeir).toBe(false)
+  })
+})
+
 describe('recomputeLegacyTrackers — triggered by sim mutations', () => {
   let userId: string
   let legacyId: string

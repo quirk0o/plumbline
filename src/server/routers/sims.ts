@@ -388,16 +388,31 @@ export const simsRouter = router({
           }
         }
 
-        if (input.isHeir === true && sim.generationNumber !== null) {
-          await tx.sim.updateMany({
-            where: {
-              legacyId: sim.legacyId,
-              generationNumber: sim.generationNumber,
-              isHeir: true,
-              NOT: { id: input.id },
-            },
-            data: { isHeir: false },
-          })
+        if (input.isHeir === true) {
+          // Clear heirs in the generation the sim ends up in: an explicit
+          // generationNumber in this update wins; otherwise re-read the current
+          // value inside the transaction so a concurrent generation change
+          // cannot make us clear a stale cohort.
+          const targetGeneration =
+            input.generationNumber !== undefined
+              ? input.generationNumber
+              : (
+                  await tx.sim.findUniqueOrThrow({
+                    where: { id },
+                    select: { generationNumber: true },
+                  })
+                ).generationNumber
+          if (targetGeneration !== null) {
+            await tx.sim.updateMany({
+              where: {
+                legacyId: sim.legacyId,
+                generationNumber: targetGeneration,
+                isHeir: true,
+                NOT: { id: input.id },
+              },
+              data: { isHeir: false },
+            })
+          }
         }
 
         return tx.sim.update({ where: { id }, data: fields })

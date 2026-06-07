@@ -375,8 +375,9 @@ async function main() {
   ]
 
   for (const [nameA, nameB] of conflictPairs) {
-    const a = await prisma.personalityTrait.findFirst({ where: { name: nameA } })
-    const b = await prisma.personalityTrait.findFirst({ where: { name: nameB } })
+    const adultFilter = { notIn: [LifeStage.INFANT, LifeStage.TODDLER] as LifeStage[] }
+    const a = await prisma.personalityTrait.findFirst({ where: { name: nameA, minLifeStage: adultFilter } })
+    const b = await prisma.personalityTrait.findFirst({ where: { name: nameB, minLifeStage: adultFilter } })
     if (!a || !b) { console.warn(`Skipping conflict ${nameA} <-> ${nameB}: trait not found`); continue }
     const [traitAId, traitBId] = [a.id, b.id].sort()
     await prisma.personalityTraitConflict.upsert({

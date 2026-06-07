@@ -1533,8 +1533,35 @@ describe('sims.getTreeData', () => {
       },
     })
     const result = await caller.sims.getTreeData({ legacySlug })
-    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB })
-    expect(result.partnerEdges).not.toContainEqual({ simAId: idA2, simBId: idC })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.MARRIED })
+    expect(result.partnerEdges.map((e) => [e.simAId, e.simBId])).not.toContainEqual([idA2, idC])
+  })
+
+  it('includes romanticStatus on every partner edge', async () => {
+    const caller = authedCaller(userId)
+    const simA = await createTestSim(legacyId, { firstName: 'SimA' })
+    const simB = await createTestSim(legacyId, { firstName: 'SimB' })
+    const [idA, idB] = [simA.id, simB.id].sort()
+    await db.socialRelationship.create({
+      data: {
+        simAId: idA,
+        simBId: idB,
+        romanticStatus: RomanticStatus.MARRIED,
+        friendshipScore: 0,
+        romanceScore: 0,
+      },
+    })
+    const result = await caller.sims.getTreeData({ legacySlug })
+    expect(result.partnerEdges.length).toBeGreaterThan(0)
+    for (const edge of result.partnerEdges) {
+      expect(edge).toHaveProperty('romanticStatus')
+      expect(edge.romanticStatus).not.toBe(RomanticStatus.NONE)
+    }
+    expect(result.partnerEdges).toContainEqual({
+      simAId: idA,
+      simBId: idB,
+      romanticStatus: RomanticStatus.MARRIED,
+    })
   })
 
   it('throws NOT_FOUND for a legacy that does not belong to the user', async () => {
@@ -1669,7 +1696,33 @@ describe('sims.getMiniTreeData', () => {
     const ids = result.sims.map((s) => s.id)
     expect(ids).toContain(focused.id)
     expect(ids).toContain(partner.id)
-    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.MARRIED })
+  })
+
+  it('includes romanticStatus on every partner edge', async () => {
+    const caller = authedCaller(userId)
+    const focused = await createTestSim(legacyId, { firstName: 'Focused' })
+    const partner = await createTestSim(legacyId, { firstName: 'Partner' })
+    const [idA, idB] = [focused.id, partner.id].sort()
+    await db.socialRelationship.create({
+      data: {
+        simAId: idA,
+        simBId: idB,
+        romanticStatus: RomanticStatus.MARRIED,
+        friendshipScore: 0,
+        romanceScore: 0,
+      },
+    })
+    const result = await caller.sims.getMiniTreeData({ simId: focused.id })
+    expect(result.partnerEdges.length).toBeGreaterThan(0)
+    for (const edge of result.partnerEdges) {
+      expect(edge).toHaveProperty('romanticStatus')
+    }
+    expect(result.partnerEdges).toContainEqual({
+      simAId: idA,
+      simBId: idB,
+      romanticStatus: RomanticStatus.MARRIED,
+    })
   })
 
   it('throws NOT_FOUND for a sim that does not belong to the user', async () => {
@@ -1735,7 +1788,7 @@ describe('sims.getMiniTreeData', () => {
       },
     })
     const result = await caller.sims.getMiniTreeData({ simId: focused.id })
-    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.EX_PARTNER })
     expect(result.sims.map((s) => s.id)).toContain(exPartner.id)
   })
 

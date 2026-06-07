@@ -212,7 +212,7 @@ export const simsRouter = router({
             ],
             romanticStatus: { not: RomanticStatus.NONE },
           },
-          select: { simAId: true, simBId: true },
+          select: { simAId: true, simBId: true, romanticStatus: true },
           orderBy: { simAId: 'asc' },
         }),
       ])
@@ -220,7 +220,7 @@ export const simsRouter = router({
       return {
         sims: sims.map((s) => ({ ...s, href: `/app/legacies/${input.legacySlug}/sims/${s.id}` })),
         familyEdges: familyEdges.map((e) => ({ parentId: e.parentId, childId: e.childId })),
-        partnerEdges: partnerEdges.map((e) => ({ simAId: e.simAId, simBId: e.simBId })),
+        partnerEdges: partnerEdges.map((e) => ({ simAId: e.simAId, simBId: e.simBId, romanticStatus: e.romanticStatus })),
       }
     }),
 
@@ -253,12 +253,12 @@ export const simsRouter = router({
                   },
                   socialRelationshipsA: {
                     where: { romanticStatus: { not: RomanticStatus.NONE } },
-                    select: { simAId: true, simBId: true },
+                    select: { simAId: true, simBId: true, romanticStatus: true },
                     orderBy: { simAId: 'asc' },
                   },
                   socialRelationshipsB: {
                     where: { romanticStatus: { not: RomanticStatus.NONE } },
-                    select: { simAId: true, simBId: true },
+                    select: { simAId: true, simBId: true, romanticStatus: true },
                     orderBy: { simAId: 'asc' },
                   },
                 },
@@ -274,12 +274,12 @@ export const simsRouter = router({
           },
           socialRelationshipsA: {
             where: { romanticStatus: { not: RomanticStatus.NONE } },
-            select: { simAId: true, simBId: true },
+            select: { simAId: true, simBId: true, romanticStatus: true },
             orderBy: { simAId: 'asc' },
           },
           socialRelationshipsB: {
             where: { romanticStatus: { not: RomanticStatus.NONE } },
-            select: { simAId: true, simBId: true },
+            select: { simAId: true, simBId: true, romanticStatus: true },
             orderBy: { simAId: 'asc' },
           },
         },
@@ -292,7 +292,7 @@ export const simsRouter = router({
       const familyEdgeSet = new Set<string>()
       const partnerEdgeSet = new Set<string>()
       const familyEdges: { parentId: string; childId: string }[] = []
-      const partnerEdges: { simAId: string; simBId: string }[] = []
+      const partnerEdges: { simAId: string; simBId: string; romanticStatus: RomanticStatus }[] = []
 
       function addSim(s: MiniTreeSimData) {
         if (!simMap.has(s.id)) simMap.set(s.id, { ...s, href: `/app/legacies/${legacySlug}/sims/${s.id}` })
@@ -301,22 +301,22 @@ export const simsRouter = router({
         const key = `${parentId}-${childId}`
         if (!familyEdgeSet.has(key)) { familyEdgeSet.add(key); familyEdges.push({ parentId, childId }) }
       }
-      function addPartnerEdge(simAId: string, simBId: string) {
+      function addPartnerEdge(simAId: string, simBId: string, romanticStatus: RomanticStatus) {
         const [a, b] = [simAId, simBId].sort()
         const key = `${a}-${b}`
-        if (!partnerEdgeSet.has(key)) { partnerEdgeSet.add(key); partnerEdges.push({ simAId: a, simBId: b }) }
+        if (!partnerEdgeSet.has(key)) { partnerEdgeSet.add(key); partnerEdges.push({ simAId: a, simBId: b, romanticStatus }) }
       }
 
       addSim(focusedSim)
-      focusedSim.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
-      focusedSim.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
+      focusedSim.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
+      focusedSim.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
 
       for (const parentRel of focusedSim.childOf) {
         const parent = parentRel.parent
         addSim(parent)
         addFamilyEdge(parent.id, focusedSim.id)
-        parent.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
-        parent.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId))
+        parent.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
+        parent.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
         for (const gpRel of parent.childOf) {
           addSim(gpRel.parent)
           addFamilyEdge(gpRel.parent.id, parent.id)

@@ -524,25 +524,30 @@ export const simsRouter = router({
       if (parent.legacyId !== child.legacyId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
       }
-      const created = await ctx.db.familyRelationship.create({
-        data: { parentId: input.parentId, childId: input.childId, type: input.type },
-      })
-      if (child.generationNumber === null) {
-        const allParents = await ctx.db.familyRelationship.findMany({
-          where: { childId: input.childId },
-          select: { parent: { select: { generationNumber: true } } },
+      const { created, derivedGeneration } = await ctx.db.$transaction(async (tx) => {
+        const created = await tx.familyRelationship.create({
+          data: { parentId: input.parentId, childId: input.childId, type: input.type },
         })
-        const parentGens = allParents
-          .map((r) => r.parent.generationNumber)
-          .filter((g): g is number => g !== null)
-        if (parentGens.length > 0) {
-          await ctx.db.sim.update({
-            where: { id: input.childId },
-            data: { generationNumber: Math.min(...parentGens) + 1 },
+        let derivedGeneration = false
+        if (child.generationNumber === null) {
+          const allParents = await tx.familyRelationship.findMany({
+            where: { childId: input.childId },
+            select: { parent: { select: { generationNumber: true } } },
           })
-          void recomputeLegacyTrackers(ctx.db, child.legacyId)
+          const parentGens = allParents
+            .map((r) => r.parent.generationNumber)
+            .filter((g): g is number => g !== null)
+          if (parentGens.length > 0) {
+            await tx.sim.update({
+              where: { id: input.childId },
+              data: { generationNumber: Math.min(...parentGens) + 1 },
+            })
+            derivedGeneration = true
+          }
         }
-      }
+        return { created, derivedGeneration }
+      })
+      if (derivedGeneration) void recomputeLegacyTrackers(ctx.db, child.legacyId)
       return created
     }),
 
@@ -555,28 +560,32 @@ export const simsRouter = router({
         ctx.db.sim.findFirst({ where: { id: input.childId, legacy: { userId } } }),
       ])
       if (!parent || !child) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
-      const deleted = await ctx.db.familyRelationship.delete({
-        where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
+      const { deleted, generationChanged } = await ctx.db.$transaction(async (tx) => {
+        const deleted = await tx.familyRelationship.delete({
+          where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
+        })
+        const remainingParents = await tx.familyRelationship.findMany({
+          where: { childId: input.childId },
+          select: { parent: { select: { generationNumber: true } } },
+        })
+        const parentGens = remainingParents
+          .map((r) => r.parent.generationNumber)
+          .filter((g): g is number => g !== null)
+        let newGen: number | null
+        if (parentGens.length > 0) {
+          newGen = Math.min(...parentGens) + 1
+        } else if (remainingParents.length === 0) {
+          newGen = null
+        } else {
+          return { deleted, generationChanged: false }
+        }
+        if (newGen !== child.generationNumber) {
+          await tx.sim.update({ where: { id: input.childId }, data: { generationNumber: newGen } })
+          return { deleted, generationChanged: true }
+        }
+        return { deleted, generationChanged: false }
       })
-      const remainingParents = await ctx.db.familyRelationship.findMany({
-        where: { childId: input.childId },
-        select: { parent: { select: { generationNumber: true } } },
-      })
-      const parentGens = remainingParents
-        .map((r) => r.parent.generationNumber)
-        .filter((g): g is number => g !== null)
-      let newGen: number | null
-      if (parentGens.length > 0) {
-        newGen = Math.min(...parentGens) + 1
-      } else if (remainingParents.length === 0) {
-        newGen = null
-      } else {
-        return deleted
-      }
-      if (newGen !== child.generationNumber) {
-        await ctx.db.sim.update({ where: { id: input.childId }, data: { generationNumber: newGen } })
-        void recomputeLegacyTrackers(ctx.db, child.legacyId)
-      }
+      if (generationChanged) void recomputeLegacyTrackers(ctx.db, child.legacyId)
       return deleted
     }),
 
@@ -599,24 +608,27 @@ export const simsRouter = router({
       ])
       if (!simA || !simB) throw new TRPCError({ code: 'NOT_FOUND', message: 'Sim not found' })
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
-      const created = await ctx.db.socialRelationship.create({
-        data: {
-          simAId: normalA,
-          simBId: normalB,
-          romanticStatus: input.romanticStatus,
-          friendshipScore: 0,
-          romanceScore: 0,
-        },
-      })
       const noGenSim =
         simA.generationNumber === null && simB.generationNumber !== null ? simA
         : simB.generationNumber === null && simA.generationNumber !== null ? simB
         : null
-      if (noGenSim !== null) {
-        const gen = (noGenSim === simA ? simB : simA).generationNumber!
-        await ctx.db.sim.update({ where: { id: noGenSim.id }, data: { generationNumber: gen } })
-        void recomputeLegacyTrackers(ctx.db, noGenSim.legacyId)
-      }
+      const created = await ctx.db.$transaction(async (tx) => {
+        const created = await tx.socialRelationship.create({
+          data: {
+            simAId: normalA,
+            simBId: normalB,
+            romanticStatus: input.romanticStatus,
+            friendshipScore: 0,
+            romanceScore: 0,
+          },
+        })
+        if (noGenSim !== null) {
+          const gen = (noGenSim === simA ? simB : simA).generationNumber!
+          await tx.sim.update({ where: { id: noGenSim.id }, data: { generationNumber: gen } })
+        }
+        return created
+      })
+      if (noGenSim !== null) void recomputeLegacyTrackers(ctx.db, noGenSim.legacyId)
       return created
     }),
 

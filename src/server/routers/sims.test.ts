@@ -629,6 +629,59 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
     expect(row?.type).toBe(FamilyRelationshipType.BIOLOGICAL)
   })
 
+  it('does not persist the relationship when the generation derivation write fails', async () => {
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
+    const failingDb = db.$extends({
+      query: {
+        sim: {
+          update() {
+            throw new Error('injected failure: sim.update')
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    await expect(
+      authedCaller(userId, failingDb).sims.addFamilyRelationship({
+        parentId,
+        childId,
+        type: FamilyRelationshipType.BIOLOGICAL,
+      })
+    ).rejects.toThrow()
+
+    const row = await db.familyRelationship.findUnique({
+      where: { parentId_childId: { parentId, childId } },
+    })
+    expect(row).toBeNull()
+  })
+
+  it('keeps the relationship when the generation recompute write fails on removal', async () => {
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
+    await db.sim.update({ where: { id: childId }, data: { generationNumber: 2 } })
+    await db.familyRelationship.create({
+      data: { parentId, childId, type: FamilyRelationshipType.BIOLOGICAL },
+    })
+    const failingDb = db.$extends({
+      query: {
+        sim: {
+          update() {
+            throw new Error('injected failure: sim.update')
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    await expect(
+      authedCaller(userId, failingDb).sims.removeFamilyRelationship({ parentId, childId })
+    ).rejects.toThrow()
+
+    const row = await db.familyRelationship.findUnique({
+      where: { parentId_childId: { parentId, childId } },
+    })
+    expect(row).not.toBeNull()
+    expect((await db.sim.findUnique({ where: { id: childId } }))?.generationNumber).toBe(2)
+  })
+
   it('removes a family relationship', async () => {
     await db.familyRelationship.create({ data: { parentId, childId, type: FamilyRelationshipType.BIOLOGICAL } })
     await authedCaller(userId).sims.removeFamilyRelationship({ parentId, childId })
@@ -808,6 +861,32 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
     })
     expect(row).not.toBeNull()
     expect(row?.friendshipScore).toBe(0)
+  })
+
+  it('does not persist the relationship when the partner generation backfill fails', async () => {
+    await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
+    const failingDb = db.$extends({
+      query: {
+        sim: {
+          update() {
+            throw new Error('injected failure: sim.update')
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    await expect(
+      authedCaller(userId, failingDb).sims.addSocialRelationship({
+        simAId,
+        simBId,
+        romanticStatus: RomanticStatus.DATING,
+      })
+    ).rejects.toThrow()
+
+    const row = await db.socialRelationship.findUnique({
+      where: { simAId_simBId: { simAId, simBId } },
+    })
+    expect(row).toBeNull()
   })
 
   it('normalises ID order regardless of input order', async () => {

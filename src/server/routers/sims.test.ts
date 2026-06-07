@@ -1154,6 +1154,51 @@ describe('sims.update — heir cohort', () => {
   })
 })
 
+describe('one heir per generation — database constraint', () => {
+  let userId: string
+  let legacyId: string
+
+  beforeEach(async () => {
+    const user = await createTestUser()
+    userId = user.id
+    const legacy = await createTestLegacy(userId)
+    legacyId = legacy.id
+  })
+
+  afterEach(async () => { await cleanupUser(userId) })
+
+  it('rejects a second heir in the same legacy and generation even on direct writes', async () => {
+    await db.sim.create({
+      data: { legacyId, firstName: 'First', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
+    })
+    await expect(
+      db.sim.create({
+        data: { legacyId, firstName: 'Second', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
+      })
+    ).rejects.toMatchObject({ code: 'P2002' })
+  })
+
+  it('allows multiple heirs with no generation (null is not a cohort)', async () => {
+    await db.sim.create({
+      data: { legacyId, firstName: 'NullA', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: null, isHeir: true },
+    })
+    await db.sim.create({
+      data: { legacyId, firstName: 'NullB', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: null, isHeir: true },
+    })
+    expect(await db.sim.count({ where: { legacyId, isHeir: true } })).toBe(2)
+  })
+
+  it('allows non-heir sims to share a generation', async () => {
+    await db.sim.create({
+      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
+    })
+    await db.sim.create({
+      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+    expect(await db.sim.count({ where: { legacyId, generationNumber: 2 } })).toBe(2)
+  })
+})
+
 describe('recomputeLegacyTrackers — triggered by sim mutations', () => {
   let userId: string
   let legacyId: string

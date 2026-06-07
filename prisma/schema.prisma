@@ -398,6 +398,9 @@ model Sim {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   generationNumber  Int?
+  /// One heir per (legacyId, generationNumber) is enforced by the partial
+  /// unique index sims_one_heir_per_generation_key (migration
+  /// 20260607093000) — partial indexes are not expressible in PSL.
   isHeir            Boolean       @default(false)
 
   household            Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)

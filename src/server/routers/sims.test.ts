@@ -20,6 +20,27 @@ import {
 } from '@/test/helpers'
 import { db } from '@/server/db'
 
+/**
+ * A caller-injectable db client whose given model operation always throws —
+ * for asserting transactional rollback. Query extensions apply inside
+ * interactive transactions too, so the fault fires within $transaction.
+ */
+function failingDb(model: string, operation: string): typeof db {
+  // The computed keys defeat $extends's mapped-type inference (it expects
+  // literal model/operation names), so the argument is cast once here; the
+  // call sites stay cast-free.
+  const extension = {
+    query: {
+      [model]: {
+        [operation]() {
+          throw new Error(`injected failure: ${model}.${operation}`)
+        },
+      },
+    },
+  }
+  return db.$extends(extension as never) as unknown as typeof db
+}
+
 describe('sims.create', () => {
   let userId: string
   let legacyId: string
@@ -241,18 +262,8 @@ describe('sims.create — atomicity', () => {
   it('does not persist the sim when the family relationship write fails', async () => {
     const parent = await createTestSim(legacyId, { firstName: 'Parent' })
     await db.sim.update({ where: { id: parent.id }, data: { generationNumber: 1 } })
-    const failingDb = db.$extends({
-      query: {
-        familyRelationship: {
-          createMany() {
-            throw new Error('injected failure: familyRelationship.createMany')
-          },
-        },
-      },
-    }) as unknown as typeof db
-
     await expect(
-      authedCaller(userId, failingDb).sims.create({
+      authedCaller(userId, failingDb('familyRelationship', 'createMany')).sims.create({
         legacyId,
         firstName: 'Orphaned',
         lastName: 'Child',
@@ -266,18 +277,8 @@ describe('sims.create — atomicity', () => {
   })
 
   it('does not persist the sim when founder designation fails', async () => {
-    const failingDb = db.$extends({
-      query: {
-        legacy: {
-          updateMany() {
-            throw new Error('injected failure: legacy.updateMany')
-          },
-        },
-      },
-    }) as unknown as typeof db
-
     await expect(
-      authedCaller(userId, failingDb).sims.create({
+      authedCaller(userId, failingDb('legacy', 'updateMany')).sims.create({
         legacyId,
         firstName: 'Undesignated',
         lastName: 'Founder',
@@ -631,18 +632,9 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
 
   it('does not persist the relationship when the generation derivation write fails', async () => {
     await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
-    const failingDb = db.$extends({
-      query: {
-        sim: {
-          update() {
-            throw new Error('injected failure: sim.update')
-          },
-        },
-      },
-    }) as unknown as typeof db
 
     await expect(
-      authedCaller(userId, failingDb).sims.addFamilyRelationship({
+      authedCaller(userId, failingDb('sim', 'update')).sims.addFamilyRelationship({
         parentId,
         childId,
         type: FamilyRelationshipType.BIOLOGICAL,
@@ -661,18 +653,8 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
     await db.familyRelationship.create({
       data: { parentId, childId, type: FamilyRelationshipType.BIOLOGICAL },
     })
-    const failingDb = db.$extends({
-      query: {
-        sim: {
-          update() {
-            throw new Error('injected failure: sim.update')
-          },
-        },
-      },
-    }) as unknown as typeof db
-
     await expect(
-      authedCaller(userId, failingDb).sims.removeFamilyRelationship({ parentId, childId })
+      authedCaller(userId, failingDb('sim', 'update')).sims.removeFamilyRelationship({ parentId, childId })
     ).rejects.toThrow()
 
     const row = await db.familyRelationship.findUnique({
@@ -865,18 +847,9 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
 
   it('does not persist the relationship when the partner generation backfill fails', async () => {
     await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
-    const failingDb = db.$extends({
-      query: {
-        sim: {
-          update() {
-            throw new Error('injected failure: sim.update')
-          },
-        },
-      },
-    }) as unknown as typeof db
 
     await expect(
-      authedCaller(userId, failingDb).sims.addSocialRelationship({
+      authedCaller(userId, failingDb('sim', 'update')).sims.addSocialRelationship({
         simAId,
         simBId,
         romanticStatus: RomanticStatus.DATING,
@@ -1133,6 +1106,23 @@ describe('sims.update — heir cohort', () => {
     expect(newHeir?.isHeir).toBe(false)
     expect(moved?.isHeir).toBe(true)
     expect(moved?.generationNumber).toBe(3)
+  })
+
+  it('does not clear the previous cohort when the sim moves to a null generation', async () => {
+    const gen2Heir = await db.sim.create({
+      data: { legacyId, firstName: 'Gen2Heir', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
+    })
+    const mover = await db.sim.create({
+      data: { legacyId, firstName: 'NullMover', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
+    })
+
+    await authedCaller(userId).sims.update({ id: mover.id, generationNumber: null, isHeir: true })
+
+    // The mover leaves generation 2 — its existing heir keeps the title.
+    expect((await db.sim.findUnique({ where: { id: gen2Heir.id } }))?.isHeir).toBe(true)
+    const moved = await db.sim.findUnique({ where: { id: mover.id } })
+    expect(moved?.generationNumber).toBeNull()
+    expect(moved?.isHeir).toBe(true)
   })
 
   it("clears heirs in the sim's current generation even when it changed concurrently", async () => {

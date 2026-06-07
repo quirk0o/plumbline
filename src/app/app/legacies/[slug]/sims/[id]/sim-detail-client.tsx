@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import type { CauseOfDeath } from '@prisma/client'
+import type { CauseOfDeath, LifeStage } from '@prisma/client'
 import type { Trait } from '@/app/components/trait-picker'
+import { isLifeStageInRange } from '@/lib/life-stage'
 import { IdentitySection } from './identity-section'
 import { TraitEditor } from './trait-editor'
 import { GoalsSection } from './goals-section'
@@ -39,12 +41,18 @@ interface Props {
   slug: string
   legacySims: { id: string; firstName: string; lastName: string; imageUrl: string | null }[]
   traits: Trait[]
-  aspirations: { id: string; name: string; category: string }[]
+  aspirations: { id: string; name: string; category: string; minLifeStage: LifeStage | null; maxLifeStage: LifeStage | null }[]
   careers: { id: string; name: string; type: string }[]
   skills: { id: string; name: string; maxLevel: number }[]
 }
 
 export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, careers, skills }: Props) {
+  const [currentLifeStage, setCurrentLifeStage] = useState<LifeStage>(sim.lifeStage as LifeStage)
+
+  const visibleAspirations = aspirations.filter((a) =>
+    isLifeStageInRange(currentLifeStage, a.minLifeStage, a.maxLifeStage)
+  )
+
   const legacyName = slug
     .split('-')
     .map((w) => w[0]?.toUpperCase() + w.slice(1))
@@ -59,14 +67,14 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
       </nav>
 
       <div className={styles.card}>
-        <IdentitySection sim={sim} />
+        <IdentitySection sim={sim} onLifeStageChange={setCurrentLifeStage} />
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionLabel}>Personality Traits</h2>
             <div className={styles.sectionLine} />
           </div>
-          <TraitEditor sim={sim} traits={traits} />
+          <TraitEditor sim={sim} traits={traits} lifeStage={currentLifeStage} />
         </section>
 
         <section className={styles.section}>
@@ -74,7 +82,7 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
             <h2 className={styles.sectionLabel}>Goals &amp; Career</h2>
             <div className={styles.sectionLine} />
           </div>
-          <GoalsSection sim={sim} aspirations={aspirations} careers={careers} />
+          <GoalsSection sim={sim} aspirations={visibleAspirations} careers={careers} />
         </section>
 
         <section className={styles.section}>

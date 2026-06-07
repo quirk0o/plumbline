@@ -49,7 +49,7 @@ interface SimProp {
   isHeir: boolean
 }
 
-export function IdentitySection({ sim }: { sim: SimProp }) {
+export function IdentitySection({ sim, onLifeStageChange }: { sim: SimProp; onLifeStageChange?: (ls: LifeStage) => void }) {
   const update = trpc.sims.update.useMutation()
 
   function save(fields: Parameters<typeof update.mutate>[0]) {
@@ -98,8 +98,10 @@ export function IdentitySection({ sim }: { sim: SimProp }) {
           <Combobox
             value={lifeStage}
             onChange={(v) => {
-              setLifeStage(v as LifeStage)
-              save({ id: sim.id, lifeStage: v as LifeStage })
+              const ls = v as LifeStage
+              setLifeStage(ls)
+              onLifeStageChange?.(ls)
+              save({ id: sim.id, lifeStage: ls })
             }}
             variant="chip"
             aria-label="Life stage"

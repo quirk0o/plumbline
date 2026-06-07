@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
 import { fetchTraitsWithConflicts, fetchAspirations, fetchCareers, fetchSkills } from '@/lib/reference-data'
-import { isLifeStageInRange } from '@/lib/life-stage'
 import { SimDetailClient } from './sim-detail-client'
 
 interface Props {
@@ -51,17 +50,13 @@ export default async function SimDetailPage({ params }: Props) {
 
   if (!sim) notFound()
 
-  const filteredAspirations = aspirations.filter((a) =>
-    isLifeStageInRange(sim.lifeStage, a.minLifeStage, a.maxLifeStage)
-  )
-
   return (
     <SimDetailClient
       sim={sim}
       slug={slug}
       legacySims={legacySims}
       traits={traits}
-      aspirations={filteredAspirations}
+      aspirations={aspirations}
       careers={careers}
       skills={skills}
     />

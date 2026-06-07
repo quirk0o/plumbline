@@ -12,7 +12,7 @@ interface SimProp {
   personalityTraits: { personalityTrait: { id: string; name: string } }[]
 }
 
-export function TraitEditor({ sim, traits }: { sim: SimProp; traits: Trait[] }) {
+export function TraitEditor({ sim, traits, lifeStage }: { sim: SimProp; traits: Trait[]; lifeStage?: LifeStage }) {
   const [localTraitIds, setLocalTraitIds] = useState<string[]>(
     sim.personalityTraits.map((t) => t.personalityTrait.id),
   )
@@ -84,7 +84,7 @@ export function TraitEditor({ sim, traits }: { sim: SimProp; traits: Trait[] }) 
               onChange={handlePickerChange}
               max={6}
               scrollableGrid
-              lifeStage={sim.lifeStage as LifeStage}
+              lifeStage={lifeStage ?? sim.lifeStage as LifeStage}
             />
           </div>
         </div>

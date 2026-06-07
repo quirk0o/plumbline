@@ -293,10 +293,10 @@ async function main() {
     { name: 'Plant Lover', category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TEEN, description: 'Plant Lover Sims treat each and every plant like the little Sim they are. Being a friend to plants is not always easy on a Plant Lover\'s emotions, but luckily these Sims don\'t need any skill to share their special interest, just a big heart!',                                                                                                                                            packId: await pack('Enchanted by Nature') },
 
     // ── Infant traits — base game ────────────────────────────────────────────
-    { name: 'Calm (Infant)',     category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims like to watch the world, are less likely to cry or become angry, and don\'t grow tired of activities as easily as other infants; however, they are less likely to explore the world on their own.' },
-    { name: 'Cautious (Infant)', category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims appreciate the familiar but are slow to warm up to new experiences, locations, and Sims.' },
+    { name: 'Calm',              category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims like to watch the world, are less likely to cry or become angry, and don\'t grow tired of activities as easily as other infants; however, they are less likely to explore the world on their own.' },
+    { name: 'Cautious',          category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims appreciate the familiar but are slow to warm up to new experiences, locations, and Sims.' },
     { name: 'Clingy (Infant)',   category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT },
-    { name: 'Intense (Infant)',  category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims have big emotions and are easily entertained, but they are also more difficult to calm when in a bad mood.' },
+    { name: 'Intense',           category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims have big emotions and are easily entertained, but they are also more difficult to calm when in a bad mood.' },
     { name: 'Sensitive',         category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are prone to diaper rash, are often picky with food, and can more easily become overstimulated by too much play and social interaction; however, they also rest more peacefully through the night when soothed.' },
     { name: 'Sunny',             category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are bursting with smiles and giggles and enjoy engaging with other Sims, but they do require more social attention.' },
     { name: 'Wiggly',            category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are always on the go and want to play and move about; however they often struggle to fall asleep or pay attention for extended periods of time.' },
@@ -311,6 +311,10 @@ async function main() {
     { name: 'Silly',            category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Goofy and curious. These Toddlers love to tell jokes and get Playful. They earn Imagination skill slightly faster.' },
     { name: 'Wild',             category: TraitCategory.LIFESTYLE, minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Spirited and full of Energy. These Toddlers love to explore and get Energized. They earn Movement skill slightly faster. They get sad if they haven\'t been outside in a while.' },
   ]
+
+  await prisma.personalityTrait.deleteMany({
+    where: { name: { in: ['Calm (Infant)', 'Cautious (Infant)', 'Intense (Infant)'] } },
+  })
 
   for (const t of personalityTraitSeed) {
     await prisma.personalityTrait.upsert({

@@ -120,7 +120,13 @@ function ComboboxRoot({
 
   return (
     <ComboboxContext.Provider value={{ selectedValue: value, handleSelect, registerItem, search }}>
-      <Popover.Root open={open} onOpenChange={handleOpenChange}>
+      {/* modal-while-open: a surrounding modal Dialog/Drawer's scroll lock
+          otherwise blocks wheel/touch scrolling on the body-portaled list
+          (radix-ui/primitives#1159 — `modal` is the canonical fix). It can't
+          be unconditional: our forceMount portal would keep the modal
+          wrapper's RemoveScroll mounted (and the page locked) even while
+          closed, since Radix gates it on render, not on open state. */}
+      <Popover.Root modal={open} open={open} onOpenChange={handleOpenChange}>
         <Popover.Trigger asChild>
           <button
             id={id}

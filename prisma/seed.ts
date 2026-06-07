@@ -295,7 +295,7 @@ async function main() {
     // ── Infant traits — base game ────────────────────────────────────────────
     { name: 'Calm',              category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims like to watch the world, are less likely to cry or become angry, and don\'t grow tired of activities as easily as other infants; however, they are less likely to explore the world on their own.' },
     { name: 'Cautious',          category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims appreciate the familiar but are slow to warm up to new experiences, locations, and Sims.' },
-    { name: 'Clingy (Infant)',   category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT },
+    { name: 'Clingy',            category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT },
     { name: 'Intense',           category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims have big emotions and are easily entertained, but they are also more difficult to calm when in a bad mood.' },
     { name: 'Sensitive',         category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are prone to diaper rash, are often picky with food, and can more easily become overstimulated by too much play and social interaction; however, they also rest more peacefully through the night when soothed.' },
     { name: 'Sunny',             category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.INFANT, maxLifeStage: LifeStage.INFANT, description: 'These Sims are bursting with smiles and giggles and enjoy engaging with other Sims, but they do require more social attention.' },
@@ -304,7 +304,7 @@ async function main() {
     // ── Toddler traits — base game ───────────────────────────────────────────
     { name: 'Angelic',          category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Idyllic, easygoing Toddlers. They are never defiant and they don\'t throw a tantrum. They can easily talk to strangers.' },
     { name: 'Charmer',          category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'These Toddlers love to socialize. They earn Communication skill faster, and don\'t suffer Stranger Danger from strangers. They can Share the Love with other Sims.' },
-    { name: 'Clingy (Toddler)', category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'These shy Toddlers avoid Sims outside the household and get sad if left behind. They gain extra skill when taught. And they recover faster from bad moods when Comforted.' },
+    { name: 'Clingy',           category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'These shy Toddlers avoid Sims outside the household and get sad if left behind. They gain extra skill when taught. And they recover faster from bad moods when Comforted.' },
     { name: 'Fussy',            category: TraitCategory.EMOTIONAL, minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Tiny trouble-makers who love to Cry, cause trouble, and Throw Fits. But being noticed makes them Happy and helps them overcome negative Moodlets.' },
     { name: 'Independent',      category: TraitCategory.SOCIAL,    minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'These Toddlers love their freedom, and don\'t like to take orders from caregivers. They gain extra skill when they are left alone, and need less Attention than other Toddlers.' },
     { name: 'Inquisitive',      category: TraitCategory.HOBBY,     minLifeStage: LifeStage.TODDLER, maxLifeStage: LifeStage.TODDLER, description: 'Curious explorers. These Toddlers gain Thinking skill slightly faster. They are happiest when learning something, and sad if they haven\'t learned anything lately.' },
@@ -313,12 +313,12 @@ async function main() {
   ]
 
   await prisma.personalityTrait.deleteMany({
-    where: { name: { in: ['Calm (Infant)', 'Cautious (Infant)', 'Intense (Infant)'] } },
+    where: { name: { in: ['Calm (Infant)', 'Cautious (Infant)', 'Intense (Infant)', 'Clingy (Infant)', 'Clingy (Toddler)'] } },
   })
 
   for (const t of personalityTraitSeed) {
     await prisma.personalityTrait.upsert({
-      where:  { name: t.name },
+      where:  { name_minLifeStage: { name: t.name, minLifeStage: t.minLifeStage as LifeStage } },
       update: { description: t.description ?? null, packId: t.packId ?? null, minLifeStage: t.minLifeStage ?? null, maxLifeStage: t.maxLifeStage ?? null },
       create: t,
     })
@@ -375,8 +375,8 @@ async function main() {
   ]
 
   for (const [nameA, nameB] of conflictPairs) {
-    const a = await prisma.personalityTrait.findUnique({ where: { name: nameA } })
-    const b = await prisma.personalityTrait.findUnique({ where: { name: nameB } })
+    const a = await prisma.personalityTrait.findFirst({ where: { name: nameA } })
+    const b = await prisma.personalityTrait.findFirst({ where: { name: nameB } })
     if (!a || !b) { console.warn(`Skipping conflict ${nameA} <-> ${nameB}: trait not found`); continue }
     const [traitAId, traitBId] = [a.id, b.id].sort()
     await prisma.personalityTraitConflict.upsert({

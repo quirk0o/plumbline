@@ -167,7 +167,7 @@ model Lot {
 
 model PersonalityTrait {
   id           String         @id @default(cuid())
-  name         String         @unique
+  name         String
   description  String?
   category     TraitCategory?
   minLifeStage LifeStage?
@@ -181,6 +181,7 @@ model PersonalityTrait {
   conflictsA           PersonalityTraitConflict[] @relation("ConflictA")
   conflictsB           PersonalityTraitConflict[] @relation("ConflictB")
 
+  @@unique([name, minLifeStage])
   @@map("personality_traits")
 }
 

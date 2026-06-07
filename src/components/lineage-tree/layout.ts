@@ -1,332 +1,257 @@
 /**
- * Pure, deterministic layout math for the SVG lineage tree.
- *
- * No React, no DOM — fully unit-testable. Consumes the exact shape returned by
- * the `sims.getTreeData` tRPC procedure and produces absolute node positions
- * (top-left of each 140×90 node bbox) plus a computed viewBox sized to the
- * content (never hard-coded to the mock's 1000×460).
+ * Lineage-tree layout orchestrator. Pure and deterministic: same input →
+ * identical output, all tie-breaks by sim id. Pipeline rationale lives in
+ * docs/superpowers/specs/2026-06-07-lineage-layout-redesign-design.md.
  */
+export * from './layout-shared'
+import {
+  CREST_ANCHORS,
+  HANGING_UNION_BASE_OFFSET,
+  HANGING_UNION_LANE_PITCH,
+  HANGING_UNION_MAX_LANES,
+  MARRIAGE_BOND_GAP,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  ROW_LABEL_GUTTER,
+  ROW_PITCH,
+  TREE_PADDING,
+  appendToList,
+  pairKey,
+  type Cluster,
+  type HangingUnion,
+  type LayoutSim,
+  type LineageCouple,
+  type LineageFamilyEdge,
+  type LineageLayout,
+  type LineagePartnerEdge,
+  type PositionedNode,
+} from './layout-shared'
+import { deriveRows } from './layout-rows'
+import { buildClusters, matchCouples } from './layout-clusters'
+import { positionClusters, type ClusterGraph } from './layout-engine'
 
-/**
- * The structural subset of a sim that the layout math needs. The full sim
- * type (with names, portraits, heir flags, etc.) lives in `to-flow-graph.ts`
- * as `LineageFlowSim`; this lean shape keeps the pure layout decoupled.
- */
-export type LayoutSim = {
-  id: string
-  generationNumber: number | null
-}
-
-export type LineageFamilyEdge = {
-  parentId: string
-  childId: string
-}
-
-export type LineagePartnerEdge = {
-  simAId: string
-  simBId: string
-}
-
-/** Node bounding box (matches the design's 140×90 with the Crest medallion). */
-export const NODE_WIDTH = 140
-export const NODE_HEIGHT = 90
-
-/**
- * Connector anchor offsets within a node's bbox, for the Crest renderer.
- * Lines attach to the medallion edge, not the bbox corners.
- * Mirrors `SimNodeCrest.anchors` in the design handoff.
- */
-export const CREST_ANCHORS = {
-  top: 2,
-  bottom: 46,
-  left: 48,
-  right: 92,
-  cx: 70,
-  cy: 24,
-} as const
-
-export type CrestAnchors = typeof CREST_ANCHORS
-
-/** Vertical pitch between generation rows (top edge to top edge). */
-export const ROW_PITCH = 160
-/** Gap between two partners' adjacent medallion edges (the marriage bond). */
-export const MARRIAGE_BOND_GAP = 20
-/** Horizontal gap between unrelated sims / couple clusters within a row. */
-export const CLUSTER_GAP = 40
-/** Left gutter reserved for the generation-row labels. */
-export const ROW_LABEL_GUTTER = 64
-/** Outer padding around the whole tree. */
-export const TREE_PADDING = 24
-
-export type PositionedNode = {
-  id: string
-  /** Top-left x of the 140×90 node bbox. */
-  x: number
-  /** Top-left y of the 140×90 node bbox. */
-  y: number
-}
-
-export type LineageLayout = {
-  nodes: PositionedNode[]
-  /** id → positioned node, for convenient lookup by consumers. */
-  byId: Record<string, PositionedNode>
-  /** Top-left y of each rendered generation row, keyed by row index (0-based). */
-  rowYs: number[]
-  /** Generation number for each rendered row (null-gen sims live in a trailing row). */
-  rowGenerations: (number | null)[]
-  /**
-   * Partner pairs that were actually placed adjacently (one node-width + bond
-   * gap apart, same row). Consumers render marriage bonds ONLY from this list —
-   * a sim with multiple partner edges yields at most one couple here, so bonds
-   * never span non-adjacent medallions.
-   */
-  couples: { a: string; b: string }[]
-  viewBox: { width: number; height: number }
-}
-
-type Cluster = {
-  /** Member ids in render order (1 for singles, 2 for couples). */
-  members: string[]
-  /** Stable sort key derived from member ids. */
-  key: string
-}
-
-/**
- * Compute deterministic node positions from the real tree data.
- *
- * Algorithm (a clean generation-row layout, per README "fidelity is
- * approximate"):
- *  1. Group sims into rows by `generationNumber`, ascending. Sims with a null
- *     generation are collected into a single trailing row (documented choice:
- *     keep them visible rather than omit, so the tree never silently drops a
- *     sim).
- *  2. Within a row, pair partners (from `partnerEdges`) into adjacent clusters
- *     and leave everyone else as singletons. Partners sit side-by-side with one
- *     node width + a 20px marriage-bond gap between their medallion edges.
- *  3. Lay clusters left-to-right with a consistent gap. Ordering within a row is
- *     stable: clusters sort by a key built from their member ids, so two calls
- *     with the same input yield identical output.
- *  4. The viewBox grows with content: width = widest row, height = row count.
- */
+/** [high] The pipeline — one named step per spec section. */
 export function computeLineageLayout(
   sims: LayoutSim[],
   familyEdges: LineageFamilyEdge[],
   partnerEdges: LineagePartnerEdge[],
 ): LineageLayout {
+  const { idSet, cleanFamily, cleanPartners } = sanitizeEdges(sims, familyEdges, partnerEdges)
+  const { rowGenerations, rowOf } = deriveRows(sims, cleanPartners)
+  const couples = matchCouples(cleanPartners, idSet, rowOf)
+  const clusters = buildClusters(sims, rowOf, couples)
+  const clusterGraph = buildClusterGraph(clusters, cleanFamily, rowOf)
+  const xByCluster = positionClusters(clusterGraph)
+  const rowYs = computeRowYs(rowGenerations)
+  const { nodes, byId } = placeMedallions(clusters, xByCluster, rowYs)
+  const hangingUnions = placeHangingUnions({ familyEdges: cleanFamily, couples, byId, rowOf, rowYs })
+  const viewBox = computeViewBox(nodes, rowYs)
+  return { nodes, byId, rowYs, rowGenerations, couples, hangingUnions, viewBox }
+}
+
+/** [low] Drop self-edges and edges referencing unknown sims; dedupe family edges. */
+function sanitizeEdges(
+  sims: LayoutSim[],
+  familyEdges: LineageFamilyEdge[],
+  partnerEdges: LineagePartnerEdge[],
+): { idSet: Set<string>; cleanFamily: LineageFamilyEdge[]; cleanPartners: LineagePartnerEdge[] } {
   const idSet = new Set(sims.map((s) => s.id))
-
-  // 1. Group into rows by generation. Stable ordering: sims arrive sorted by id
-  //    from getTreeData; we preserve that within each generation bucket.
-  const sorted = [...sims].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-
-  const realGenerations = Array.from(
-    new Set(
-      sorted
-        .map((s) => s.generationNumber)
-        .filter((g): g is number => g !== null),
-    ),
-  ).sort((a, b) => a - b)
-
-  const hasNullGen = sorted.some((s) => s.generationNumber === null)
-  const rowGenerations: (number | null)[] = hasNullGen
-    ? [...realGenerations, null]
-    : [...realGenerations]
-
-  const simsByRow: LayoutSim[][] = rowGenerations.map((gen) =>
-    sorted.filter((s) => s.generationNumber === gen),
-  )
-
-  // Partner lookup: normalized pair set + per-sim partner map (first partner wins,
-  // deterministically, since ids are sorted).
-  const partnerOf = new Map<string, string>()
-  const normalizedPairs = partnerEdges
-    .map(({ simAId, simBId }) => {
-      const [lo, hi] = [simAId, simBId].sort()
-      return { lo, hi }
-    })
-    .filter(({ lo, hi }) => idSet.has(lo) && idSet.has(hi) && lo !== hi)
-    .sort((a, b) => (a.lo < b.lo ? -1 : a.lo > b.lo ? 1 : a.hi < b.hi ? -1 : 1))
-  for (const { lo, hi } of normalizedPairs) {
-    if (!partnerOf.has(lo) && !partnerOf.has(hi)) {
-      partnerOf.set(lo, hi)
-      partnerOf.set(hi, lo)
-    }
+  const cleanFamily: LineageFamilyEdge[] = []
+  const seen = new Set<string>()
+  for (const e of familyEdges) {
+    if (!idSet.has(e.parentId) || !idSet.has(e.childId) || e.parentId === e.childId) continue
+    const key = `${e.parentId}->${e.childId}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    cleanFamily.push(e)
   }
+  const cleanPartners = partnerEdges.filter(
+    (e) => idSet.has(e.simAId) && idSet.has(e.simBId) && e.simAId !== e.simBId,
+  )
+  return { idSet, cleanFamily, cleanPartners }
+}
 
-  // Child → parents (for centering children under their parents' midpoint).
+/**
+ * [high] Translate sim-level family edges into the cluster-level graph the
+ * engine positions. The engine lays out CLUSTERS (a couple is one block),
+ * so "bob → carol" and "alice → carol" both become "[alice+bob] cluster →
+ * [carol] cluster" — one deduped edge.
+ */
+function buildClusterGraph(
+  clusters: Cluster[],
+  familyEdges: LineageFamilyEdge[],
+  rowOf: Map<string, number>,
+): ClusterGraph {
+  const clusterOf = indexClustersByMember(clusters)
+  const layoutEdges = listDownwardEdges(familyEdges, rowOf)
+  const parentClusterIdsOf = groupParentClustersByChildCluster(layoutEdges, clusterOf)
+  return { clusters, parentClusterIdsOf }
+}
+
+/** [low] member simId → the cluster containing that sim. */
+function indexClustersByMember(clusters: Cluster[]): Map<string, Cluster> {
+  const clusterOf = new Map<string, Cluster>()
+  for (const c of clusters) {
+    for (const m of c.members) clusterOf.set(m, c)
+  }
+  return clusterOf
+}
+
+/**
+ * [low] Only edges where the parent's row is strictly ABOVE the child's
+ * constrain the layout. Degenerate edges (same-row or inverted, from
+ * manually edited generations) still render later — they just don't
+ * participate here. Since every kept edge descends, the engine can never
+ * see a cycle.
+ */
+function listDownwardEdges(
+  familyEdges: LineageFamilyEdge[],
+  rowOf: Map<string, number>,
+): LineageFamilyEdge[] {
+  return familyEdges.filter((e) => rowOf.get(e.parentId)! < rowOf.get(e.childId)!)
+}
+
+/**
+ * [low] childClusterId → unique, sorted parent CLUSTER ids. Edges that fold
+ * into a single cluster (parent and child in the same cluster) are dropped.
+ */
+function groupParentClustersByChildCluster(
+  familyEdges: LineageFamilyEdge[],
+  clusterOf: Map<string, Cluster>,
+): Map<string, string[]> {
+  const parentClusterIdsOf = new Map<string, string[]>()
+  for (const { parentId, childId } of familyEdges) {
+    const parentCluster = clusterOf.get(parentId)!
+    const childCluster = clusterOf.get(childId)!
+    if (parentCluster.id === childCluster.id) continue
+    const list = parentClusterIdsOf.get(childCluster.id) ?? []
+    if (!list.includes(parentCluster.id)) list.push(parentCluster.id)
+    parentClusterIdsOf.set(childCluster.id, list)
+  }
+  for (const list of parentClusterIdsOf.values()) list.sort()
+  return parentClusterIdsOf
+}
+
+/** [low] */
+function computeRowYs(rowGenerations: (number | null)[]): number[] {
+  return rowGenerations.map((_, i) => TREE_PADDING + i * ROW_PITCH)
+}
+
+/** [low] Absolute medallion positions: engine x + label gutter; y from the row. */
+function placeMedallions(
+  clusters: Cluster[],
+  xByCluster: Map<string, number>,
+  rowYs: number[],
+): { nodes: PositionedNode[]; byId: Record<string, PositionedNode> } {
+  const baseX = ROW_LABEL_GUTTER + TREE_PADDING
+  const nodes: PositionedNode[] = []
+  const byId: Record<string, PositionedNode> = {}
+  for (const cluster of clusters) {
+    const left = baseX + (xByCluster.get(cluster.id) ?? 0)
+    const y = rowYs[cluster.rowIndex]
+    cluster.members.forEach((id, idx) => {
+      const node: PositionedNode = {
+        id,
+        x: idx === 0 ? left : left + NODE_WIDTH + MARRIAGE_BOND_GAP,
+        y,
+      }
+      byId[id] = node
+      nodes.push(node)
+    })
+  }
+  return { nodes, byId }
+}
+
+type CoParentJunction = {
+  key: string
+  parentA: string
+  parentB: string
+  x: number
+  rowIndex: number
+}
+
+/** [high] Descent junctions below the row for non-adjacent co-parent pairs. */
+function placeHangingUnions(args: {
+  familyEdges: LineageFamilyEdge[]
+  couples: LineageCouple[]
+  byId: Record<string, PositionedNode>
+  rowOf: Map<string, number>
+  rowYs: number[]
+}): HangingUnion[] {
+  const pairs = collectCoParentPairs(args.familyEdges, args.couples)
+  const junctions = positionJunctions(pairs, args.byId, args.rowOf)
+  return stackIntoLanes(junctions, args.rowYs)
+}
+
+/** [low] Two-parent sets that are NOT the adjacent couple, deduped by pair. */
+function collectCoParentPairs(
+  familyEdges: LineageFamilyEdge[],
+  couples: LineageCouple[],
+): [string, string][] {
+  const coupleKeys = new Set(couples.map((c) => pairKey([c.a, c.b])))
   const parentsOfChild = new Map<string, string[]>()
   for (const { parentId, childId } of familyEdges) {
-    if (!idSet.has(parentId) || !idSet.has(childId)) continue
     const list = parentsOfChild.get(childId) ?? []
     if (!list.includes(parentId)) list.push(parentId)
     parentsOfChild.set(childId, list)
   }
+  const pairs: [string, string][] = []
+  const seen = new Set<string>()
+  for (const parents of parentsOfChild.values()) {
+    if (parents.length !== 2) continue
+    const key = pairKey(parents)
+    if (coupleKeys.has(key) || seen.has(key)) continue
+    seen.add(key)
+    const [a, b] = [...parents].sort()
+    pairs.push([a, b])
+  }
+  return pairs
+}
 
-  const byId: Record<string, PositionedNode> = {}
-  const nodes: PositionedNode[] = []
-  const rowYs: number[] = []
-  const couples: { a: string; b: string }[] = []
-  let maxRowWidth = 0
+/** [low] Junction x = midpoint of the parents' medallion centers; row = the
+ *  lower parent's row. */
+function positionJunctions(
+  pairs: [string, string][],
+  byId: Record<string, PositionedNode>,
+  rowOf: Map<string, number>,
+): CoParentJunction[] {
+  return pairs.map(([parentA, parentB]) => ({
+    key: pairKey([parentA, parentB]),
+    parentA,
+    parentB,
+    x: (byId[parentA].x + CREST_ANCHORS.cx + byId[parentB].x + CREST_ANCHORS.cx) / 2,
+    rowIndex: Math.max(rowOf.get(parentA)!, rowOf.get(parentB)!),
+  }))
+}
 
-  // First pass: place every row left-to-right at its natural position so we know
-  // each node's x. We build clusters per row deterministically.
-  rowGenerations.forEach((_gen, rowIndex) => {
-    const rowSims = simsByRow[rowIndex]
-    const rowY = TREE_PADDING + rowIndex * ROW_PITCH
-    rowYs.push(rowY)
-
-    const placedInRow = new Set<string>()
-    const clusters: Cluster[] = []
-    for (const sim of rowSims) {
-      if (placedInRow.has(sim.id)) continue
-      const partner = partnerOf.get(sim.id)
-      if (partner && !placedInRow.has(partner) && rowSims.some((r) => r.id === partner)) {
-        // Couple: order the two members by id for determinism.
-        const members = [sim.id, partner].sort()
-        clusters.push({ members, key: members.join('|') })
-        couples.push({ a: members[0], b: members[1] })
-        placedInRow.add(sim.id)
-        placedInRow.add(partner)
-      } else {
-        clusters.push({ members: [sim.id], key: sim.id })
-        placedInRow.add(sim.id)
-      }
-    }
-    clusters.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-
-    // Lay clusters left-to-right.
-    let cursorX = ROW_LABEL_GUTTER + TREE_PADDING
-    for (const cluster of clusters) {
-      cluster.members.forEach((id, idx) => {
-        const x =
-          idx === 0
-            ? cursorX
-            : // partner: one node width + bond gap to the right of the first member
-              cursorX + NODE_WIDTH + MARRIAGE_BOND_GAP
-        const node: PositionedNode = { id, x, y: rowY }
-        byId[id] = node
-        nodes.push(node)
+/** [low] Same-row junctions stack into lanes, left to right, so their
+ *  horizontal runs never overlap. */
+function stackIntoLanes(junctions: CoParentJunction[], rowYs: number[]): HangingUnion[] {
+  const byRow = new Map<number, CoParentJunction[]>()
+  for (const j of junctions) {
+    appendToList(byRow, j.rowIndex, j)
+  }
+  const hangingUnions: HangingUnion[] = []
+  for (const rowIndex of [...byRow.keys()].sort((a, b) => a - b)) {
+    const inRow = byRow.get(rowIndex)!.sort((a, b) => a.x - b.x || (a.key < b.key ? -1 : 1))
+    inRow.forEach(({ key, parentA, parentB, x }, i) => {
+      const lane = i % HANGING_UNION_MAX_LANES
+      hangingUnions.push({
+        key,
+        parentA,
+        parentB,
+        x,
+        y: rowYs[rowIndex] + HANGING_UNION_BASE_OFFSET + lane * HANGING_UNION_LANE_PITCH,
       })
-      const clusterWidth =
-        cluster.members.length === 2
-          ? NODE_WIDTH * 2 + MARRIAGE_BOND_GAP
-          : NODE_WIDTH
-      cursorX += clusterWidth + CLUSTER_GAP
-    }
-
-    const rowRight = cursorX - CLUSTER_GAP + TREE_PADDING
-    if (rowRight > maxRowWidth) maxRowWidth = rowRight
-  })
-
-  // Second pass (best-effort centering): nudge each child cluster so children
-  // sit roughly under their parents' midpoint, without overlapping siblings.
-  // Per README this is approximate; we only shift when it does not collide.
-  centerChildrenUnderParents(nodes, byId, simsByRow, rowGenerations, parentsOfChild, partnerOf)
-
-  // Recompute width after centering (centering can push the rightmost node out).
-  let widest = 0
-  for (const node of nodes) {
-    const right = node.x + NODE_WIDTH + TREE_PADDING
-    if (right > widest) widest = right
+    })
   }
-  const viewBoxWidth = Math.max(maxRowWidth, widest, ROW_LABEL_GUTTER + NODE_WIDTH + TREE_PADDING * 2)
+  return hangingUnions
+}
 
+/** [low] Width = rightmost medallion + padding; height = last row + medallion + padding. */
+function computeViewBox(nodes: PositionedNode[], rowYs: number[]): { width: number; height: number } {
+  let widest = ROW_LABEL_GUTTER + NODE_WIDTH + TREE_PADDING * 2
+  for (const n of nodes) widest = Math.max(widest, n.x + NODE_WIDTH + TREE_PADDING)
   const lastRowTop = rowYs.length > 0 ? rowYs[rowYs.length - 1] : TREE_PADDING
-  const viewBoxHeight = lastRowTop + NODE_HEIGHT + TREE_PADDING
-
-  return {
-    nodes,
-    byId,
-    rowYs,
-    rowGenerations,
-    couples,
-    viewBox: { width: viewBoxWidth, height: viewBoxHeight },
-  }
-}
-
-/**
- * Best-effort horizontal centering of child clusters beneath their parents'
- * midpoint. Operates row by row; only applies a shift that keeps clusters
- * non-overlapping and within the left gutter. Deterministic.
- */
-function centerChildrenUnderParents(
-  nodes: PositionedNode[],
-  byId: Record<string, PositionedNode>,
-  simsByRow: LayoutSim[][],
-  rowGenerations: (number | null)[],
-  parentsOfChild: Map<string, string[]>,
-  partnerOf: Map<string, string>,
-): void {
-  // Process rows top-down so parent rows are already positioned.
-  for (let rowIndex = 1; rowIndex < rowGenerations.length; rowIndex++) {
-    const rowSims = simsByRow[rowIndex]
-    if (rowSims.length === 0) continue
-
-    // Build the same clusters used for placement (couple or single), in their
-    // current left-to-right order by x.
-    const seen = new Set<string>()
-    type RowCluster = { members: string[]; minX: number }
-    const clusters: RowCluster[] = []
-    for (const sim of rowSims) {
-      if (seen.has(sim.id)) continue
-      const partner = partnerOf.get(sim.id)
-      const members =
-        partner && rowSims.some((r) => r.id === partner)
-          ? [sim.id, partner].sort()
-          : [sim.id]
-      members.forEach((m) => seen.add(m))
-      const minX = Math.min(...members.map((m) => byId[m].x))
-      clusters.push({ members, minX })
-    }
-    clusters.sort((a, b) => a.minX - b.minX)
-
-    // For each cluster, compute the desired center from its (first) member's
-    // parents' midpoint. Apply as a delta, clamped so clusters stay ordered.
-    let leftBound = -Infinity
-    for (let i = 0; i < clusters.length; i++) {
-      const cluster = clusters[i]
-      const clusterWidth =
-        cluster.members.length === 2
-          ? NODE_WIDTH * 2 + MARRIAGE_BOND_GAP
-          : NODE_WIDTH
-
-      const parentCenters: number[] = []
-      for (const member of cluster.members) {
-        const parents = parentsOfChild.get(member) ?? []
-        for (const parentId of parents) {
-          const p = byId[parentId]
-          if (p) parentCenters.push(p.x + CREST_ANCHORS.cx)
-        }
-      }
-      if (parentCenters.length === 0) {
-        // No known parents; just respect the left bound.
-        const minStart = leftBound === -Infinity ? cluster.minX : leftBound + CLUSTER_GAP
-        const newMinX = Math.max(cluster.minX, minStart)
-        applyClusterShift(byId, cluster.members, newMinX - cluster.minX)
-        leftBound = newMinX + clusterWidth
-        continue
-      }
-      const desiredCenter =
-        parentCenters.reduce((sum, c) => sum + c, 0) / parentCenters.length
-      const desiredMinX = desiredCenter - clusterWidth / 2
-
-      // Clamp so we never push left of the previous cluster.
-      const minStart = leftBound === -Infinity ? cluster.minX : leftBound + CLUSTER_GAP
-      const newMinX = Math.max(desiredMinX, minStart, ROW_LABEL_GUTTER + TREE_PADDING)
-      // Only move rightward or to the centered spot; never collapse left of start.
-      applyClusterShift(byId, cluster.members, newMinX - cluster.minX)
-      leftBound = newMinX + clusterWidth
-    }
-  }
-}
-
-function applyClusterShift(
-  byId: Record<string, PositionedNode>,
-  members: string[],
-  delta: number,
-): void {
-  if (delta === 0) return
-  for (const id of members) {
-    byId[id].x += delta
-  }
+  return { width: widest, height: lastRowTop + NODE_HEIGHT + TREE_PADDING }
 }

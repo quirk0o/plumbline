@@ -1,9 +1,9 @@
 'use client'
 import { Handle, Position, type EdgeProps } from '@xyflow/react'
-import type { GenLabelNodeData } from './to-flow-graph'
+import type { GenLabelNodeData, MarriageEdgeData, UnionNodeData } from './to-flow-graph'
 import styles from './lineage-flow.module.css'
 
-/** Amber generation pill in the left gutter (old SVG gutter labels). */
+/** Amber generation pill in the left gutter. */
 export function GenLabelNode({ data }: { data: GenLabelNodeData }) {
   return (
     <div className={styles.genPill} aria-hidden="true">
@@ -13,17 +13,34 @@ export function GenLabelNode({ data }: { data: GenLabelNodeData }) {
 }
 
 /**
- * Invisible 1×1 anchor at a couple's marriage-bond midpoint. Descent edges
- * start here — the bond is where children descend from. For a lone parent it
- * sits at the medallion center, occluded until the line exits below (edges
- * render beneath nodes), matching the old connector behavior.
+ * Invisible 1×1 anchor where children descend from. For an adjacent couple it
+ * sits at the marriage-bond midpoint; for non-adjacent co-parents it hangs
+ * below the row (fed by coParent elbows). When the junction joins two parents
+ * to children it renders the amber diamond — the diamond ALWAYS means
+ * "parents-to-children junction", never "marriage".
  *
  * Must be 1×1, not 0×0 — see to-flow-graph.ts union node comment for the two
  * xyflow falsy-zero pitfalls (nodesInitialized gate and handleBounds gate).
  */
-export function UnionNode() {
+export function UnionNode({ data }: { data: UnionNodeData }) {
   return (
-    <div style={{ width: 1, height: 1, background: 'transparent' }}>
+    <div style={{ width: 1, height: 1, background: 'transparent', position: 'relative', overflow: 'visible' }}>
+      {data.diamond && (
+        <span
+          data-testid="union-diamond"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: -3.5,
+            top: -3.5,
+            width: 8,
+            height: 8,
+            background: 'var(--amber)',
+            transform: 'rotate(45deg)',
+          }}
+        />
+      )}
+      <Handle type="target" id="in" position={Position.Top} className={styles.handle} isConnectable={false} />
       <Handle type="source" id="out" position={Position.Bottom} className={styles.handle} isConnectable={false} />
     </div>
   )
@@ -48,14 +65,47 @@ export function DescentEdge({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
   )
 }
 
-/** Amber bond between adjacent partners with a rotated diamond at the midpoint. */
-export function MarriageEdge({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
-  const mx = (sourceX + targetX) / 2
-  const my = (sourceY + targetY) / 2
+/**
+ * Elbow from a parent's bottom handle down and across to a hanging union.
+ * No trailing vertical: the union sits exactly at targetY, so the horizontal
+ * run lands on it (contrast descentPath, which continues down to the child's
+ * top handle).
+ */
+export function coParentPath(sourceX: number, sourceY: number, targetX: number, targetY: number): string {
+  return `M ${sourceX} ${sourceY} V ${targetY} H ${targetX}`
+}
+
+export function CoParentEdge({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
   return (
-    <g aria-hidden="true">
-      <line x1={sourceX} y1={sourceY} x2={targetX} y2={targetY} stroke="var(--amber)" strokeWidth="1.5" />
-      <rect x={mx - 4} y={my - 4} width="8" height="8" transform={`rotate(45 ${mx} ${my})`} fill="var(--amber)" />
-    </g>
+    <path
+      d={coParentPath(sourceX, sourceY, targetX, targetY)}
+      stroke="var(--border-bright)"
+      strokeWidth="1.5"
+      fill="none"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    />
+  )
+}
+
+/**
+ * Amber bond between adjacent partners. Line only — the descent diamond is
+ * rendered by the union node (and only exists when the couple has children).
+ * Widowed bonds render dashed and faded.
+ */
+export function MarriageEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
+  const dashed = (data as MarriageEdgeData | undefined)?.dashed === true
+  return (
+    <line
+      x1={sourceX}
+      y1={sourceY}
+      x2={targetX}
+      y2={targetY}
+      stroke="var(--amber)"
+      strokeWidth="1.5"
+      strokeDasharray={dashed ? '4 3' : undefined}
+      opacity={dashed ? 0.7 : undefined}
+      aria-hidden="true"
+    />
   )
 }

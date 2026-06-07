@@ -91,6 +91,8 @@ npm run test:e2e
 
 All tests must pass before the work is considered done.
 
+Before merging your work, run the /code-review skill to review your work. If your work includes changes to the UI, also run the design-system-reviewer agent and the web-qa-tester agent to check for unintended visual changes. Address any issues these reviews surface before merging. If the reviews find issues that you believe are false positives, document your reasoning in the review comments and ask for a second opinion from another agent or the user. If the reviews find significant issues that require large changes, rerun the reviews after making those changes to ensure all issues are addressed. 
+
 # Local Development: Signing In
 
 Use the **magic link** flow:

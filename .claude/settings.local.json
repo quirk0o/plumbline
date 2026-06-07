@@ -40,7 +40,8 @@
       "Skill(superpowers:test-driven-development)",
       "Bash(but status *)",
       "Bash(but diff *)",
-      "Bash(but pull *)"
+      "Bash(but pull *)",
+      "Skill(code-review)"
     ]
   }
 }

@@ -1,0 +1,123 @@
+/**
+ * Shared types, constants, and generic utilities for the lineage-tree layout
+ * pipeline. No domain logic — only shapes, numbers, and tiny helpers — so the
+ * pipeline modules and the orchestrator can all import without cycles.
+ */
+import type { RomanticStatus } from '@prisma/client'
+
+export type LayoutSim = {
+  id: string
+  generationNumber: number | null
+}
+
+export type LineageFamilyEdge = {
+  parentId: string
+  childId: string
+}
+
+export type LineagePartnerEdge = {
+  simAId: string
+  simBId: string
+  romanticStatus: RomanticStatus
+}
+
+/** Node bounding box (matches the design's 140×90 with the Crest medallion). */
+export const NODE_WIDTH = 140
+export const NODE_HEIGHT = 90
+
+/** Connector anchor offsets within a node's bbox (medallion edge, not corners). */
+export const CREST_ANCHORS = {
+  top: 2,
+  bottom: 46,
+  left: 48,
+  right: 92,
+  cx: 70,
+  cy: 24,
+} as const
+
+export type CrestAnchors = typeof CREST_ANCHORS
+
+/** Vertical pitch between generation rows (top edge to top edge). */
+export const ROW_PITCH = 160
+/** Gap between two partners' adjacent medallion edges (the marriage bond). */
+export const MARRIAGE_BOND_GAP = 20
+/** Horizontal gap between unrelated sims / couple clusters within a row. */
+export const CLUSTER_GAP = 40
+/** Horizontal gap between disconnected family-tree components. */
+export const COMPONENT_GAP = 96
+/** Left gutter reserved for the generation-row labels. */
+export const ROW_LABEL_GUTTER = 64
+/** Outer padding around the whole tree. */
+export const TREE_PADDING = 24
+/** Width of a 2-member couple cluster. */
+export const COUPLE_WIDTH = NODE_WIDTH * 2 + MARRIAGE_BOND_GAP
+
+/**
+ * Hanging unions (descent junctions for non-adjacent co-parents) sit below
+ * the parents' row, stacked into lanes so horizontal runs never overlap.
+ */
+export const HANGING_UNION_BASE_OFFSET = NODE_HEIGHT + 4
+export const HANGING_UNION_LANE_PITCH = 12
+export const HANGING_UNION_MAX_LANES = 4
+
+export type PositionedNode = {
+  id: string
+  x: number
+  y: number
+}
+
+/** A partner pair the layout placed adjacently, with its bond status. */
+export type LineageCouple = {
+  a: string
+  b: string
+  romanticStatus: RomanticStatus
+}
+
+/** Descent junction for a non-adjacent co-parent pair with shared children. */
+export type HangingUnion = {
+  /**
+   * pairKey of the two parents — the layout↔adapter join point: the adapter
+   * derives the union node id (`union-${key}`) and coParent edge ids from it.
+   */
+  key: string
+  parentA: string
+  parentB: string
+  /** Junction point (diamond center) in canvas coordinates. */
+  x: number
+  y: number
+}
+
+export type LineageLayout = {
+  nodes: PositionedNode[]
+  byId: Record<string, PositionedNode>
+  rowYs: number[]
+  rowGenerations: (number | null)[]
+  couples: LineageCouple[]
+  hangingUnions: HangingUnion[]
+  viewBox: { width: number; height: number }
+}
+
+/** A layout unit: a couple (2 members, [lo, hi]) or a single. */
+export type Cluster = {
+  /** Smallest member id — stable cluster identifier (cluster-space, not sim-space). */
+  id: string
+  members: string[]
+  rowIndex: number
+  width: number
+}
+
+/** [utility] Canonical unordered-pair key. */
+export function pairKey(ids: readonly string[]): string {
+  return [...ids].sort().join('+')
+}
+
+/**
+ * [utility] Append to a Map-of-arrays entry, creating it on first use.
+ * In-place push, not spread-copy — re-spreading the list on every insertion
+ * costs O(degree²) per key.
+ */
+export function appendToList<K, V>(map: Map<K, V[]>, key: K, value: V): void {
+  const list = map.get(key)
+  if (list) list.push(value)
+  else map.set(key, [value])
+}

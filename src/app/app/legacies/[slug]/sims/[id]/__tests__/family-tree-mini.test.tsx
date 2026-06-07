@@ -56,7 +56,7 @@ const WITH_FAMILY = {
       { id: 's2', firstName: 'Bella', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: true, href: '/app/legacies/goth/sims/s2' },
     ],
     familyEdges: [],
-    partnerEdges: [{ simAId: 's1', simBId: 's2' }],
+    partnerEdges: [{ simAId: 's1', simBId: 's2', romanticStatus: 'MARRIED' as const }],
   },
   isLoading: false,
   isError: false,

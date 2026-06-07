@@ -5,8 +5,8 @@ import {
   MARRIAGE_BOND_GAP,
   type LayoutSim,
   type LineageFamilyEdge,
-  type LineagePartnerEdge,
 } from '../layout'
+import type { LineagePartnerEdge } from '../layout-shared'
 
 // Fixture: 2 real generations + 1 null-generation sim, ≥1 couple, ≥1 parent-child link.
 const sims: LayoutSim[] = [
@@ -20,7 +20,9 @@ const familyEdges: LineageFamilyEdge[] = [
   { parentId: 'founder-a', childId: 'child-c' },
   { parentId: 'founder-b', childId: 'child-c' },
 ]
-const partnerEdges: LineagePartnerEdge[] = [{ simAId: 'founder-a', simBId: 'founder-b' }]
+const partnerEdges: LineagePartnerEdge[] = [
+  { simAId: 'founder-a', simBId: 'founder-b', romanticStatus: 'MARRIED' as const },
+]
 
 describe('computeLineageLayout', () => {
   it('places sims in the same generation at the same y', () => {
@@ -99,8 +101,8 @@ describe('computeLineageLayout', () => {
     // 'a' has two partner edges in the same generation. Only one partner can be
     // placed adjacent, so the layout must expose exactly one couple — never two.
     const partnerEdges = [
-      { simAId: 'a', simBId: 'b' },
-      { simAId: 'a', simBId: 'c' },
+      { simAId: 'a', simBId: 'b', romanticStatus: 'MARRIED' as const },
+      { simAId: 'a', simBId: 'c', romanticStatus: 'MARRIED' as const },
     ]
     const layout = computeLineageLayout(sims, [], partnerEdges)
     expect(layout.couples).toHaveLength(1)

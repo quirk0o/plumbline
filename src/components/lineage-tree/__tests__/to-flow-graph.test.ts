@@ -22,7 +22,7 @@ const familyEdges = [
   { parentId: 'f1', childId: 'c1' },
   { parentId: 'f2', childId: 'c1' },
 ]
-const partnerEdges = [{ simAId: 'f1', simBId: 'f2' }]
+const partnerEdges = [{ simAId: 'f1', simBId: 'f2', romanticStatus: 'MARRIED' as const }]
 const layout = computeLineageLayout(sims, familyEdges, partnerEdges)
 
 function isCrestNode(n: Node): n is Node<CrestNodeData, 'crest'> {
@@ -196,7 +196,7 @@ describe('toFlowGraph — parents not placed as an adjacent couple', () => {
     { parentId: 'f1', childId: 'c1' },
     { parentId: 'f2', childId: 'c1' },
   ]
-  const repartneredPartnerEdges = [{ simAId: 'f1', simBId: 'p2' }]
+  const repartneredPartnerEdges = [{ simAId: 'f1', simBId: 'p2', romanticStatus: 'MARRIED' as const }]
   const repartneredLayout = computeLineageLayout(repartneredSims, repartneredFamilyEdges, repartneredPartnerEdges)
   const repartneredGraph = toFlowGraph(repartneredLayout, repartneredSims, repartneredFamilyEdges, {})
 

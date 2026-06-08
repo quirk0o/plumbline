@@ -12,12 +12,13 @@ const ROMANTIC_STATUS_OPTIONS: RomanticStatus[] = [
   RomanticStatus.DATING,
   RomanticStatus.ENGAGED,
   RomanticStatus.MARRIED,
+  RomanticStatus.PARTNER,
   RomanticStatus.EX_PARTNER,
   RomanticStatus.WIDOWED,
 ]
 
 function formatStatus(s: string) {
-  return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 interface Props {

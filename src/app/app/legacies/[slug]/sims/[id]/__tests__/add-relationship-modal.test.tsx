@@ -120,4 +120,11 @@ describe('AddRelationshipModal', () => {
     await user.click(screen.getByRole('button', { name: /cancel/i }))
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('offers a "Partner" option in the Romantic status combobox', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await user.click(screen.getByRole('button', { name: /romantic status/i }))
+    expect(screen.getByRole('option', { name: 'Partner', hidden: true })).toBeInTheDocument()
+  })
 })

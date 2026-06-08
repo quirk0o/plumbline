@@ -10,6 +10,7 @@ import styles from './sim-inspector.module.css'
 const PARTNER_STATUSES: RomanticStatus[] = [
   RomanticStatus.MARRIED,
   RomanticStatus.ENGAGED,
+  RomanticStatus.PARTNER,
   RomanticStatus.DATING,
   RomanticStatus.WIDOWED,
 ]

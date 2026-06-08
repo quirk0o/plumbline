@@ -326,10 +326,61 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
     }
   }
 
-  // --- Marriages: one per unique unordered MARRIED pair ---
+  // --- Couple rows: Marriages (MARRIED) and Partnerships (PARTNER) ---
+  entries.push(
+    ...deriveCoupleMilestones(legacy.socialRelationships, simMap, {
+      status: 'MARRIED',
+      kind: 'Marriage',
+      idPrefix: 'marriage',
+      makeTitle: (aName, bName) => `${aName} marries ${bName}`,
+    }),
+  )
+  entries.push(
+    ...deriveCoupleMilestones(legacy.socialRelationships, simMap, {
+      status: 'PARTNER',
+      kind: 'Partnership',
+      idPrefix: 'partnership',
+      makeTitle: (aName, bName) => `${aName} partners with ${bName}`,
+    }),
+  )
+
+  entries.sort((a, b) => {
+    if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
+    return a.id.localeCompare(b.id)
+  })
+
+  return entries
+}
+
+/** A sim's display name, falling back to 'Unknown' for an unresolved pair member. */
+function simDisplayName(sim: FetchedSim | undefined): string {
+  return [sim?.firstName ?? 'Unknown', sim?.lastName ?? ''].filter(Boolean).join(' ')
+}
+
+/** How a couple milestone kind differs from the others. */
+interface CoupleMilestoneSpec {
+  status: 'MARRIED' | 'PARTNER'
+  kind: 'Marriage' | 'Partnership'
+  idPrefix: string
+  makeTitle: (aName: string, bName: string) => string
+}
+
+/**
+ * Derive couple milestones: one per unique unordered pair of the given
+ * romanticStatus. De-duplicated by canonical pair (lower id first) to handle
+ * any accidental reciprocal rows; gen = min non-null generation of the two
+ * sims; sortOrder = relationship.createdAt.
+ */
+function deriveCoupleMilestones(
+  socialRelationships: FetchedLegacy['socialRelationships'],
+  simMap: Map<string, FetchedSim>,
+  spec: CoupleMilestoneSpec,
+): Milestone[] {
   const seenPairs = new Set<string>()
-  for (const rel of legacy.socialRelationships) {
-    if (rel.romanticStatus !== 'MARRIED') continue
+  const entries: Milestone[] = []
+
+  for (const rel of socialRelationships) {
+    if (rel.romanticStatus !== spec.status) continue
     const [idA, idB] = [rel.simAId, rel.simBId].sort()
     const pairKey = `${idA}:${idB}`
     if (seenPairs.has(pairKey)) continue
@@ -337,59 +388,24 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
 
     const simA = simMap.get(idA)
     const simB = simMap.get(idB)
-    const aName = [simA?.firstName ?? 'Unknown', simA?.lastName ?? ''].filter(Boolean).join(' ')
-    const bName = [simB?.firstName ?? 'Unknown', simB?.lastName ?? ''].filter(Boolean).join(' ')
+    const aName = simDisplayName(simA)
+    const bName = simDisplayName(simB)
     const gens = [simA?.generationNumber, simB?.generationNumber].filter(
       (g): g is number => g !== null && g !== undefined,
     )
     const gen: number | null = gens.length > 0 ? Math.min(...gens) : null
 
     entries.push({
-      id: `marriage-${idA}-${idB}`,
-      kind: 'Marriage',
+      id: `${spec.idPrefix}-${idA}-${idB}`,
+      kind: spec.kind,
       gen,
       simIds: [idA, idB],
-      title: `${aName} marries ${bName}`,
+      title: spec.makeTitle(aName, bName),
       blurb: null,
       userAuthored: false,
       sortOrder: rel.createdAt.getTime(),
     })
   }
-
-  // --- Partnerships: one per unique unordered PARTNER pair ---
-  const seenPartnerPairs = new Set<string>()
-  for (const rel of legacy.socialRelationships) {
-    if (rel.romanticStatus !== 'PARTNER') continue
-    const [idA, idB] = [rel.simAId, rel.simBId].sort()
-    const pairKey = `${idA}:${idB}`
-    if (seenPartnerPairs.has(pairKey)) continue
-    seenPartnerPairs.add(pairKey)
-
-    const simA = simMap.get(idA)
-    const simB = simMap.get(idB)
-    const aName = [simA?.firstName ?? 'Unknown', simA?.lastName ?? ''].filter(Boolean).join(' ')
-    const bName = [simB?.firstName ?? 'Unknown', simB?.lastName ?? ''].filter(Boolean).join(' ')
-    const gens = [simA?.generationNumber, simB?.generationNumber].filter(
-      (g): g is number => g !== null && g !== undefined,
-    )
-    const gen: number | null = gens.length > 0 ? Math.min(...gens) : null
-
-    entries.push({
-      id: `partnership-${idA}-${idB}`,
-      kind: 'Partnership',
-      gen,
-      simIds: [idA, idB],
-      title: `${aName} partners with ${bName}`,
-      blurb: null,
-      userAuthored: false,
-      sortOrder: rel.createdAt.getTime(),
-    })
-  }
-
-  entries.sort((a, b) => {
-    if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
-    return a.id.localeCompare(b.id)
-  })
 
   return entries
 }

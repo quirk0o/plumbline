@@ -34,7 +34,7 @@ export function matchCouples(
   idSet: Set<string>,
   rowOf: Map<string, number>,
 ): LineageCouple[] {
-  const candidates = listRankedCandidates(partnerEdges, idSet, rowOf)
+  const candidates = listRankedCandidates(partnerEdges, idSet, rowOf, true)
   return pickGreedyMatching(candidates)
 }
 
@@ -52,38 +52,13 @@ export function crossGenCurrentPairs(
 ): LineageCouple[] {
   const seen = new Set<string>()
   const pairs: LineageCouple[] = []
-  for (const { lo, hi, romanticStatus } of listCrossGenCandidates(partnerEdges, idSet, rowOf)) {
+  for (const { lo, hi, romanticStatus } of listRankedCandidates(partnerEdges, idSet, rowOf, false)) {
     const key = `${lo}+${hi}`
     if (seen.has(key)) continue
     seen.add(key)
     pairs.push({ a: lo, b: hi, romanticStatus })
   }
   return pairs
-}
-
-/** [low] Like listRankedCandidates, but keeps DIFFERENT-row pairs instead of
- *  same-row ones. Same rank ordering, so cross-gen bonds are deterministic. */
-function listCrossGenCandidates(
-  partnerEdges: LineagePartnerEdge[],
-  idSet: Set<string>,
-  rowOf: Map<string, number>,
-): RankedCandidate[] {
-  return partnerEdges
-    .map(({ simAId, simBId, romanticStatus }) => {
-      const [lo, hi] = [simAId, simBId].sort()
-      return { lo, hi, romanticStatus, rank: ADJACENCY_RANK[romanticStatus] }
-    })
-    .filter(
-      (c): c is RankedCandidate =>
-        c.rank !== undefined &&
-        c.lo !== c.hi &&
-        idSet.has(c.lo) &&
-        idSet.has(c.hi) &&
-        rowOf.get(c.lo) !== undefined &&
-        rowOf.get(c.hi) !== undefined &&
-        rowOf.get(c.lo) !== rowOf.get(c.hi),
-    )
-    .sort((a, b) => a.rank - b.rank || comparePairIds(a, b))
 }
 
 /** [high] */
@@ -104,28 +79,32 @@ function comparePairIds(a: { lo: string; hi: string }, b: { lo: string; hi: stri
 }
 
 /**
- * [low] Adjacency candidates: rankable status, both sims known, same row.
- * Sorted by rank, then pair ids — the order the greedy matcher consumes.
+ * [low] Rankable partner candidates, both sims known, sharing a row when
+ * `sameRow` is true or in different rows when false. Sorted by rank, then pair
+ * ids — the deterministic order the greedy matcher and cross-gen bonds consume.
+ *
+ * `sameRow: true` → adjacency candidates for matchCouples (same-row pairs).
+ * `sameRow: false` → cross-generation pairs for crossGenCurrentPairs.
  */
 function listRankedCandidates(
   partnerEdges: LineagePartnerEdge[],
   idSet: Set<string>,
   rowOf: Map<string, number>,
+  sameRow: boolean,
 ): RankedCandidate[] {
   return partnerEdges
     .map(({ simAId, simBId, romanticStatus }) => {
       const [lo, hi] = [simAId, simBId].sort()
       return { lo, hi, romanticStatus, rank: ADJACENCY_RANK[romanticStatus] }
     })
-    .filter(
-      (c): c is RankedCandidate =>
-        c.rank !== undefined &&
-        c.lo !== c.hi &&
-        idSet.has(c.lo) &&
-        idSet.has(c.hi) &&
-        rowOf.get(c.lo) !== undefined &&
-        rowOf.get(c.lo) === rowOf.get(c.hi),
-    )
+    .filter((c): c is RankedCandidate => {
+      if (c.rank === undefined || c.lo === c.hi) return false
+      if (!idSet.has(c.lo) || !idSet.has(c.hi)) return false
+      const rowLo = rowOf.get(c.lo)
+      const rowHi = rowOf.get(c.hi)
+      if (rowLo === undefined || rowHi === undefined) return false
+      return sameRow ? rowLo === rowHi : rowLo !== rowHi
+    })
     .sort((a, b) => a.rank - b.rank || comparePairIds(a, b))
 }
 

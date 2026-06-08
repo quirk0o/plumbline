@@ -41,7 +41,13 @@ export interface FetchedSim {
   aspirations: FetchedSimAspiration[]
 }
 
-/** Minimal social-relationship row (only MARRIED ones are needed). */
+/**
+ * Minimal social-relationship row.
+ *
+ * Both MARRIED and PARTNER rows are consumed by milestone derivation
+ * (MARRIED → Marriage milestones, PARTNER → Partnership milestones), so
+ * do not filter the fetch down to MARRIED only.
+ */
 export interface FetchedSocialRelationship {
   id: string
   simAId: string
@@ -87,8 +93,10 @@ export interface FetchedLegacy {
   sims: FetchedSim[]
   /**
    * All social relationships for sims in this legacy.
-   * Only rows where romanticStatus === 'MARRIED' are used for milestone
-   * derivation; the rest are ignored.
+   * Rows where romanticStatus === 'MARRIED' derive Marriage milestones and
+   * rows where romanticStatus === 'PARTNER' derive Partnership milestones;
+   * other statuses are ignored. Do not filter the fetch to MARRIED only or
+   * Partnership milestones will silently disappear.
    *
    * Note: the schema enforces simAId < simBId at the application layer
    * (see schema comment), but we de-duplicate by unordered pair anyway

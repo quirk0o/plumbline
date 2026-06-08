@@ -19,6 +19,7 @@ import {
   CREST_ANCHORS,
   NODE_HEIGHT,
   NODE_WIDTH,
+  addUnique,
   pairKey,
   type HangingUnion,
   type LineageCouple,
@@ -224,9 +225,7 @@ function groupParentsByChild(
   const parentsByChild = new Map<string, string[]>()
   for (const { parentId, childId } of familyEdges) {
     if (!layout.byId[parentId] || !layout.byId[childId]) continue
-    const list = parentsByChild.get(childId) ?? []
-    if (!list.includes(parentId)) list.push(parentId)
-    parentsByChild.set(childId, list)
+    addUnique(parentsByChild, childId, parentId)
   }
   return parentsByChild
 }

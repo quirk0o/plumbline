@@ -273,6 +273,14 @@ describe('toFlowGraph — hanging unions', () => {
     const d = g.edges.filter((e) => e.type === 'descent' && e.target === 'k')
     expect(d.map((e) => e.source).sort()).toEqual(['p1', 'p2', 'p3'])
   })
+  it('falls back to per-parent descent lines for co-parents in different rows (no hanging union)', () => {
+    const s = [sim('p1', 1), sim('p2', 2), sim('k', 3)]
+    const fe = [{ parentId: 'p1', childId: 'k' }, { parentId: 'p2', childId: 'k' }]
+    const g = toFlowGraph(computeLineageLayout(s, fe, []), s, fe, {})
+    expect(g.nodes.filter((n) => n.type === 'union')).toHaveLength(0)
+    const d = g.edges.filter((e) => e.type === 'descent' && e.target === 'k')
+    expect(d.map((e) => e.source).sort()).toEqual(['p1', 'p2'])
+  })
 })
 
 describe('descentPath', () => {

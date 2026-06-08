@@ -121,3 +121,14 @@ export function appendToList<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   if (list) list.push(value)
   else map.set(key, [value])
 }
+
+/**
+ * [utility] Like appendToList, but skips values already present under the key
+ * (deduped grouping). For the small parent lists here a linear `includes` is
+ * cheaper than a per-key Set.
+ */
+export function addUnique<K, V>(map: Map<K, V[]>, key: K, value: V): void {
+  const list = map.get(key)
+  if (!list) map.set(key, [value])
+  else if (!list.includes(value)) list.push(value)
+}

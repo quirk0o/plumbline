@@ -24,22 +24,8 @@ export function GenLabelNode({ data }: { data: GenLabelNodeData }) {
  */
 export function UnionNode({ data }: { data: UnionNodeData }) {
   return (
-    <div style={{ width: 1, height: 1, background: 'transparent', position: 'relative', overflow: 'visible' }}>
-      {data.diamond && (
-        <span
-          data-testid="union-diamond"
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            left: -3.5,
-            top: -3.5,
-            width: 8,
-            height: 8,
-            background: 'var(--amber)',
-            transform: 'rotate(45deg)',
-          }}
-        />
-      )}
+    <div className={styles.unionAnchor}>
+      {data.diamond && <span data-testid="union-diamond" aria-hidden="true" className={styles.unionDiamond} />}
       <Handle type="target" id="in" position={Position.Top} className={styles.handle} isConnectable={false} />
       <Handle type="source" id="out" position={Position.Bottom} className={styles.handle} isConnectable={false} />
     </div>

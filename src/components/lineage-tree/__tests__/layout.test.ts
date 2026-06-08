@@ -114,6 +114,17 @@ describe('computeLineageLayout — hanging unions', () => {
     expect(wide.hangingUnions).toHaveLength(2)
     expect(new Set(wide.hangingUnions.map((u) => u.y)).size).toBe(2)
   })
+  it('does not hang a union for co-parents in different generation rows', () => {
+    // p1 (gen 1) and p2 (gen 2) co-parent kid (gen 3): a row-spanning junction
+    // would average medallions across rows, so no hanging union is created —
+    // the adapter falls back to per-parent descent lines instead.
+    const l = computeLineageLayout(
+      [sim('p1', 1), sim('p2', 2), sim('kid', 3)],
+      [{ parentId: 'p1', childId: 'kid' }, { parentId: 'p2', childId: 'kid' }],
+      [],
+    )
+    expect(l.hangingUnions).toEqual([])
+  })
 })
 
 describe('computeLineageLayout — components and singles', () => {

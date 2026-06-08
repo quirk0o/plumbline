@@ -15,6 +15,7 @@ import {
   ROW_LABEL_GUTTER,
   ROW_PITCH,
   TREE_PADDING,
+  addUnique,
   appendToList,
   pairKey,
   type Cluster,
@@ -124,9 +125,7 @@ function groupParentClustersByChildCluster(
     const parentCluster = clusterOf.get(parentId)!
     const childCluster = clusterOf.get(childId)!
     if (parentCluster.id === childCluster.id) continue
-    const list = parentClusterIdsOf.get(childCluster.id) ?? []
-    if (!list.includes(parentCluster.id)) list.push(parentCluster.id)
-    parentClusterIdsOf.set(childCluster.id, list)
+    addUnique(parentClusterIdsOf, childCluster.id, parentCluster.id)
   }
   for (const list of parentClusterIdsOf.values()) list.sort()
   return parentClusterIdsOf
@@ -178,22 +177,28 @@ function placeHangingUnions(args: {
   rowOf: Map<string, number>
   rowYs: number[]
 }): HangingUnion[] {
-  const pairs = collectCoParentPairs(args.familyEdges, args.couples)
+  const pairs = collectCoParentPairs(args.familyEdges, args.couples, args.rowOf)
   const junctions = positionJunctions(pairs, args.byId, args.rowOf)
   return stackIntoLanes(junctions, args.rowYs)
 }
 
-/** [low] Two-parent sets that are NOT the adjacent couple, deduped by pair. */
+/**
+ * [low] Two-parent sets that are NOT the adjacent couple, deduped by pair.
+ * Restricted to SAME-ROW pairs: a hanging union hangs below one row with a
+ * midpoint between two medallions in that row, which is only meaningful when
+ * both parents share it. Cross-row co-parents (e.g. partners across
+ * generations) are left out here so the adapter falls back to per-parent
+ * descent lines, which render correctly for any geometry.
+ */
 function collectCoParentPairs(
   familyEdges: LineageFamilyEdge[],
   couples: LineageCouple[],
+  rowOf: Map<string, number>,
 ): [string, string][] {
   const coupleKeys = new Set(couples.map((c) => pairKey([c.a, c.b])))
   const parentsOfChild = new Map<string, string[]>()
   for (const { parentId, childId } of familyEdges) {
-    const list = parentsOfChild.get(childId) ?? []
-    if (!list.includes(parentId)) list.push(parentId)
-    parentsOfChild.set(childId, list)
+    addUnique(parentsOfChild, childId, parentId)
   }
   const pairs: [string, string][] = []
   const seen = new Set<string>()
@@ -201,8 +206,9 @@ function collectCoParentPairs(
     if (parents.length !== 2) continue
     const key = pairKey(parents)
     if (coupleKeys.has(key) || seen.has(key)) continue
-    seen.add(key)
     const [a, b] = [...parents].sort()
+    if (rowOf.get(a) !== rowOf.get(b)) continue
+    seen.add(key)
     pairs.push([a, b])
   }
   return pairs

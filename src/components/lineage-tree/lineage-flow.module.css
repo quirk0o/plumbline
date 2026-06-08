@@ -15,6 +15,30 @@
   background: transparent;
 }
 
+/* 1x1 transparent anchor for a union node; the descent diamond is absolutely
+   positioned around it (see .unionDiamond). overflow:visible so the diamond
+   shows beyond the 1px box. */
+.unionAnchor {
+  position: relative;
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  overflow: visible;
+}
+
+/* Amber descent diamond — marks a parents-to-children junction (the only
+   amber-as-lineage-callout glyph in the tree). Geometry is tied to the 1x1
+   anchor: centered on it via the -3.5px offsets. */
+.unionDiamond {
+  position: absolute;
+  left: -3.5px;
+  top: -3.5px;
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+  transform: rotate(45deg);
+}
+
 .genPill {
   min-width: 54px;
   height: 24px;

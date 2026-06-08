@@ -136,7 +136,7 @@ export interface Milestone {
   /** Stable id: synthetic for derived rows ("birth-{simId}", "death-{simId}",
    *  "marriage-{aId}-{bId}"); the real cuid for user-authored rows. */
   id: string
-  kind: 'Founding' | 'Birth' | 'Marriage' | 'Death' | 'Note'
+  kind: 'Founding' | 'Birth' | 'Marriage' | 'Partnership' | 'Death' | 'Note'
   gen: number | null
   /** The sim(s) involved in this milestone event. */
   simIds: string[]

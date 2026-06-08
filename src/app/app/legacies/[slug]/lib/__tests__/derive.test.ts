@@ -576,6 +576,78 @@ describe('deriveMilestones', () => {
     expect(marriage!.title).toContain('Unknown')
     expect(marriage!.title).not.toMatch(/\s{2,}/)
   })
+
+  it('derives one Partnership milestone per unique PARTNER pair', () => {
+    const PARTNER_A_ID = 'sim-partner-a'
+    const PARTNER_B_ID = 'sim-partner-b'
+    const aName = 'Circe Beaker'
+    const bName = 'Loki Beaker'
+    const legacyWithPartnerPair: FetchedLegacy = {
+      id: 'legacy-partner',
+      name: 'Partner Legacy',
+      description: null,
+      founderSimId: PARTNER_A_ID,
+      households: [],
+      familyRelationships: [],
+      userMilestones: [],
+      sims: [
+        withDeathFields({
+          id: PARTNER_A_ID,
+          firstName: 'Circe',
+          lastName: 'Beaker',
+          imageUrl: null,
+          generationNumber: 1,
+          isHeir: false,
+          lifeStage: 'ADULT',
+          createdAt: d('01'),
+          aspirations: [],
+        }),
+        withDeathFields({
+          id: PARTNER_B_ID,
+          firstName: 'Loki',
+          lastName: 'Beaker',
+          imageUrl: null,
+          generationNumber: 1,
+          isHeir: false,
+          lifeStage: 'ADULT',
+          createdAt: d('02'),
+          aspirations: [],
+        }),
+      ],
+      socialRelationships: [
+        {
+          id: 'rel-partner-1',
+          simAId: PARTNER_A_ID,
+          simBId: PARTNER_B_ID,
+          romanticStatus: 'PARTNER',
+          createdAt: d('05'),
+        },
+        // Reciprocal duplicate — should be de-duplicated
+        {
+          id: 'rel-partner-2',
+          simAId: PARTNER_B_ID,
+          simBId: PARTNER_A_ID,
+          romanticStatus: 'PARTNER',
+          createdAt: d('05'),
+        },
+      ],
+    }
+    const [idA, idB] = [PARTNER_A_ID, PARTNER_B_ID].sort()
+    const result = deriveMilestones(legacyWithPartnerPair)
+    const partnerships = result.filter((m) => m.kind === 'Partnership')
+    expect(partnerships).toHaveLength(1)
+    expect(partnerships[0]).toMatchObject({
+      kind: 'Partnership',
+      simIds: expect.arrayContaining([idA, idB]),
+      title: `${aName} partners with ${bName}`,
+    })
+  })
+
+  it('still derives Marriage (not Partnership) for MARRIED pairs', () => {
+    const result = deriveMilestones(fixture)
+    expect(result.some((m) => m.kind === 'Marriage')).toBe(true)
+    expect(result.some((m) => m.kind === 'Partnership')).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------

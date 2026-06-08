@@ -356,6 +356,36 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
     })
   }
 
+  // --- Partnerships: one per unique unordered PARTNER pair ---
+  const seenPartnerPairs = new Set<string>()
+  for (const rel of legacy.socialRelationships) {
+    if (rel.romanticStatus !== 'PARTNER') continue
+    const [idA, idB] = [rel.simAId, rel.simBId].sort()
+    const pairKey = `${idA}:${idB}`
+    if (seenPartnerPairs.has(pairKey)) continue
+    seenPartnerPairs.add(pairKey)
+
+    const simA = simMap.get(idA)
+    const simB = simMap.get(idB)
+    const aName = [simA?.firstName ?? 'Unknown', simA?.lastName ?? ''].filter(Boolean).join(' ')
+    const bName = [simB?.firstName ?? 'Unknown', simB?.lastName ?? ''].filter(Boolean).join(' ')
+    const gens = [simA?.generationNumber, simB?.generationNumber].filter(
+      (g): g is number => g !== null && g !== undefined,
+    )
+    const gen: number | null = gens.length > 0 ? Math.min(...gens) : null
+
+    entries.push({
+      id: `partnership-${idA}-${idB}`,
+      kind: 'Partnership',
+      gen,
+      simIds: [idA, idB],
+      title: `${aName} partners with ${bName}`,
+      blurb: null,
+      userAuthored: false,
+      sortOrder: rel.createdAt.getTime(),
+    })
+  }
+
   entries.sort((a, b) => {
     if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
     return a.id.localeCompare(b.id)

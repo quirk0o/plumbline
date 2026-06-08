@@ -1,0 +1,2 @@
+- [Lineage tree token patterns](project_lineage_tree_tokens.md) — amber usage in marriage bond, union diamond, gen pill; descent edges use --border-bright
+- [Caption overflow guard](feedback_caption_overflow_guard.md) — absolutely-positioned caption spans need overflow containment; `.stage` in crest-flow-node is the canonical example

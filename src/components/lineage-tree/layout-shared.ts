@@ -25,6 +25,18 @@ export type LineagePartnerEdge = {
 export const NODE_WIDTH = 140
 export const NODE_HEIGHT = 90
 
+/**
+ * Crest name/life-stage text band, as y-offsets from the node's top edge.
+ * The descent line is not painted across this band so it never crosses the
+ * sim's own text. Values track crest-flow-node.module.css's label block:
+ *   .name  { top: 58px }  — sim name starts here
+ *   .stage { top: 75px }  — life-stage label, runs to the node bottom (90px)
+ * CREST_TEXT_BAND_TOP is where the name begins; CREST_TEXT_BAND_BOTTOM is the
+ * node bottom edge (NODE_HEIGHT = 90), which is also where the next row starts.
+ */
+export const CREST_TEXT_BAND_TOP = 58
+export const CREST_TEXT_BAND_BOTTOM = NODE_HEIGHT
+
 /** Connector anchor offsets within a node's bbox (medallion edge, not corners). */
 export const CREST_ANCHORS = {
   top: 2,

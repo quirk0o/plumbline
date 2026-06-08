@@ -17,6 +17,8 @@ import type { Edge, Node } from '@xyflow/react'
 import type { LifeStage } from '@prisma/client'
 import {
   CREST_ANCHORS,
+  CREST_TEXT_BAND_BOTTOM,
+  CREST_TEXT_BAND_TOP,
   NODE_HEIGHT,
   NODE_WIDTH,
   addUnique,
@@ -63,6 +65,18 @@ export type UnionNodeData = { diamond: boolean }
 
 /** Whether the marriage bond renders dashed (widowed) instead of solid. */
 export type MarriageEdgeData = { dashed: boolean }
+
+/**
+ * Gap band for descent edges whose source is a crest node (lone parent or
+ * per-parent fallback). The descent line skips this y-range so it never
+ * paints across the source sim's own name/life-stage text. Canvas coordinates:
+ * gapTop = sourceNode.y + CREST_TEXT_BAND_TOP,
+ * gapBottom = sourceNode.y + CREST_TEXT_BAND_BOTTOM.
+ * Union-sourced descents leave this undefined → plain descentPath. The two
+ * fields are required (both-or-neither): a descent either has a full gap band
+ * or no `data` at all — a partial `{ gapTop }` is meaningless.
+ */
+export type DescentEdgeData = { gapTop: number; gapBottom: number }
 
 export type CrestFlowNodeType = Node<CrestNodeData, 'crest'>
 export type GenLabelNodeType = Node<GenLabelNodeData, 'genLabel'>
@@ -130,7 +144,7 @@ function buildUnionsAndDescents(
     const kind = classifyDescent(parentIds, coupleKeys, hangingByKey)
     if (kind === 'row') emitRowDescent(build, layout, childId, parentIds)
     else if (kind === 'hanging') emitHangingDescent(build, hangingByKey, childId, parentIds)
-    else emitPerParentDescents(build, childId, parentIds)
+    else emitPerParentDescents(build, childId, parentIds, layout)
   }
   return build
 }
@@ -152,7 +166,14 @@ function classifyDescent(
   return 'perParent'
 }
 
-/** [low] Ensure the row union exists, then descend the child from it. */
+/**
+ * [low] Ensure the row union exists, then descend the child from it.
+ *
+ * A lone parent's row union sits at that parent's own medallion center, so the
+ * descent drops straight down through the parent's name/stage text band — it
+ * needs gap data. An adjacent couple's union sits in the horizontal gap BETWEEN
+ * the two medallions, crossing no one's text, so it gets no gap data.
+ */
 function emitRowDescent(
   build: DescentBuild,
   layout: LineageLayout,
@@ -166,7 +187,17 @@ function emitRowDescent(
     build.unionIdByKey.set(key, unionId)
     build.unionNodes.push(rowUnion(unionId, parentIds, layout))
   }
-  build.descentEdges.push(descentEdge(`descent-${childId}`, unionId, 'out', childId))
+  const gapData = parentIds.length === 1 ? crestGapData(layout.byId[parentIds[0]]) : undefined
+  build.descentEdges.push(descentEdge(`descent-${childId}`, unionId, 'out', childId, gapData))
+}
+
+/**
+ * [low] Gap band (in canvas coords) for a descent that drops through a crest's
+ * own name/stage text. Undefined when the source crest is not placed.
+ */
+function crestGapData(parentNode: PositionedNode | undefined): DescentEdgeData | undefined {
+  if (!parentNode) return undefined
+  return { gapTop: parentNode.y + CREST_TEXT_BAND_TOP, gapBottom: parentNode.y + CREST_TEXT_BAND_BOTTOM }
 }
 
 /** [low] Ensure the hanging union + its two co-parent elbows exist, then
@@ -190,10 +221,21 @@ function emitHangingDescent(
   build.descentEdges.push(descentEdge(`descent-${childId}`, unionId, 'out', childId))
 }
 
-/** [low] One descent line per parent. */
-function emitPerParentDescents(build: DescentBuild, childId: string, parentIds: string[]): void {
+/**
+ * [low] One descent line per parent. Each source is a crest node, so we
+ * attach gap data so the descent line skips the source crest's text band.
+ */
+function emitPerParentDescents(
+  build: DescentBuild,
+  childId: string,
+  parentIds: string[],
+  layout: LineageLayout,
+): void {
   for (const parentId of parentIds) {
-    build.descentEdges.push(descentEdge(`descent-${childId}-${parentId}`, parentId, 'bottom', childId))
+    const gapData = crestGapData(layout.byId[parentId])
+    build.descentEdges.push(
+      descentEdge(`descent-${childId}-${parentId}`, parentId, 'bottom', childId, gapData),
+    )
   }
 }
 
@@ -339,7 +381,13 @@ function coParentEdge(key: string, parentId: string, unionId: string): Edge {
 }
 
 /** [constructor] */
-function descentEdge(id: string, source: string, sourceHandle: string, target: string): Edge {
+function descentEdge(
+  id: string,
+  source: string,
+  sourceHandle: string,
+  target: string,
+  data?: DescentEdgeData,
+): Edge {
   return {
     id,
     type: 'descent',
@@ -348,6 +396,7 @@ function descentEdge(id: string, source: string, sourceHandle: string, target: s
     target,
     targetHandle: 'top',
     focusable: false,
+    data,
     ...A11Y_HIDDEN,
   }
 }

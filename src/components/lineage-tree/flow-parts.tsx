@@ -1,6 +1,6 @@
 'use client'
 import { Handle, Position, type EdgeProps } from '@xyflow/react'
-import type { GenLabelNodeData, MarriageEdgeData, UnionNodeData } from './to-flow-graph'
+import type { DescentEdgeData, GenLabelNodeData, MarriageEdgeData, UnionNodeData } from './to-flow-graph'
 import styles from './lineage-flow.module.css'
 
 /** Amber generation pill in the left gutter. */
@@ -38,10 +38,32 @@ export function descentPath(sourceX: number, sourceY: number, targetX: number, t
   return `M ${sourceX} ${sourceY} V ${midY} H ${targetX} V ${targetY}`
 }
 
-export function DescentEdge({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
+/**
+ * [low] Descent path that skips a horizontal band (the source crest's text
+ * band) so the line never paints across the sim's own name/stage. Two
+ * sub-paths: source down to the band top, then band bottom down-across-down to
+ * the target. No band → identical to descentPath.
+ */
+export function descentPathWithGap(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  gapTop?: number,
+  gapBottom?: number,
+): string {
+  if (gapTop === undefined || gapBottom === undefined) {
+    return descentPath(sourceX, sourceY, targetX, targetY)
+  }
+  const midY = (gapBottom + targetY) / 2
+  return `M ${sourceX} ${sourceY} V ${gapTop} M ${sourceX} ${gapBottom} V ${midY} H ${targetX} V ${targetY}`
+}
+
+export function DescentEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
+  const { gapTop, gapBottom } = (data as DescentEdgeData | undefined) ?? {}
   return (
     <path
-      d={descentPath(sourceX, sourceY, targetX, targetY)}
+      d={descentPathWithGap(sourceX, sourceY, targetX, targetY, gapTop, gapBottom)}
       stroke="var(--border-bright)"
       strokeWidth="1.5"
       fill="none"

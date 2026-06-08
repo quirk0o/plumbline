@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { ReactFlowProvider, type EdgeProps } from '@xyflow/react'
-import { CoParentEdge, MarriageEdge, UnionNode, coParentPath } from '../flow-parts'
+import { CoParentEdge, MarriageEdge, UnionNode, coParentPath, descentPath, descentPathWithGap } from '../flow-parts'
 
 const edgeProps = (over: Partial<EdgeProps> = {}): EdgeProps =>
   ({ id: 'e', source: 'a', target: 'b', sourceX: 0, sourceY: 0, targetX: 100, targetY: 50, ...over }) as EdgeProps
@@ -50,5 +50,26 @@ describe('CoParentEdge', () => {
   it('renders the elbow path', () => {
     const { container } = render(<svg><CoParentEdge {...edgeProps()} /></svg>)
     expect(container.querySelector('path')).toHaveAttribute('d', 'M 0 0 V 50 H 100')
+  })
+})
+
+describe('descentPathWithGap', () => {
+  it('omits the segment crossing the crest text band, resuming below it', () => {
+    // Source exits from y=24 (medallion center); text band is canvas coords 74..114.
+    // Expected: two sub-paths — drop 24→74 (to band top), then resume from 114
+    // down to midY=(114+300)/2=207, across, down to target.
+    const d = descentPathWithGap(100, 24, 100, 300, 74, 114)
+    expect(d).toContain('M 100 24 V 74')       // first segment stops at band top
+    expect(d).toContain('M 100 114')             // second segment starts below band
+  })
+
+  it('produces the correct full path for a gap scenario', () => {
+    // midY = (114 + 300) / 2 = 207
+    expect(descentPathWithGap(100, 24, 100, 300, 74, 114))
+      .toBe('M 100 24 V 74 M 100 114 V 207 H 100 V 300')
+  })
+
+  it('falls back to the plain descent path when no gap band is given', () => {
+    expect(descentPathWithGap(100, 50, 240, 170)).toBe(descentPath(100, 50, 240, 170))
   })
 })

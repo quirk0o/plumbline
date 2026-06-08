@@ -1,5 +1,5 @@
 import { describe, it, expect, assert } from 'vitest'
-import { computeLineageLayout, CREST_ANCHORS } from '../layout'
+import { computeLineageLayout, CREST_ANCHORS, CREST_TEXT_BAND_BOTTOM, CREST_TEXT_BAND_TOP } from '../layout'
 import { toFlowGraph, type LineageFlowSim } from '../to-flow-graph'
 import type { Node } from '@xyflow/react'
 import type { CrestNodeData, GenLabelNodeData } from '../to-flow-graph'
@@ -217,6 +217,31 @@ describe('toFlowGraph', () => {
       expect(g.nodes.find((n) => n.type === 'union')!.data).toMatchObject({ diamond: false })
     })
   })
+
+  describe('descent text-band gap', () => {
+    it("gives a lone parent's descent a gap covering that parent's text band", () => {
+      // A lone parent's union sits at the parent's own medallion center, so the
+      // descent drops straight through the parent's name/stage text. The gap
+      // band (canvas coords) must equal the parent's placed y + CREST_TEXT_BAND_*.
+      const s = [sim('p', 1), sim('k', 2)]
+      const fe = [{ parentId: 'p', childId: 'k' }]
+      const l = computeLineageLayout(s, fe, [])
+      const g = toFlowGraph(l, s, fe, {})
+      const descent = g.edges.find((e) => e.type === 'descent' && e.target === 'k')!
+      const parentY = l.byId['p'].y
+      expect(descent.data).toEqual({
+        gapTop: parentY + CREST_TEXT_BAND_TOP,
+        gapBottom: parentY + CREST_TEXT_BAND_BOTTOM,
+      })
+    })
+
+    it('gives an adjacent couple\'s descent no gap (it drops between the medallions)', () => {
+      // The couple union sits in the horizontal gap BETWEEN the two medallions,
+      // crossing no one's text, so no gap data is attached.
+      const descent = graph.edges.find((e) => e.type === 'descent' && e.target === 'c1')!
+      expect(descent.data).toBeUndefined()
+    })
+  })
 })
 
 describe('toFlowGraph — hanging unions', () => {
@@ -264,22 +289,40 @@ describe('toFlowGraph — hanging unions', () => {
     expect(lastDescent).toBeLessThan(firstCoParent)
     expect(firstCoParent).toBeLessThan(firstMarriage)
   })
-  it('falls back to per-parent descent lines for ≥3-parent sets', () => {
+  it('falls back to per-parent descent lines for ≥3-parent sets, each with its own text-band gap', () => {
     const s = [sim('p1', 1), sim('p2', 1), sim('p3', 1), sim('k', 2)]
     const fe = [
       { parentId: 'p1', childId: 'k' }, { parentId: 'p2', childId: 'k' }, { parentId: 'p3', childId: 'k' },
     ]
-    const g = toFlowGraph(computeLineageLayout(s, fe, []), s, fe, {})
+    const l = computeLineageLayout(s, fe, [])
+    const g = toFlowGraph(l, s, fe, {})
     const d = g.edges.filter((e) => e.type === 'descent' && e.target === 'k')
     expect(d.map((e) => e.source).sort()).toEqual(['p1', 'p2', 'p3'])
+    // Each per-parent descent is crest-sourced, so it must carry a gap derived
+    // from its OWN parent's placed y — guarding against lines through text.
+    for (const edge of d) {
+      const parentY = l.byId[edge.source].y
+      expect(edge.data).toEqual({
+        gapTop: parentY + CREST_TEXT_BAND_TOP,
+        gapBottom: parentY + CREST_TEXT_BAND_BOTTOM,
+      })
+    }
   })
-  it('falls back to per-parent descent lines for co-parents in different rows (no hanging union)', () => {
+  it('falls back to per-parent descent lines for co-parents in different rows (no hanging union), each with its own gap', () => {
     const s = [sim('p1', 1), sim('p2', 2), sim('k', 3)]
     const fe = [{ parentId: 'p1', childId: 'k' }, { parentId: 'p2', childId: 'k' }]
-    const g = toFlowGraph(computeLineageLayout(s, fe, []), s, fe, {})
+    const l = computeLineageLayout(s, fe, [])
+    const g = toFlowGraph(l, s, fe, {})
     expect(g.nodes.filter((n) => n.type === 'union')).toHaveLength(0)
     const d = g.edges.filter((e) => e.type === 'descent' && e.target === 'k')
     expect(d.map((e) => e.source).sort()).toEqual(['p1', 'p2'])
+    for (const edge of d) {
+      const parentY = l.byId[edge.source].y
+      expect(edge.data).toEqual({
+        gapTop: parentY + CREST_TEXT_BAND_TOP,
+        gapBottom: parentY + CREST_TEXT_BAND_BOTTOM,
+      })
+    }
   })
 })
 

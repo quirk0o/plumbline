@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { positionClusters } from '../layout-engine'
+import { positionClusters, positionClustersWithBonds } from '../layout-engine'
 import { CLUSTER_GAP, COMPONENT_GAP, COUPLE_WIDTH, NODE_WIDTH, type Cluster } from '../layout-shared'
 
 const couple = (id: string, rowIndex: number): Cluster => ({
@@ -75,5 +75,55 @@ describe('positionClusters', () => {
 
   it('returns an empty map for no clusters', () => {
     expect(positionClusters({ clusters: [], parentClusterIdsOf: new Map() }).size).toBe(0)
+  })
+})
+
+describe('positionClustersWithBonds', () => {
+  it('returns a routed bond path for a cross-row partner edge that clears intervening crests', () => {
+    const clusters = [single('sol', 0), single('ivy', 1), single('rex', 1), single('bex', 2)]
+    const { bondPaths } = positionClustersWithBonds({
+      clusters,
+      parentClusterIdsOf: new Map(),
+      bondEdges: [{ a: 'bex', b: 'sol', romanticStatus: 'PARTNER' }],
+    })
+    expect(bondPaths).toHaveLength(1)
+    const xs = bondPaths[0].waypoints.map((p) => p.x)
+    expect(new Set(xs).size).toBe(1) // all waypoints share one lane x; lane avoids ivy/rex
+    expect(bondPaths[0].romanticStatus).toBe('PARTNER')
+  })
+
+  it('routes the bond lane between the intervening crests, not through them', () => {
+    const clusters = [single('sol', 0), single('ivy', 1), single('rex', 1), single('bex', 2)]
+    const { lefts, bondPaths } = positionClustersWithBonds({
+      clusters,
+      parentClusterIdsOf: new Map([['ivy', ['sol']], ['rex', ['sol']]]),
+      bondEdges: [{ a: 'bex', b: 'sol', romanticStatus: 'PARTNER' }],
+    })
+    const laneX = bondPaths[0].waypoints[0].x
+    const ivyCenter = lefts.get('ivy')! + NODE_WIDTH / 2
+    const rexCenter = lefts.get('rex')! + NODE_WIDTH / 2
+    const lo = Math.min(ivyCenter, rexCenter)
+    const hi = Math.max(ivyCenter, rexCenter)
+    expect(laneX).toBeGreaterThan(lo)
+    expect(laneX).toBeLessThan(hi)
+  })
+
+  it('reports a waypoint per row the lane passes through, top to bottom', () => {
+    const clusters = [single('sol', 0), single('ivy', 1), single('rex', 1), single('bex', 2)]
+    const { bondPaths } = positionClustersWithBonds({
+      clusters,
+      parentClusterIdsOf: new Map(),
+      bondEdges: [{ a: 'bex', b: 'sol', romanticStatus: 'PARTNER' }],
+    })
+    expect(bondPaths[0].waypoints.map((w) => w.row)).toEqual([0, 1, 2])
+  })
+
+  it('leaves bondPaths empty when there are no bond edges (existing callers unaffected)', () => {
+    const clusters = [single('p', 0), single('c', 1)]
+    const { bondPaths } = positionClustersWithBonds({
+      clusters,
+      parentClusterIdsOf: new Map([['c', ['p']]]),
+    })
+    expect(bondPaths).toEqual([])
   })
 })

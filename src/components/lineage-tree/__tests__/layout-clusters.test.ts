@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { matchCouples, buildClusters } from '../layout-clusters'
+import { matchCouples, buildClusters, crossGenCurrentPairs } from '../layout-clusters'
 import { COUPLE_WIDTH, NODE_WIDTH, type LineagePartnerEdge } from '../layout-shared'
 import type { RomanticStatus } from '@prisma/client'
 
@@ -74,6 +74,25 @@ describe('matchCouples', () => {
   it('does not draw a bond for casual DATING (not an adjacency candidate)', () => {
     const couples = matchCouples([edge('a', 'b', 'DATING')], new Set(['a', 'b']), row0('a', 'b'))
     expect(couples).toEqual([])
+  })
+})
+
+describe('crossGenCurrentPairs', () => {
+  it('identifies current-partner pairs that span generations', () => {
+    const rowOf = new Map<string, number>([['sol', 0], ['bex', 1]])
+    const pairs = crossGenCurrentPairs([edge('sol', 'bex', 'PARTNER')], new Set(['sol', 'bex']), rowOf)
+    expect(pairs).toEqual([{ a: 'bex', b: 'sol', romanticStatus: 'PARTNER' }])
+  })
+
+  it('excludes DATING and EX from cross-gen bonds', () => {
+    const rowOf = new Map<string, number>([['a', 0], ['b', 1]])
+    expect(crossGenCurrentPairs([edge('a', 'b', 'DATING')], new Set(['a', 'b']), rowOf)).toEqual([])
+    expect(crossGenCurrentPairs([edge('a', 'b', 'EX_PARTNER')], new Set(['a', 'b']), rowOf)).toEqual([])
+  })
+
+  it('excludes same-row pairs (those become adjacent couples, not bonds)', () => {
+    const rowOf = new Map<string, number>([['a', 0], ['b', 0]])
+    expect(crossGenCurrentPairs([edge('a', 'b', 'PARTNER')], new Set(['a', 'b']), rowOf)).toEqual([])
   })
 })
 

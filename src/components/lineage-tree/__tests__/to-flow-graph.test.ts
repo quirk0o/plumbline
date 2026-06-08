@@ -3,7 +3,7 @@ import { computeLineageLayout, CREST_ANCHORS, CREST_TEXT_BAND_BOTTOM, CREST_TEXT
 import { toFlowGraph, type LineageFlowSim } from '../to-flow-graph'
 import type { Node } from '@xyflow/react'
 import type { CrestNodeData, GenLabelNodeData } from '../to-flow-graph'
-import { descentPath } from '../flow-parts'
+import { bondPath, descentPath } from '../flow-parts'
 
 const sim = (id: string, gen: number | null, extra: Partial<LineageFlowSim> = {}): LineageFlowSim => ({
   id,
@@ -323,6 +323,85 @@ describe('toFlowGraph — hanging unions', () => {
         gapBottom: parentY + CREST_TEXT_BAND_BOTTOM,
       })
     }
+  })
+})
+
+describe('toFlowGraph — cross-gen bonds', () => {
+  const bSims = [sim('sol', 1), sim('bex', 2), sim('pip', 3)]
+  const bFamily = [
+    { parentId: 'sol', childId: 'pip' },
+    { parentId: 'bex', childId: 'pip' },
+  ]
+  const bPartners = [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' as const }]
+  const bLayout = computeLineageLayout(bSims, bFamily, bPartners)
+  const bGraph = toFlowGraph(bLayout, bSims, bFamily, {})
+
+  it('emits a routed bond polyline whose path is built from the layout points', () => {
+    const bond = bGraph.edges.find((e) => e.type === 'bond')!
+    expect(bond).toBeDefined()
+    const data = bond.data as { points: { x: number; y: number }[]; dashed: boolean }
+    expect(data.points).toEqual(bLayout.bonds[0].points)
+    expect(data.points.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('marks current bonds solid and widowed bonds dashed', () => {
+    const current = bGraph.edges.find((e) => e.type === 'bond')!
+    expect(current.data).toMatchObject({ dashed: false })
+
+    const wSims = [sim('a', 1), sim('b', 2)]
+    const wLayout = computeLineageLayout(wSims, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'WIDOWED' as const }])
+    const wGraph = toFlowGraph(wLayout, wSims, [], {})
+    expect(wGraph.edges.find((e) => e.type === 'bond')!.data).toMatchObject({ dashed: true })
+  })
+
+  it('hides the bond edge from the accessibility tree', () => {
+    const bond = bGraph.edges.find((e) => e.type === 'bond')!
+    expect(bond.domAttributes?.['aria-hidden']).toBe('true')
+  })
+
+  it('descends the cross-gen couple’s child from a single diamond, not per-parent lines', () => {
+    const descents = bGraph.edges.filter((e) => e.type === 'descent' && e.target === 'pip')
+    expect(descents).toHaveLength(1)
+    // It descends from a union node (the diamond), not from either parent crest.
+    const source = bGraph.nodes.find((n) => n.id === descents[0].source)!
+    expect(source.type).toBe('union')
+    expect(source.data).toMatchObject({ diamond: true })
+  })
+
+  it('gives the bond child’s descent a gap covering the LOWER partner’s text band', () => {
+    // The diamond sits at the lower partner's medallion center, so the descent
+    // drops straight through that partner's own name/stage text — it must carry
+    // the lower partner's gap band (canvas coords) to skip it.
+    const descent = bGraph.edges.find((e) => e.type === 'descent' && e.target === 'pip')!
+    const lowerY = bLayout.byId['bex'].y // bex (gen 2) is the lower partner
+    expect(descent.data).toEqual({
+      gapTop: lowerY + CREST_TEXT_BAND_TOP,
+      gapBottom: lowerY + CREST_TEXT_BAND_BOTTOM,
+    })
+  })
+
+  it('places the diamond at the lower partner’s medallion center', () => {
+    const descent = bGraph.edges.find((e) => e.type === 'descent' && e.target === 'pip')!
+    const union = bGraph.nodes.find((n) => n.id === descent.source)!
+    const lower = bLayout.byId['bex'] // bex (gen 2) is below sol (gen 1)
+    expect(union.position.x + 0.5).toBeCloseTo(lower.x + CREST_ANCHORS.cx, 5)
+    expect(union.position.y + 1).toBeCloseTo(lower.y + CREST_ANCHORS.cy, 5)
+  })
+
+  it('paints the bond after descents so it renders on top', () => {
+    const types = bGraph.edges.map((e) => e.type)
+    expect(types.lastIndexOf('descent')).toBeLessThan(types.indexOf('bond'))
+  })
+})
+
+describe('bondPath', () => {
+  it('draws a moveto then lineto chain through the waypoints', () => {
+    expect(bondPath([{ x: 10, y: 20 }, { x: 10, y: 40 }, { x: 10, y: 60 }])).toBe(
+      'M 10 20 L 10 40 L 10 60',
+    )
+  })
+  it('returns an empty path for no points', () => {
+    expect(bondPath([])).toBe('')
   })
 })
 

@@ -19,7 +19,7 @@ import {
 import { toFlowGraph, type LineageFlowSim } from './to-flow-graph'
 import { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
 import { CrestFlowNode } from './crest-flow-node'
-import { CoParentEdge, DescentEdge, GenLabelNode, MarriageEdge, UnionNode } from './flow-parts'
+import { BondEdge, CoParentEdge, DescentEdge, GenLabelNode, MarriageEdge, UnionNode } from './flow-parts'
 import styles from './lineage-flow.module.css'
 
 // CrestFlowNode/GenLabelNode accept only `{ data }` (keeps them directly
@@ -33,7 +33,12 @@ const nodeTypes = {
   genLabel: GenLabelNode as NodeTypes[string],
   union: UnionNode as NodeTypes[string],
 } satisfies NodeTypes
-const edgeTypes = { marriage: MarriageEdge, descent: DescentEdge, coParent: CoParentEdge } satisfies EdgeTypes
+const edgeTypes = {
+  marriage: MarriageEdge,
+  descent: DescentEdge,
+  coParent: CoParentEdge,
+  bond: BondEdge,
+} satisfies EdgeTypes
 
 export type LineageFlowProps = {
   sims: LineageFlowSim[]

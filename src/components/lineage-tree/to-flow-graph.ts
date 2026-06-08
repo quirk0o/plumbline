@@ -23,6 +23,7 @@ import {
   NODE_WIDTH,
   addUnique,
   pairKey,
+  type BondPath,
   type HangingUnion,
   type LineageCouple,
   type LineageFamilyEdge,
@@ -65,6 +66,12 @@ export type UnionNodeData = { diamond: boolean }
 
 /** Whether the marriage bond renders dashed (widowed) instead of solid. */
 export type MarriageEdgeData = { dashed: boolean }
+
+/**
+ * A cross-generation current-partner bond, drawn as a routed amber polyline
+ * from canvas-space waypoints (top→bottom). Dashed only when widowed.
+ */
+export type BondEdgeData = { points: { x: number; y: number }[]; dashed: boolean }
 
 /**
  * Gap band for descent edges whose source is a crest node (lone parent or
@@ -119,8 +126,9 @@ export function toFlowGraph(
   const parentsByChild = groupParentsByChild(layout, familyEdges)
   const descents = buildUnionsAndDescents(layout, parentsByChild)
   const marriageEdges = buildMarriageEdges(layout, simById)
+  const bondEdges = buildBondEdges(layout, simById)
   const crestNodes = buildCrestNodes(layout, simById, opts)
-  return assembleGraph({ genLabelNodes, descents, crestNodes, marriageEdges })
+  return assembleGraph({ genLabelNodes, descents, crestNodes, marriageEdges, bondEdges })
 }
 
 type DescentBuild = {
@@ -130,7 +138,7 @@ type DescentBuild = {
   unionIdByKey: Map<string, string>
 }
 
-type DescentKind = 'row' | 'hanging' | 'perParent'
+type DescentKind = 'row' | 'hanging' | 'bond' | 'perParent'
 
 /** [high] Classify each child's parent set, then emit the matching shape. */
 function buildUnionsAndDescents(
@@ -139,11 +147,13 @@ function buildUnionsAndDescents(
 ): DescentBuild {
   const coupleKeys = collectCoupleKeys(layout.couples)
   const hangingByKey = indexHangingUnions(layout.hangingUnions)
+  const bondByKey = indexBonds(layout.bonds)
   const build = createDescentBuild()
   for (const [childId, parentIds] of parentsByChild) {
-    const kind = classifyDescent(parentIds, coupleKeys, hangingByKey)
+    const kind = classifyDescent(parentIds, coupleKeys, hangingByKey, bondByKey)
     if (kind === 'row') emitRowDescent(build, layout, childId, parentIds)
     else if (kind === 'hanging') emitHangingDescent(build, hangingByKey, childId, parentIds)
+    else if (kind === 'bond') emitBondDescent(build, layout, bondByKey, childId, parentIds)
     else emitPerParentDescents(build, childId, parentIds, layout)
   }
   return build
@@ -151,19 +161,52 @@ function buildUnionsAndDescents(
 
 /**
  * [low] row: a lone parent or the adjacent couple (shared union up in the
- * row); hanging: a known non-adjacent pair (union below the row);
- * perParent: ≥3 parents or a defensive miss (one line per parent — the
- * superseded fix/tree-descent-split-parents behavior, kept as fallback).
+ * row); hanging: a known non-adjacent pair (union below the row); bond: a
+ * cross-gen current pair (diamond at the lower partner); perParent: ≥3 parents
+ * or a defensive miss (one line per parent — the superseded
+ * fix/tree-descent-split-parents behavior, kept as fallback).
  */
 function classifyDescent(
   parentIds: string[],
   coupleKeys: Set<string>,
   hangingByKey: Map<string, HangingUnion>,
+  bondByKey: Map<string, BondPath>,
 ): DescentKind {
   if (parentIds.length === 1) return 'row'
   if (parentIds.length === 2 && coupleKeys.has(pairKey(parentIds))) return 'row'
   if (parentIds.length === 2 && hangingByKey.has(pairKey(parentIds))) return 'hanging'
+  if (parentIds.length === 2 && bondByKey.has(pairKey(parentIds))) return 'bond'
   return 'perParent'
+}
+
+/**
+ * [low] Cross-gen couple child: descend from a single diamond at the LOWER
+ * partner's medallion center (the partner placed further down the canvas).
+ * One union + one descent — never per-parent lines. The descent drops through
+ * the lower partner's own text band, so it carries that parent's gap data.
+ */
+function emitBondDescent(
+  build: DescentBuild,
+  layout: LineageLayout,
+  bondByKey: Map<string, BondPath>,
+  childId: string,
+  parentIds: string[],
+): void {
+  const key = pairKey(parentIds)
+  const lowerId = lowerPartnerId(bondByKey.get(key)!, layout)
+  let unionId = build.unionIdByKey.get(key)
+  if (!unionId) {
+    unionId = `union-${key}`
+    build.unionIdByKey.set(key, unionId)
+    build.unionNodes.push(lowerPartnerUnion(unionId, lowerId, layout))
+  }
+  const gapData = crestGapData(layout.byId[lowerId])
+  build.descentEdges.push(descentEdge(`descent-${childId}`, unionId, 'out', childId, gapData))
+}
+
+/** [low] The partner placed further down the canvas (larger y). */
+function lowerPartnerId(bond: BondPath, layout: LineageLayout): string {
+  return layout.byId[bond.a].y >= layout.byId[bond.b].y ? bond.a : bond.b
 }
 
 /**
@@ -259,6 +302,11 @@ function indexHangingUnions(hangingUnions: HangingUnion[]): Map<string, HangingU
   return new Map(hangingUnions.map((u) => [u.key, u]))
 }
 
+/** [low] Cross-gen bonds by their partner-pair key. */
+function indexBonds(bonds: BondPath[]): Map<string, BondPath> {
+  return new Map(bonds.map((b) => [pairKey([b.a, b.b]), b]))
+}
+
 /** [low] Family edges grouped by child; only fully placed edges count. */
 function groupParentsByChild(
   layout: LineageLayout,
@@ -283,6 +331,19 @@ function buildMarriageEdges(layout: LineageLayout, simById: Map<string, LineageF
   })
 }
 
+/**
+ * [low] One routed amber polyline per cross-gen bond, between placed, present
+ * partners. The edge carries the canvas-space waypoints; the BondEdge renderer
+ * draws them as a polyline. Dashed only when widowed.
+ */
+function buildBondEdges(layout: LineageLayout, simById: Map<string, LineageFlowSim>): Edge[] {
+  return layout.bonds.flatMap((bond) => {
+    if (!layout.byId[bond.a] || !layout.byId[bond.b]) return []
+    if (!simById.has(bond.a) || !simById.has(bond.b)) return []
+    return [bondEdge(bond)]
+  })
+}
+
 /** [low] Generation pills in the left gutter (position mirrors the old SVG). */
 function buildGenLabelNodes(layout: LineageLayout): Node[] {
   return layout.rowYs.map((rowY, i) => genLabelNode(layout.rowGenerations[i], rowY))
@@ -302,16 +363,23 @@ function buildCrestNodes(
 }
 
 /** [low] Node z-order: labels, unions, crests (nodes render in array order).
- *  Edge paint order: descents under co-parent elbows under bonds. */
+ *  Edge paint order: descents under co-parent elbows under bonds (marriage and
+ *  cross-gen) — all amber bonds paint on top. */
 function assembleGraph(parts: {
   genLabelNodes: Node[]
   descents: DescentBuild
   crestNodes: Node[]
   marriageEdges: Edge[]
+  bondEdges: Edge[]
 }): { nodes: Node[]; edges: Edge[] } {
   return {
     nodes: [...parts.genLabelNodes, ...parts.descents.unionNodes, ...parts.crestNodes],
-    edges: [...parts.descents.descentEdges, ...parts.descents.coParentEdges, ...parts.marriageEdges],
+    edges: [
+      ...parts.descents.descentEdges,
+      ...parts.descents.coParentEdges,
+      ...parts.marriageEdges,
+      ...parts.bondEdges,
+    ],
   }
 }
 
@@ -366,6 +434,13 @@ function hangingUnionNode(id: string, hu: HangingUnion): Node {
   return unionNode(id, { x: hu.x - 0.5, y: hu.y - 1 }, true)
 }
 
+/** [constructor] Diamond union at the LOWER partner's medallion center — the
+ *  cross-gen couple's children descend from here. */
+function lowerPartnerUnion(id: string, lowerId: string, layout: LineageLayout): Node {
+  const p = layout.byId[lowerId]
+  return unionNode(id, { x: p.x + CREST_ANCHORS.cx - 0.5, y: p.y + CREST_ANCHORS.cy - 1 }, true)
+}
+
 /** [constructor] Elbow from one parent's bottom handle to a hanging union. */
 function coParentEdge(key: string, parentId: string, unionId: string): Edge {
   return {
@@ -413,6 +488,25 @@ function marriageEdge(couple: LineageCouple, aIsLeft: boolean): Edge {
     targetHandle: 'left',
     focusable: false,
     data: { dashed: couple.romanticStatus === 'WIDOWED' } satisfies MarriageEdgeData,
+    ...A11Y_HIDDEN,
+  }
+}
+
+/**
+ * [constructor] Routed amber bond polyline for a cross-gen current couple. The
+ * waypoints already live in canvas space, so the edge's source/target handles
+ * are unused for geometry — the renderer draws straight from `points`. Source
+ * and target are the two partners so xyflow still treats it as a real edge.
+ * Dashed only when widowed.
+ */
+function bondEdge(bond: BondPath): Edge {
+  return {
+    id: `bond-${bond.a}-${bond.b}`,
+    type: 'bond',
+    source: bond.a,
+    target: bond.b,
+    focusable: false,
+    data: { points: bond.points, dashed: bond.romanticStatus === 'WIDOWED' } satisfies BondEdgeData,
     ...A11Y_HIDDEN,
   }
 }

@@ -38,6 +38,54 @@ export function matchCouples(
   return pickGreedyMatching(candidates)
 }
 
+/**
+ * [low] Current-partner pairs (rankable statuses) whose two sims sit in
+ * DIFFERENT rows — the cross-generation complement of matchCouples' same-row
+ * pairs. These can't be placed adjacently, so the orchestrator draws them as a
+ * routed bond polyline instead. Members are id-sorted (a=lo, b=hi), matching
+ * the LineageCouple shape. Deduped by pair; deterministic (rank, then ids).
+ */
+export function crossGenCurrentPairs(
+  partnerEdges: LineagePartnerEdge[],
+  idSet: Set<string>,
+  rowOf: Map<string, number>,
+): LineageCouple[] {
+  const seen = new Set<string>()
+  const pairs: LineageCouple[] = []
+  for (const { lo, hi, romanticStatus } of listCrossGenCandidates(partnerEdges, idSet, rowOf)) {
+    const key = `${lo}+${hi}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    pairs.push({ a: lo, b: hi, romanticStatus })
+  }
+  return pairs
+}
+
+/** [low] Like listRankedCandidates, but keeps DIFFERENT-row pairs instead of
+ *  same-row ones. Same rank ordering, so cross-gen bonds are deterministic. */
+function listCrossGenCandidates(
+  partnerEdges: LineagePartnerEdge[],
+  idSet: Set<string>,
+  rowOf: Map<string, number>,
+): RankedCandidate[] {
+  return partnerEdges
+    .map(({ simAId, simBId, romanticStatus }) => {
+      const [lo, hi] = [simAId, simBId].sort()
+      return { lo, hi, romanticStatus, rank: ADJACENCY_RANK[romanticStatus] }
+    })
+    .filter(
+      (c): c is RankedCandidate =>
+        c.rank !== undefined &&
+        c.lo !== c.hi &&
+        idSet.has(c.lo) &&
+        idSet.has(c.hi) &&
+        rowOf.get(c.lo) !== undefined &&
+        rowOf.get(c.hi) !== undefined &&
+        rowOf.get(c.lo) !== rowOf.get(c.hi),
+    )
+    .sort((a, b) => a.rank - b.rank || comparePairIds(a, b))
+}
+
 /** [high] */
 export function buildClusters(
   sims: LayoutSim[],

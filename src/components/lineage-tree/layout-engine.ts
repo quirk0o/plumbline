@@ -11,12 +11,32 @@ import {
   type MutGraph,
   type Separation,
 } from 'd3-dag'
+import type { RomanticStatus } from '@prisma/client'
 import { CLUSTER_GAP, COMPONENT_GAP, appendToList, type Cluster } from './layout-shared'
+
+/** A current-partner bond between two single-clusters in different rows. The
+ *  cluster ids are each partner's own single-cluster id. */
+export type BondEdge = { a: string; b: string; romanticStatus: RomanticStatus }
 
 export type ClusterGraph = {
   clusters: Cluster[]
   /** childClusterId → parent CLUSTER ids; only edges spanning ≥1 row down. */
   parentClusterIdsOf: Map<string, string[]>
+  /** Cross-row current-partner bonds, routed by the engine into lanes. */
+  bondEdges?: BondEdge[]
+}
+
+/**
+ * A routed bond returned from the engine. `x` is band-relative (component
+ * offset applied, but no gutter/padding) and `row` is the ABSOLUTE cluster row
+ * the waypoint passes through. The orchestrator finishes the transform: adds
+ * baseX to x and resolves row → canvas y via rowYs.
+ */
+export type RoutedBondPath = {
+  a: string
+  b: string
+  romanticStatus: RomanticStatus
+  waypoints: { x: number; row: number }[]
 }
 
 type ComponentDatum = {
@@ -33,15 +53,72 @@ type ComponentLayout = {
   /** clusterId → 0-based left edge within the component. */
   lefts: Map<string, number>
   width: number
+  /** Routed bond paths, x band-relative to the component (offset added later). */
+  bondPaths: RoutedBondPath[]
 }
 
 /** [high] Absolute left x per cluster id, 0-based (no gutter/padding). */
 export function positionClusters(graph: ClusterGraph): Map<string, number> {
+  return positionClustersWithBonds(graph).lefts
+}
+
+/**
+ * [high] Like positionClusters, but also routes cross-row partner bonds. The
+ * engine threads each bond as an extra (tagged) parent edge so d3-dag opens a
+ * vertical lane that clears intervening crests; the lane waypoints come back as
+ * band-relative bond paths.
+ */
+export function positionClustersWithBonds(graph: ClusterGraph): {
+  lefts: Map<string, number>
+  width: number
+  bondPaths: RoutedBondPath[]
+} {
+  const bondEdges = graph.bondEdges ?? []
+  const bondsByCluster = indexBondsByCluster(bondEdges, graph.clusters)
   const { components, loose } = splitComponents(graph)
-  const layouts = components.map((component) => layoutComponent(component, graph.parentClusterIdsOf))
+  const layouts = components.map((component) =>
+    layoutComponent(component, graph.parentClusterIdsOf, bondsByCluster),
+  )
   const band = bandLeftToRight(layouts)
   const packed = packLooseClusters(loose, band.width)
-  return mergeXMaps(band.xById, packed)
+  return {
+    lefts: mergeXMaps(band.xById, packed),
+    width: band.width,
+    bondPaths: band.bondPaths,
+  }
+}
+
+/**
+ * One bond as the engine sees it: the upper partner (smaller rowIndex) becomes
+ * an extra graph parent of the lower partner, opening a routed vertical lane.
+ */
+type BondLink = { upper: string; lower: string; romanticStatus: RomanticStatus }
+
+/** clusterId-keyed bond data: links indexed by lower partner, plus the
+ *  upper→lower keys that mark a graph link as a bond (not a descent). */
+type BondsByCluster = {
+  byLower: Map<string, BondLink[]>
+  bondKeys: Set<string>
+}
+
+/** [low] Orient each bond (upper = smaller rowIndex) and index it by the lower
+ *  partner cluster, the one that receives the extra parent edge. */
+function indexBondsByCluster(bondEdges: BondEdge[], clusters: Cluster[]): BondsByCluster {
+  const rowOf = new Map(clusters.map((c) => [c.id, c.rowIndex]))
+  const byLower = new Map<string, BondLink[]>()
+  const bondKeys = new Set<string>()
+  for (const { a, b, romanticStatus } of bondEdges) {
+    if (rowOf.get(a) === undefined || rowOf.get(b) === undefined) continue
+    const [upper, lower] = rowOf.get(a)! <= rowOf.get(b)! ? [a, b] : [b, a]
+    appendToList(byLower, lower, { upper, lower, romanticStatus })
+    bondKeys.add(bondKey(upper, lower))
+  }
+  return { byLower, bondKeys }
+}
+
+/** [utility] */
+function bondKey(upper: string, lower: string): string {
+  return `${upper}->${lower}`
 }
 
 /**
@@ -56,18 +133,35 @@ export function splitComponents(graph: ClusterGraph): {
   loose: Cluster[]
 } {
   const neighbors = buildNeighborMap(graph.parentClusterIdsOf)
+  addBondNeighbors(neighbors, graph.bondEdges ?? [])
   const grouped = walkComponents(graph.clusters, neighbors)
   return { components: sortComponents(grouped.components), loose: grouped.loose }
 }
 
-/** [high] X-position one component: pinned rows, d3-dag orders and spaces. */
+/** [low] Bonds also connect their two clusters, so the engine routes them in a
+ *  single component (a lane can only clear crests it shares a component with). */
+function addBondNeighbors(neighbors: Map<string, string[]>, bondEdges: BondEdge[]): void {
+  for (const { a, b } of bondEdges) {
+    appendToList(neighbors, a, b)
+    appendToList(neighbors, b, a)
+  }
+}
+
+/** [high] X-position one component: pinned rows, d3-dag orders and spaces.
+ *  Bonds touching this component are routed into lanes alongside descent. */
 export function layoutComponent(
   component: Cluster[],
   parentClusterIdsOf: Map<string, string[]>,
+  bondsByCluster: BondsByCluster = { byLower: new Map(), bondKeys: new Set() },
 ): ComponentLayout {
-  const data = toComponentData(component, parentClusterIdsOf)
+  const data = toComponentData(component, parentClusterIdsOf, bondsByCluster.byLower)
   const graph = runSugiyama(data)
-  return collectLefts(graph)
+  const rowOf = new Map(component.map((c) => [c.id, c.rowIndex]))
+  // The shared engine-space origin for both node lefts and bond-lane xs —
+  // computed once so the two readers can't drift apart.
+  const minLeft = componentMinLeft(graph)
+  const layout = collectLefts(graph, minLeft)
+  return { ...layout, bondPaths: collectBondPaths(graph, bondsByCluster, rowOf, minLeft) }
 }
 
 /** [high] Build the d3-dag graph and run sugiyama over it in place. */
@@ -147,10 +241,13 @@ function sortComponents(components: Cluster[][]): Cluster[][] {
   return keyed.map((k) => k.component)
 }
 
-/** [low] graphStratify input: parentIds scoped to the component, rows normalized. */
+/** [low] graphStratify input: parentIds (descent + bonds) scoped to the
+ *  component, rows normalized. A bond adds the upper partner as an extra parent
+ *  of the lower one — d3-dag then routes a lane between them. */
 function toComponentData(
   component: Cluster[],
   parentClusterIdsOf: Map<string, string[]>,
+  bondsByLower: Map<string, BondLink[]>,
 ): ComponentDatum[] {
   const minRow = Math.min(...component.map((c) => c.rowIndex))
   const inComponent = new Set(component.map((c) => c.id))
@@ -158,10 +255,23 @@ function toComponentData(
     .sort((a, b) => a.rowIndex - b.rowIndex || (a.id < b.id ? -1 : 1))
     .map((cluster) => ({
       id: cluster.id,
-      parentIds: (parentClusterIdsOf.get(cluster.id) ?? []).filter((p) => inComponent.has(p)).sort(),
+      parentIds: parentIdsFor(cluster.id, parentClusterIdsOf, bondsByLower, inComponent),
       cluster,
       normRow: cluster.rowIndex - minRow,
     }))
+}
+
+/** [low] Descent parents plus any bond's upper partner, deduped and scoped. */
+function parentIdsFor(
+  clusterId: string,
+  parentClusterIdsOf: Map<string, string[]>,
+  bondsByLower: Map<string, BondLink[]>,
+  inComponent: Set<string>,
+): string[] {
+  const descent = parentClusterIdsOf.get(clusterId) ?? []
+  const bondParents = (bondsByLower.get(clusterId) ?? []).map((b) => b.upper)
+  const all = new Set([...descent, ...bondParents].filter((p) => inComponent.has(p)))
+  return [...all].sort()
 }
 
 /** [low] Cluster width plus the in-row gap; height is unused (y is ours). */
@@ -193,12 +303,22 @@ function pinnedRowLayering<N extends { normRow: number }, L>(
   return max - min
 }
 
-/** [low] d3-dag reports centers; convert to left edges normalized to 0. */
-function collectLefts(graph: Graph<ComponentDatum, undefined>): ComponentLayout {
+/** [low] Smallest left edge across the component's nodes — the shared origin
+ *  for both node lefts and bond-lane xs (they live in one engine frame). */
+function componentMinLeft(graph: Graph<ComponentDatum, undefined>): number {
   let minLeft = Infinity
   for (const node of graph.nodes()) {
     minLeft = Math.min(minLeft, node.x - node.data.cluster.width / 2)
   }
+  return minLeft
+}
+
+/** [low] d3-dag reports centers; convert to left edges normalized to 0 using
+ *  the shared component origin. */
+function collectLefts(
+  graph: Graph<ComponentDatum, undefined>,
+  minLeft: number,
+): { lefts: Map<string, number>; width: number } {
   const lefts = new Map<string, number>()
   let width = 0
   for (const node of graph.nodes()) {
@@ -209,16 +329,85 @@ function collectLefts(graph: Graph<ComponentDatum, undefined>): ComponentLayout 
   return { lefts, width }
 }
 
+/**
+ * [low] Extract the routed lane for each bond link. d3-dag's link.points are
+ * [ex, ey] in engine space, top→bottom: x is a center-line, normalized like
+ * node lefts (ex - minLeft); the two endpoint points sit on the partner nodes
+ * whose rows we know, so every waypoint's row is a linear interpolation of ey
+ * between the endpoints' engine ys. (Interpolating against the real endpoints
+ * is robust to d3-dag's internal layer spacing — which is a fixed 2× pitch when
+ * intervening rows are populated, but collapses when they are not; the spike
+ * confirmed both, and interpolation maps both to the right integer rows.)
+ */
+function collectBondPaths(
+  graph: Graph<ComponentDatum, undefined>,
+  bonds: BondsByCluster,
+  rowOf: Map<string, number>,
+  minLeft: number,
+): RoutedBondPath[] {
+  if (bonds.bondKeys.size === 0) return []
+  const statusByKey = indexBondStatusByKey(bonds.byLower)
+  const paths: RoutedBondPath[] = []
+  for (const link of graph.links()) {
+    const key = bondKey(link.source.data.id, link.target.data.id)
+    if (!bonds.bondKeys.has(key)) continue
+    paths.push({
+      a: link.source.data.id,
+      b: link.target.data.id,
+      romanticStatus: statusByKey.get(key)!,
+      waypoints: routeWaypoints(link.points, minLeft, {
+        ey0: link.points[0][1],
+        ey1: link.points[link.points.length - 1][1],
+        row0: rowOf.get(link.source.data.id)!,
+        row1: rowOf.get(link.target.data.id)!,
+      }),
+    })
+  }
+  return paths
+}
+
+type BondEndpoints = { ey0: number; ey1: number; row0: number; row1: number }
+
+/** [low] Normalize x and interpolate each waypoint's engine y to a cluster row
+ *  from the bond's two known endpoints. */
+function routeWaypoints(
+  points: readonly (readonly [number, number])[],
+  minLeft: number,
+  ends: BondEndpoints,
+): { x: number; row: number }[] {
+  const span = ends.ey1 - ends.ey0
+  return points.map(([ex, ey]) => ({
+    x: ex - minLeft,
+    row: span === 0 ? ends.row0 : ends.row0 + ((ey - ends.ey0) / span) * (ends.row1 - ends.row0),
+  }))
+}
+
+/** [utility] (upper→lower) bond key → its romantic status. */
+function indexBondStatusByKey(byLower: Map<string, BondLink[]>): Map<string, RomanticStatus> {
+  const byKey = new Map<string, RomanticStatus>()
+  for (const links of byLower.values()) {
+    for (const l of links) byKey.set(bondKey(l.upper, l.lower), l.romanticStatus)
+  }
+  return byKey
+}
+
 /** [low] Cumulative offsets; COMPONENT_GAP between components. The returned
- *  width includes the trailing gap — it is the start x for loose packing. */
-function bandLeftToRight(layouts: ComponentLayout[]): { xById: Map<string, number>; width: number } {
+ *  width includes the trailing gap — it is the start x for loose packing.
+ *  Bond-lane xs shift by the same per-component offset as node lefts. */
+function bandLeftToRight(
+  layouts: ComponentLayout[],
+): { xById: Map<string, number>; width: number; bondPaths: RoutedBondPath[] } {
   const xById = new Map<string, number>()
+  const bondPaths: RoutedBondPath[] = []
   let offset = 0
-  for (const { lefts, width } of layouts) {
+  for (const { lefts, width, bondPaths: localBonds } of layouts) {
     for (const [id, left] of lefts) xById.set(id, offset + left)
+    for (const bp of localBonds) {
+      bondPaths.push({ ...bp, waypoints: bp.waypoints.map((w) => ({ x: w.x + offset, row: w.row })) })
+    }
     offset += width + COMPONENT_GAP
   }
-  return { xById, width: offset }
+  return { xById, width: offset, bondPaths }
 }
 
 /** [low] Per-row cursors: loose clusters pack compactly after the last band. */

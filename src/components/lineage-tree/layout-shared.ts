@@ -99,6 +99,15 @@ export type HangingUnion = {
   y: number
 }
 
+/** A current-partner bond drawn as a routed polyline (cross-generation). */
+export type BondPath = {
+  a: string
+  b: string
+  romanticStatus: RomanticStatus
+  /** Canvas-space waypoints from the engine, top→bottom. */
+  points: { x: number; y: number }[]
+}
+
 export type LineageLayout = {
   nodes: PositionedNode[]
   byId: Record<string, PositionedNode>
@@ -106,6 +115,7 @@ export type LineageLayout = {
   rowGenerations: (number | null)[]
   couples: LineageCouple[]
   hangingUnions: HangingUnion[]
+  bonds: BondPath[]
   viewBox: { width: number; height: number }
 }
 

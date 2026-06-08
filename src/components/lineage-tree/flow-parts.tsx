@@ -1,7 +1,22 @@
 'use client'
 import { Handle, Position, type EdgeProps } from '@xyflow/react'
-import type { DescentEdgeData, GenLabelNodeData, MarriageEdgeData, UnionNodeData } from './to-flow-graph'
+import type {
+  BondEdgeData,
+  DescentEdgeData,
+  GenLabelNodeData,
+  MarriageEdgeData,
+  UnionNodeData,
+} from './to-flow-graph'
 import styles from './lineage-flow.module.css'
+
+/**
+ * Shared amber-bond stroke style — both the in-row marriage line and the routed
+ * cross-gen bond use it, so the widowed/current look stays identical across the
+ * two. Amber (var(--amber)) is the lineage-callout color per the brand guide.
+ */
+const AMBER_STROKE_WIDTH = '1.5'
+const AMBER_DASH_ARRAY = '4 3'
+const AMBER_DASHED_OPACITY = 0.7
 
 /** Amber generation pill in the left gutter. */
 export function GenLabelNode({ data }: { data: GenLabelNodeData }) {
@@ -110,9 +125,37 @@ export function MarriageEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeP
       x2={targetX}
       y2={targetY}
       stroke="var(--amber)"
-      strokeWidth="1.5"
-      strokeDasharray={dashed ? '4 3' : undefined}
-      opacity={dashed ? 0.7 : undefined}
+      strokeWidth={AMBER_STROKE_WIDTH}
+      strokeDasharray={dashed ? AMBER_DASH_ARRAY : undefined}
+      opacity={dashed ? AMBER_DASHED_OPACITY : undefined}
+      aria-hidden="true"
+    />
+  )
+}
+
+/** Polyline from canvas-space waypoints — "M x0 y0 L x1 y1 L …". */
+export function bondPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return ''
+  const [first, ...rest] = points
+  return `M ${first.x} ${first.y}` + rest.map((p) => ` L ${p.x} ${p.y}`).join('')
+}
+
+/**
+ * Amber routed bond for a cross-generation current couple. Unlike MarriageEdge
+ * (a straight in-row line), this follows the engine-routed lane in `data.points`
+ * so it clears intervening crests. Widowed bonds render dashed and faded.
+ */
+export function BondEdge({ data }: EdgeProps) {
+  const { points = [], dashed = false } = (data as BondEdgeData | undefined) ?? {}
+  return (
+    <path
+      d={bondPath(points)}
+      stroke="var(--amber)"
+      strokeWidth={AMBER_STROKE_WIDTH}
+      fill="none"
+      strokeLinejoin="round"
+      strokeDasharray={dashed ? AMBER_DASH_ARRAY : undefined}
+      opacity={dashed ? AMBER_DASHED_OPACITY : undefined}
       aria-hidden="true"
     />
   )

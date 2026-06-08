@@ -18,6 +18,7 @@ import {
   addUnique,
   appendToList,
   pairKey,
+  type BondPath,
   type Cluster,
   type HangingUnion,
   type LayoutSim,
@@ -28,8 +29,8 @@ import {
   type PositionedNode,
 } from './layout-shared'
 import { deriveRows } from './layout-rows'
-import { buildClusters, matchCouples } from './layout-clusters'
-import { positionClusters, type ClusterGraph } from './layout-engine'
+import { buildClusters, crossGenCurrentPairs, matchCouples } from './layout-clusters'
+import { positionClustersWithBonds, type BondEdge, type ClusterGraph, type RoutedBondPath } from './layout-engine'
 
 /** [high] The pipeline — one named step per spec section. */
 export function computeLineageLayout(
@@ -41,13 +42,76 @@ export function computeLineageLayout(
   const { rowGenerations, rowOf } = deriveRows(sims, cleanPartners)
   const couples = matchCouples(cleanPartners, idSet, rowOf)
   const clusters = buildClusters(sims, rowOf, couples)
-  const clusterGraph = buildClusterGraph(clusters, cleanFamily, rowOf)
-  const xByCluster = positionClusters(clusterGraph)
+  const bondPairs = listDrawableBondPairs(crossGenCurrentPairs(cleanPartners, idSet, rowOf), clusters)
+  const bondChildLower = mapBondChildrenToLowerParent(cleanFamily, bondPairs, rowOf)
+  const clusterGraph = buildClusterGraph(clusters, cleanFamily, rowOf, bondPairs, bondChildLower)
+  const { lefts: xByCluster, bondPaths } = positionClustersWithBonds(clusterGraph)
   const rowYs = computeRowYs(rowGenerations)
   const { nodes, byId } = placeMedallions(clusters, xByCluster, rowYs)
   const hangingUnions = placeHangingUnions({ familyEdges: cleanFamily, couples, byId, rowOf, rowYs })
+  const bonds = toBondPaths(bondPaths, bondPairs, rowYs)
   const viewBox = computeViewBox(nodes, rowYs)
-  return { nodes, byId, rowYs, rowGenerations, couples, hangingUnions, viewBox }
+  return { nodes, byId, rowYs, rowGenerations, couples, hangingUnions, bonds, viewBox }
+}
+
+/**
+ * [low] Keep only cross-gen pairs the engine can route as a clean lane: both
+ * partners must be their own single-cluster. A sim already matched into a
+ * same-row adjacent couple keeps that bond as primary; a lane into a couple
+ * block has no single medallion to anchor on.
+ */
+function listDrawableBondPairs(bondPairs: LineageCouple[], clusters: Cluster[]): LineageCouple[] {
+  const singleIds = new Set(clusters.filter((c) => c.members.length === 1).map((c) => c.id))
+  return bondPairs.filter((p) => singleIds.has(p.a) && singleIds.has(p.b))
+}
+
+/**
+ * [low] For each cross-gen current pair, the child whose two parents are
+ * EXACTLY that pair descends from the LOWER partner (childId → lower parent id).
+ * Other children, and children of three+ parents, are not re-routed.
+ */
+function mapBondChildrenToLowerParent(
+  familyEdges: LineageFamilyEdge[],
+  bondPairs: LineageCouple[],
+  rowOf: Map<string, number>,
+): Map<string, string> {
+  const bondKeys = new Set(bondPairs.map((p) => pairKey([p.a, p.b])))
+  const parentsOfChild = new Map<string, string[]>()
+  for (const { parentId, childId } of familyEdges) addUnique(parentsOfChild, childId, parentId)
+  const lowerByChild = new Map<string, string>()
+  for (const [childId, parents] of parentsOfChild) {
+    if (parents.length !== 2 || !bondKeys.has(pairKey(parents))) continue
+    const [a, b] = parents
+    lowerByChild.set(childId, rowOf.get(a)! >= rowOf.get(b)! ? a : b)
+  }
+  return lowerByChild
+}
+
+/** [low] Engine bonds carry cluster ids + interpolated rows; finish the canvas
+ *  transform: add the gutter/padding baseX to x, resolve row → medallion-center
+ *  y, and re-attach the actual partner sim-id pair (id-sorted, like couples). */
+function toBondPaths(
+  routed: RoutedBondPath[],
+  bondPairs: LineageCouple[],
+  rowYs: number[],
+): BondPath[] {
+  const baseX = ROW_LABEL_GUTTER + TREE_PADDING
+  const pairByKey = new Map(bondPairs.map((p) => [pairKey([p.a, p.b]), p]))
+  return routed.flatMap((path) => {
+    const pair = pairByKey.get(pairKey([path.a, path.b]))
+    if (!pair) return []
+    return [
+      {
+        a: pair.a,
+        b: pair.b,
+        romanticStatus: pair.romanticStatus,
+        points: path.waypoints.map((w) => ({
+          x: baseX + w.x,
+          y: rowYs[Math.round(w.row)] + CREST_ANCHORS.cy,
+        })),
+      },
+    ]
+  })
 }
 
 /** [low] Drop self-edges and edges referencing unknown sims; dedupe family edges. */
@@ -77,16 +141,47 @@ function sanitizeEdges(
  * engine positions. The engine lays out CLUSTERS (a couple is one block),
  * so "bob → carol" and "alice → carol" both become "[alice+bob] cluster →
  * [carol] cluster" — one deduped edge.
+ *
+ * Cross-gen current pairs get two extra treatments: their child descends from
+ * the LOWER partner only (so the engine routes one descent, not two crossing
+ * lines), and the pair itself becomes a bond edge the engine routes as a lane.
  */
 function buildClusterGraph(
   clusters: Cluster[],
   familyEdges: LineageFamilyEdge[],
   rowOf: Map<string, number>,
+  bondPairs: LineageCouple[],
+  bondChildLower: Map<string, string>,
 ): ClusterGraph {
   const clusterOf = indexClustersByMember(clusters)
-  const layoutEdges = listDownwardEdges(familyEdges, rowOf)
+  const layoutEdges = rerouteBondChildren(listDownwardEdges(familyEdges, rowOf), bondChildLower)
   const parentClusterIdsOf = groupParentClustersByChildCluster(layoutEdges, clusterOf)
-  return { clusters, parentClusterIdsOf }
+  const bondEdges = buildBondEdges(bondPairs)
+  return { clusters, parentClusterIdsOf, bondEdges }
+}
+
+/**
+ * [low] Replace a bond-child's two parent edges with a single edge from the
+ * lower partner — the descent then drops from the couple's diamond at the lower
+ * partner instead of crossing two generations from each parent.
+ */
+function rerouteBondChildren(
+  familyEdges: LineageFamilyEdge[],
+  bondChildLower: Map<string, string>,
+): LineageFamilyEdge[] {
+  return familyEdges.filter((e) => {
+    const lower = bondChildLower.get(e.childId)
+    return lower === undefined || e.parentId === lower
+  })
+}
+
+/**
+ * [low] One bond edge per drawable cross-gen pair. Both partners are already
+ * single-clusters (listDrawableBondPairs guarantees it), so the cluster id is
+ * the sim id — the lane anchors directly on each partner's medallion.
+ */
+function buildBondEdges(bondPairs: LineageCouple[]): BondEdge[] {
+  return bondPairs.map((p) => ({ a: p.a, b: p.b, romanticStatus: p.romanticStatus }))
 }
 
 /** [low] member simId → the cluster containing that sim. */

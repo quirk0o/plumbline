@@ -127,6 +127,66 @@ describe('computeLineageLayout — hanging unions', () => {
   })
 })
 
+describe('computeLineageLayout — cross-gen bonds', () => {
+  it('draws a cross-gen current couple as a bond, not per-parent lines', () => {
+    const l = computeLineageLayout(
+      [sim('sol', 1), sim('bex', 2), sim('pip', 3)],
+      [{ parentId: 'sol', childId: 'pip' }, { parentId: 'bex', childId: 'pip' }],
+      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' }],
+    )
+    expect(l.bonds).toHaveLength(1)
+    expect(l.bonds[0].points.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('carries the partner ids (id-sorted) and status on the bond', () => {
+    const l = computeLineageLayout(
+      [sim('sol', 1), sim('bex', 2)],
+      [],
+      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' }],
+    )
+    expect(l.bonds).toEqual([
+      expect.objectContaining({ a: 'bex', b: 'sol', romanticStatus: 'PARTNER' }),
+    ])
+  })
+
+  it('routes the bond endpoints at the two partners’ medallion-center height', () => {
+    const l = computeLineageLayout(
+      [sim('sol', 1), sim('bex', 2)],
+      [],
+      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' }],
+    )
+    const ys = l.bonds[0].points.map((p) => p.y)
+    expect(Math.min(...ys)).toBe(l.byId['sol'].y + CREST_ANCHORS.cy)
+    expect(Math.max(...ys)).toBe(l.byId['bex'].y + CREST_ANCHORS.cy)
+  })
+
+  it('emits no bond for a same-gen couple (that is an adjacent couple instead)', () => {
+    const l = computeLineageLayout(
+      [sim('a', 1), sim('b', 1)],
+      [],
+      [{ simAId: 'a', simBId: 'b', romanticStatus: 'PARTNER' }],
+    )
+    expect(l.bonds).toEqual([])
+    expect(l.couples).toHaveLength(1)
+  })
+
+  it('emits no bond for cross-gen EX or DATING relationships', () => {
+    const ex = computeLineageLayout(
+      [sim('a', 1), sim('b', 2)],
+      [],
+      [{ simAId: 'a', simBId: 'b', romanticStatus: 'EX_PARTNER' }],
+    )
+    expect(ex.bonds).toEqual([])
+
+    const dating = computeLineageLayout(
+      [sim('a', 1), sim('b', 2)],
+      [],
+      [{ simAId: 'a', simBId: 'b', romanticStatus: 'DATING' }],
+    )
+    expect(dating.bonds).toEqual([])
+  })
+})
+
 describe('computeLineageLayout — components and singles', () => {
   const sims = [sim('f1', 1), sim('f2', 1), sim('c1', 2), sim('g1', 1), sim('c2', 2), sim('pia', 1)]
   const familyEdges = [

@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { ReactFlowProvider, type EdgeProps } from '@xyflow/react'
-import { CoParentEdge, MarriageEdge, UnionNode, coParentPath, descentPath, descentPathWithGap } from '../flow-parts'
+import { BondEdge, CoParentEdge, MarriageEdge, UnionNode, coParentPath, descentPath, descentPathWithGap } from '../flow-parts'
 
 const edgeProps = (over: Partial<EdgeProps> = {}): EdgeProps =>
   ({ id: 'e', source: 'a', target: 'b', sourceX: 0, sourceY: 0, targetX: 100, targetY: 50, ...over }) as EdgeProps
@@ -32,6 +32,24 @@ describe('MarriageEdge', () => {
   it('renders dashed when data.dashed is true', () => {
     const { container } = render(<svg><MarriageEdge {...edgeProps({ data: { dashed: true } })} /></svg>)
     expect(container.querySelector('line')).toHaveAttribute('stroke-dasharray')
+  })
+})
+
+describe('BondEdge', () => {
+  const points = [{ x: 10, y: 20 }, { x: 10, y: 100 }, { x: 10, y: 180 }]
+  it('renders the routed polyline through the waypoints, solid by default', () => {
+    const { container } = render(
+      <svg><BondEdge {...edgeProps({ data: { points, dashed: false } })} /></svg>,
+    )
+    const path = container.querySelector('path')
+    expect(path).toHaveAttribute('d', 'M 10 20 L 10 100 L 10 180')
+    expect(path).not.toHaveAttribute('stroke-dasharray')
+  })
+  it('renders dashed when widowed', () => {
+    const { container } = render(
+      <svg><BondEdge {...edgeProps({ data: { points, dashed: true } })} /></svg>,
+    )
+    expect(container.querySelector('path')).toHaveAttribute('stroke-dasharray')
   })
 })
 

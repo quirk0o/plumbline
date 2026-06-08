@@ -109,6 +109,7 @@ enum RomanticStatus {
   DATING
   ENGAGED
   MARRIED
+  PARTNER
   EX_PARTNER
   WIDOWED
 }

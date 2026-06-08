@@ -18,7 +18,7 @@ describe('matchCouples', () => {
     expect(couples).toEqual([{ a: 'bob', b: 'z', romanticStatus: 'MARRIED' }])
   })
 
-  it('ranks MARRIED > ENGAGED > DATING > WIDOWED for the single slot', () => {
+  it('ranks MARRIED > ENGAGED > PARTNER > WIDOWED for the single slot', () => {
     const couples = matchCouples(
       [edge('bob', 'late', 'WIDOWED'), edge('bob', 'new', 'MARRIED')],
       new Set(['bob', 'late', 'new']),
@@ -49,12 +49,31 @@ describe('matchCouples', () => {
 
   it('gives each sim at most one adjacent partner', () => {
     const couples = matchCouples(
-      [edge('hub', 'w1', 'MARRIED'), edge('hub', 'w2', 'DATING')],
+      [edge('hub', 'w1', 'MARRIED'), edge('hub', 'w2', 'PARTNER')],
       new Set(['hub', 'w1', 'w2']),
       row0('hub', 'w1', 'w2'),
     )
     expect(couples).toHaveLength(1)
     expect(couples[0]).toMatchObject({ romanticStatus: 'MARRIED' })
+  })
+
+  it('treats PARTNER as a current partner that can be adjacent', () => {
+    const couples = matchCouples([edge('a', 'b', 'PARTNER')], new Set(['a', 'b']), row0('a', 'b'))
+    expect(couples).toEqual([{ a: 'a', b: 'b', romanticStatus: 'PARTNER' }])
+  })
+
+  it('ranks PARTNER above WIDOWED but below ENGAGED', () => {
+    const couples = matchCouples(
+      [edge('bob', 'wid', 'WIDOWED'), edge('bob', 'par', 'PARTNER')],
+      new Set(['bob', 'wid', 'par']),
+      row0('bob', 'wid', 'par'),
+    )
+    expect(couples).toEqual([{ a: 'bob', b: 'par', romanticStatus: 'PARTNER' }])
+  })
+
+  it('does not draw a bond for casual DATING (not an adjacency candidate)', () => {
+    const couples = matchCouples([edge('a', 'b', 'DATING')], new Set(['a', 'b']), row0('a', 'b'))
+    expect(couples).toEqual([])
   })
 })
 

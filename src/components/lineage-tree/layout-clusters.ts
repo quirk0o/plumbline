@@ -13,11 +13,11 @@ import {
   type LineagePartnerEdge,
 } from './layout-shared'
 
-/** Lower = more current. EX_PARTNER is deliberately absent. */
+/** Lower = more current. DATING (casual) and EX_PARTNER are deliberately absent. */
 const ADJACENCY_RANK: Partial<Record<RomanticStatus, number>> = {
   MARRIED: 0,
   ENGAGED: 1,
-  DATING: 2,
+  PARTNER: 2,
   WIDOWED: 3,
 }
 

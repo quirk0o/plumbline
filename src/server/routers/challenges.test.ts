@@ -1,17 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestTrackerType } from '@/test/helpers'
+import { withTestUser } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('challenges.create', () => {
-  let userId: string
-
-  beforeEach(async () => { ({ id: userId } = await createTestUser()) })
-  afterEach(async () => { await cleanupUser(userId) })
+  const ctx = withTestUser()
 
   it('creates a challenge owned by the caller', async () => {
-    const result = await authedCaller(userId).challenges.create({ name: 'My Legacy Challenge' })
-    expect(result.ownerId).toBe(userId)
+    const result = await ctx.caller.challenges.create({ name: 'My Legacy Challenge' })
+    expect(result.ownerId).toBe(ctx.userId)
     expect(await db.challenge.findUnique({ where: { id: result.id } })).not.toBeNull()
   })
 
@@ -21,18 +19,16 @@ describe('challenges.create', () => {
 })
 
 describe('challenges.addPhase', () => {
-  let userId: string
+  const ctx = withTestUser()
   let challengeId: string
 
   beforeEach(async () => {
-    ({ id: userId } = await createTestUser())
-    const c = await authedCaller(userId).challenges.create({ name: 'C' })
+    const c = await ctx.caller.challenges.create({ name: 'C' })
     challengeId = c.id
   })
-  afterEach(async () => { await cleanupUser(userId) })
 
   it('adds a generation phase to the challenge', async () => {
-    const result = await authedCaller(userId).challenges.addPhase({
+    const result = await ctx.caller.challenges.addPhase({
       challengeId,
       generationNumber: 1,
       title: 'The Founder',
@@ -54,35 +50,30 @@ describe('challenges.addPhase', () => {
 })
 
 describe('challenges.update', () => {
-  let userId: string
-
-  beforeEach(async () => { ({ id: userId } = await createTestUser()) })
-  afterEach(async () => { await cleanupUser(userId) })
+  const ctx = withTestUser()
 
   it('returns NOT_FOUND when the challenge does not exist', async () => {
     await expect(
-      authedCaller(userId).challenges.update({ id: 'nonexistent-challenge-id', name: 'New Name' })
+      ctx.caller.challenges.update({ id: 'nonexistent-challenge-id', name: 'New Name' })
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 })
 
 describe('challenges.addTracker', () => {
-  let userId: string
+  const ctx = withTestUser()
   let challengePhaseId: string
   let trackerTypeId: string
 
   beforeEach(async () => {
-    ({ id: userId } = await createTestUser())
-    const c = await authedCaller(userId).challenges.create({ name: 'C' })
-    const phase = await authedCaller(userId).challenges.addPhase({ challengeId: c.id, generationNumber: 1 })
+    const c = await ctx.caller.challenges.create({ name: 'C' })
+    const phase = await ctx.caller.challenges.addPhase({ challengeId: c.id, generationNumber: 1 })
     challengePhaseId = phase.id
-    const tt = await createTestTrackerType({ ownerId: userId })
+    const tt = await createTestTrackerType({ ownerId: ctx.userId })
     trackerTypeId = tt.id
   })
-  afterEach(async () => { await cleanupUser(userId) })
 
   it('adds a tracker to the phase', async () => {
-    const result = await authedCaller(userId).challenges.addTracker({
+    const result = await ctx.caller.challenges.addTracker({
       challengePhaseId,
       trackerTypeId,
       name: 'Max Cooking',
@@ -97,7 +88,7 @@ describe('challenges.addTracker', () => {
     try {
       const privateTrackerType = await createTestTrackerType({ ownerId: otherUser.id })
       await expect(
-        authedCaller(userId).challenges.addTracker({
+        ctx.caller.challenges.addTracker({
           challengePhaseId,
           trackerTypeId: privateTrackerType.id,
           name: 'Stolen Tracker',
@@ -111,19 +102,17 @@ describe('challenges.addTracker', () => {
 })
 
 describe('challenges.getById', () => {
-  let userId: string
+  const ctx = withTestUser()
   let challengeId: string
 
   beforeEach(async () => {
-    ({ id: userId } = await createTestUser())
-    const c = await authedCaller(userId).challenges.create({ name: 'Full Challenge' })
+    const c = await ctx.caller.challenges.create({ name: 'Full Challenge' })
     challengeId = c.id
-    await authedCaller(userId).challenges.addPhase({ challengeId, generationNumber: 1, title: 'Gen 1' })
+    await ctx.caller.challenges.addPhase({ challengeId, generationNumber: 1, title: 'Gen 1' })
   })
-  afterEach(async () => { await cleanupUser(userId) })
 
   it('returns the challenge with nested phases and trackers', async () => {
-    const result = await authedCaller(userId).challenges.getById({ id: challengeId })
+    const result = await ctx.caller.challenges.getById({ id: challengeId })
     expect(result.id).toBe(challengeId)
     expect(result.phases).toHaveLength(1)
     expect(result.phases[0].title).toBe('Gen 1')

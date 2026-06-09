@@ -1,29 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { authedCaller, unauthCaller } from '@/test/caller'
-import { createTestUser, cleanupUser } from '@/test/helpers'
+import { describe, it, expect } from 'vitest'
+import { unauthCaller } from '@/test/caller'
+import { withTestUser } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('traits.getAll', () => {
-  let userId: string
-
-  beforeEach(async () => {
-    const user = await createTestUser()
-    userId = user.id
-  })
-
-  afterEach(async () => {
-    await cleanupUser(userId)
-  })
+  const ctx = withTestUser()
 
   it('returns a non-empty array of personality traits', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.traits.getAll()
+    const result = await ctx.caller.traits.getAll()
     expect(Array.isArray(result)).toBe(true)
     expect(result.length).toBeGreaterThan(0)
   })
 
   it('includes the conflictsWith relation on every trait', async () => {
-    const result = await authedCaller(userId).traits.getAll()
+    const result = await ctx.caller.traits.getAll()
     expect(result.length).toBeGreaterThan(0)
     for (const trait of result) {
       expect(Array.isArray(trait.conflictsWith)).toBe(true)
@@ -41,8 +31,7 @@ describe('traits.getAll', () => {
     })
     if (!packLinkedTrait) return
 
-    const caller = authedCaller(userId)
-    const result = await caller.traits.getAll()
+    const result = await ctx.caller.traits.getAll()
     expect(result.map((t) => t.id)).not.toContain(packLinkedTrait.id)
   })
 
@@ -52,10 +41,9 @@ describe('traits.getAll', () => {
     })
     if (!packLinkedTrait) return
 
-    await db.userPack.create({ data: { userId, packId: packLinkedTrait.packId! } })
+    await db.userPack.create({ data: { userId: ctx.userId, packId: packLinkedTrait.packId! } })
 
-    const caller = authedCaller(userId)
-    const result = await caller.traits.getAll()
+    const result = await ctx.caller.traits.getAll()
     expect(result.map((t) => t.id)).toContain(packLinkedTrait.id)
   })
 })

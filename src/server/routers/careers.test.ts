@@ -1,23 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { authedCaller, unauthCaller } from '@/test/caller'
-import { createTestUser, cleanupUser } from '@/test/helpers'
+import { describe, it, expect } from 'vitest'
+import { unauthCaller } from '@/test/caller'
+import { withTestUser } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('careers.getAll', () => {
-  let userId: string
-
-  beforeEach(async () => {
-    const user = await createTestUser()
-    userId = user.id
-  })
-
-  afterEach(async () => {
-    await cleanupUser(userId)
-  })
+  const ctx = withTestUser()
 
   it('returns a non-empty array of careers', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.careers.getAll()
+    const result = await ctx.caller.careers.getAll()
     expect(Array.isArray(result)).toBe(true)
     expect(result.length).toBeGreaterThan(0)
   })
@@ -28,8 +18,7 @@ describe('careers.getAll', () => {
     })
     if (!packLinkedCareer) throw new Error('No pack-linked careers found. Is the DB seeded?')
 
-    const caller = authedCaller(userId)
-    const result = await caller.careers.getAll()
+    const result = await ctx.caller.careers.getAll()
     expect(result.map((c) => c.id)).not.toContain(packLinkedCareer.id)
   })
 
@@ -39,10 +28,9 @@ describe('careers.getAll', () => {
     })
     if (!packLinkedCareer) throw new Error('No pack-linked careers found. Is the DB seeded?')
 
-    await db.userPack.create({ data: { userId, packId: packLinkedCareer.packId! } })
+    await db.userPack.create({ data: { userId: ctx.userId, packId: packLinkedCareer.packId! } })
 
-    const caller = authedCaller(userId)
-    const result = await caller.careers.getAll()
+    const result = await ctx.caller.careers.getAll()
     expect(result.map((c) => c.id)).toContain(packLinkedCareer.id)
   })
 

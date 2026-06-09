@@ -1,29 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { Gender } from '@prisma/client'
-import { authedCaller, unauthCaller } from '@/test/caller'
+import { unauthCaller } from '@/test/caller'
 import {
   createTestUser,
   cleanupUser,
   createTestLegacy,
   getConflictingTraits,
 } from '@/test/helpers'
+import { withTestUser } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('legacies.create', () => {
-  let userId: string
-
-  beforeEach(async () => {
-    const user = await createTestUser()
-    userId = user.id
-  })
-
-  afterEach(async () => {
-    await cleanupUser(userId)
-  })
+  const ctx = withTestUser()
 
   it('creates a legacy and persists it to the database', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.create({ name: 'The Goth Legacy' })
+    const result = await ctx.caller.legacies.create({ name: 'The Goth Legacy' })
     expect(result.legacy.name).toBe('The Goth Legacy')
     const record = await db.legacy.findUnique({ where: { id: result.legacy.id } })
     expect(record).not.toBeNull()
@@ -31,21 +22,18 @@ describe('legacies.create', () => {
   })
 
   it('derives the slug from the legacy name', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.create({ name: 'The Caliente Legacy' })
+    const result = await ctx.caller.legacies.create({ name: 'The Caliente Legacy' })
     expect(result.legacy.slug).toBe('the-caliente-legacy')
   })
 
   it('appends -2 suffix when the base slug already exists for this user', async () => {
-    await createTestLegacy(userId, { slug: 'my-legacy' })
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.create({ name: 'My Legacy' })
+    await createTestLegacy(ctx.userId, { slug: 'my-legacy' })
+    const result = await ctx.caller.legacies.create({ name: 'My Legacy' })
     expect(result.legacy.slug).toBe('my-legacy-2')
   })
 
   it('creates a founder Sim and sets founderSimId on the legacy', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.create({
+    const result = await ctx.caller.legacies.create({
       name: 'Caliente Legacy',
       founder: { firstName: 'Nina', lastName: 'Caliente', gender: Gender.FEMALE },
     })
@@ -57,8 +45,7 @@ describe('legacies.create', () => {
   })
 
   it('founder sim gets generationNumber 1', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.create({
+    const result = await ctx.caller.legacies.create({
       name: 'Goth Legacy',
       founder: { firstName: 'Mortimer', lastName: 'Goth', gender: Gender.MALE },
     })
@@ -69,9 +56,8 @@ describe('legacies.create', () => {
 
   it('throws BAD_REQUEST when the founder has conflicting personality traits', async () => {
     const { traitA, traitB } = await getConflictingTraits()
-    const caller = authedCaller(userId)
     await expect(
-      caller.legacies.create({
+      ctx.caller.legacies.create({
         name: 'Bad Legacy',
         founder: {
           firstName: 'A',
@@ -84,8 +70,7 @@ describe('legacies.create', () => {
   })
 
   it('founds "The <LastName> Household" when foundHousehold is set', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.create({
+    const result = await ctx.caller.legacies.create({
       name: `Founder House Test ${Date.now()}`,
       founder: {
         firstName: 'Dina',
@@ -106,8 +91,7 @@ describe('legacies.create', () => {
   })
 
   it('leaves the founder unhoused when foundHousehold is not set', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.create({
+    const result = await ctx.caller.legacies.create({
       name: `Unhoused Founder Test ${Date.now()}`,
       founder: { firstName: 'Nina', lastName: 'Caliente', gender: Gender.FEMALE },
     })
@@ -129,45 +113,39 @@ describe('legacies.create', () => {
 })
 
 describe('legacies.getAll', () => {
-  let userId: string
+  const ctx = withTestUser()
   let otherUserId: string
 
   beforeEach(async () => {
-    const user = await createTestUser()
     const otherUser = await createTestUser()
-    userId = user.id
     otherUserId = otherUser.id
   })
 
   afterEach(async () => {
-    await cleanupUser(userId)
     await cleanupUser(otherUserId)
   })
 
   it('returns only the current user\'s legacies', async () => {
-    await createTestLegacy(userId, { name: 'My Legacy', slug: 'my-legacy' })
+    await createTestLegacy(ctx.userId, { name: 'My Legacy', slug: 'my-legacy' })
     await createTestLegacy(otherUserId, { name: 'Other Legacy', slug: 'other-legacy' })
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.getAll()
+    const result = await ctx.caller.legacies.getAll()
     expect(result).toHaveLength(1)
     expect(result[0].name).toBe('My Legacy')
   })
 
   it('includes founderSim fields when a founder is set', async () => {
-    const caller = authedCaller(userId)
-    await caller.legacies.create({
+    await ctx.caller.legacies.create({
       name: 'Goth Legacy',
       founder: { firstName: 'Mortimer', lastName: 'Goth', gender: Gender.MALE },
     })
-    const result = await caller.legacies.getAll()
+    const result = await ctx.caller.legacies.getAll()
     expect(result[0].founderSim).not.toBeNull()
     expect(result[0].founderSim?.firstName).toBe('Mortimer')
     expect(result[0].founderSim?.lastName).toBe('Goth')
   })
 
   it('returns an empty array when the user has no legacies', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.legacies.getAll()
+    const result = await ctx.caller.legacies.getAll()
     expect(result).toEqual([])
   })
 

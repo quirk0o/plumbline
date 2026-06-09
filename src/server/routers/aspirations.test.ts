@@ -1,23 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { authedCaller, unauthCaller } from '@/test/caller'
-import { createTestUser, cleanupUser } from '@/test/helpers'
+import { describe, it, expect } from 'vitest'
+import { unauthCaller } from '@/test/caller'
+import { withTestUser } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('aspirations.getAll', () => {
-  let userId: string
-
-  beforeEach(async () => {
-    const user = await createTestUser()
-    userId = user.id
-  })
-
-  afterEach(async () => {
-    await cleanupUser(userId)
-  })
+  const ctx = withTestUser()
 
   it('returns a non-empty array of aspirations', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.aspirations.getAll()
+    const result = await ctx.caller.aspirations.getAll()
     expect(Array.isArray(result)).toBe(true)
     expect(result.length).toBeGreaterThan(0)
   })
@@ -28,8 +18,7 @@ describe('aspirations.getAll', () => {
     })
     if (!packLinkedAspiration) throw new Error('No pack-linked aspirations found. Is the DB seeded?')
 
-    const caller = authedCaller(userId)
-    const result = await caller.aspirations.getAll()
+    const result = await ctx.caller.aspirations.getAll()
     expect(result.map((a) => a.id)).not.toContain(packLinkedAspiration.id)
   })
 
@@ -39,10 +28,9 @@ describe('aspirations.getAll', () => {
     })
     if (!packLinkedAspiration) throw new Error('No pack-linked aspirations found. Is the DB seeded?')
 
-    await db.userPack.create({ data: { userId, packId: packLinkedAspiration.packId! } })
+    await db.userPack.create({ data: { userId: ctx.userId, packId: packLinkedAspiration.packId! } })
 
-    const caller = authedCaller(userId)
-    const result = await caller.aspirations.getAll()
+    const result = await ctx.caller.aspirations.getAll()
     expect(result.map((a) => a.id)).toContain(packLinkedAspiration.id)
   })
 

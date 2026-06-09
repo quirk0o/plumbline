@@ -208,7 +208,7 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     expect(l.bonds).toHaveLength(1)
     const bond = l.bonds[0]
     const gjCenterX = l.byId['gj'].x + CREST_ANCHORS.cx
-    const gjRightEdge = l.byId['gj'].x + NODE_WIDTH
+    const gjRightEdge = l.byId['gj'].x + CREST_ANCHORS.right
 
     // No bond point runs on gj's center column (where its parental descent lives).
     expect(bond.points.some((p) => p.x === gjCenterX)).toBe(false)
@@ -224,11 +224,13 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     expect(p1.x).toBe(p2.x)
     expect(p1.x).toBeGreaterThan(gjRightEdge)
 
-    // First/last points attach to the partners' right edges at center height.
+    // First/last points attach to the partners' medallion right edges (the
+    // visible circle edge, CREST_ANCHORS.right — NOT the node-box edge), at
+    // medallion-center height, so the bracket actually meets each crest.
     const upper = l.byId['jt'].y < l.byId['gj'].y ? l.byId['jt'] : l.byId['gj']
     const lower = l.byId['jt'].y < l.byId['gj'].y ? l.byId['gj'] : l.byId['jt']
-    expect(p0).toEqual({ x: upper.x + NODE_WIDTH, y: upper.y + CREST_ANCHORS.cy })
-    expect(p3).toEqual({ x: lower.x + NODE_WIDTH, y: lower.y + CREST_ANCHORS.cy })
+    expect(p0).toEqual({ x: upper.x + CREST_ANCHORS.right, y: upper.y + CREST_ANCHORS.cy })
+    expect(p3).toEqual({ x: lower.x + CREST_ANCHORS.right, y: lower.y + CREST_ANCHORS.cy })
 
     // The right-gutter lane must not be clipped by the viewBox.
     expect(l.viewBox.width).toBeGreaterThanOrEqual(p1.x + TREE_PADDING)

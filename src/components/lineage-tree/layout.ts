@@ -145,14 +145,15 @@ function isOnColumn(
  * any descent (descents make their vertical approach on column CENTERS).
  */
 function sideBracketPoints(upper: PositionedNode, lower: PositionedNode): { x: number; y: number }[] {
-  const laneX = Math.max(upper.x, lower.x) + NODE_WIDTH + BOND_LANE_GUTTER
+  const rightEdge = (n: PositionedNode) => n.x + CREST_ANCHORS.right
+  const laneX = Math.max(rightEdge(upper), rightEdge(lower)) + BOND_LANE_GUTTER
   const upperY = upper.y + CREST_ANCHORS.cy
   const lowerY = lower.y + CREST_ANCHORS.cy
   return [
-    { x: upper.x + NODE_WIDTH, y: upperY },
+    { x: rightEdge(upper), y: upperY },
     { x: laneX, y: upperY },
     { x: laneX, y: lowerY },
-    { x: lower.x + NODE_WIDTH, y: lowerY },
+    { x: rightEdge(lower), y: lowerY },
   ]
 }
 

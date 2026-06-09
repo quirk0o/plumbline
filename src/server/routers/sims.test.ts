@@ -920,6 +920,16 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
     expect(reopened.endedAt).toBeNull()
   })
 
+  it('updateSocialRelationship coerces an ISO-string endedAt (the over-the-wire shape; no tRPC transformer)', async () => {
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.MARRIED })
+    // httpBatchLink JSON-serialises a Date to an ISO string; the input must coerce it back.
+    const iso = '2026-03-03T00:00:00.000Z'
+    const ended = await authedCaller(userId).sims.updateSocialRelationship({
+      simAId, simBId, romanticStatus: RomanticStatus.MARRIED, endedAt: iso as unknown as Date,
+    })
+    expect(ended.endedAt?.toISOString()).toBe(iso)
+  })
+
   it('removes the relationship', async () => {
     await db.socialRelationship.create({
       data: { simAId, simBId, romanticStatus: RomanticStatus.NONE, friendshipScore: 0, romanceScore: 0 },

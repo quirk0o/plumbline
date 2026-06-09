@@ -708,6 +708,10 @@
   color: var(--green);
   cursor: pointer;
   appearance: none;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-base);
 }
 
 .endRelBtn:hover {

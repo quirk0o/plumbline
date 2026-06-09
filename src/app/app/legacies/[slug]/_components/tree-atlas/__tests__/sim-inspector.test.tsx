@@ -104,4 +104,29 @@ describe('SimInspector', () => {
     render(<SimInspector {...baseProps} founderSimId="someone-else" />)
     expect(screen.getByText(/selected · gen ii/i)).toBeInTheDocument()
   })
+
+  const partnerRow = (status: string, endedAt: string | null) => ({
+    romanticStatus: status,
+    endedAt,
+    simB: { id: 'mate', firstName: 'Marnie', lastName: 'Mate', imageUrl: null },
+  })
+
+  it('surfaces a current partner under the Partner heading', () => {
+    mockUseQuery.mockReturnValue({
+      data: { ...SIM, socialRelationshipsA: [partnerRow('MARRIED', null)], socialRelationshipsB: [] },
+      isLoading: false, isError: false,
+    })
+    render(<SimInspector {...baseProps} />)
+    expect(screen.getByText('Partner')).toBeInTheDocument()
+    expect(screen.getByText('Marnie Mate')).toBeInTheDocument()
+  })
+
+  it('does NOT surface an ended (divorced) bond as the current partner', () => {
+    mockUseQuery.mockReturnValue({
+      data: { ...SIM, socialRelationshipsA: [partnerRow('MARRIED', '2026-01-01T00:00:00.000Z')], socialRelationshipsB: [] },
+      isLoading: false, isError: false,
+    })
+    render(<SimInspector {...baseProps} />)
+    expect(screen.queryByText('Marnie Mate')).not.toBeInTheDocument()
+  })
 })

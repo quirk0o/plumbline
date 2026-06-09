@@ -25,6 +25,13 @@ export function FamilyTreeMini({ simId }: Props) {
     },
     [hrefById, router],
   )
+  // tRPC serialises endedAt as an ISO string; the layout type is Date | null,
+  // so revive it at the client boundary. Memoised so toFlowGraph doesn't re-run
+  // the full layout on every render (matches the tree-atlas surface).
+  const partnerEdges = useMemo(
+    () => (data?.partnerEdges ?? []).map((e) => ({ ...e, endedAt: e.endedAt ? new Date(e.endedAt) : null })),
+    [data],
+  )
 
   if (isLoading) {
     return (
@@ -55,12 +62,7 @@ export function FamilyTreeMini({ simId }: Props) {
         <LineageFlow
           sims={data.sims}
           familyEdges={data.familyEdges}
-          // tRPC serialises endedAt as an ISO string; the layout type is
-          // Date | null, so revive it at the client boundary.
-          partnerEdges={data.partnerEdges.map((e) => ({
-            ...e,
-            endedAt: e.endedAt ? new Date(e.endedAt) : null,
-          }))}
+          partnerEdges={partnerEdges}
           focusSimId={simId}
           legacyName={focusedSim?.lastName}
           onSelectSim={handleSelect}

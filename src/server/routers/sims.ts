@@ -608,7 +608,10 @@ export const simsRouter = router({
         simAId: z.string(),
         simBId: z.string(),
         romanticStatus: z.nativeEnum(RomanticStatus).default('DATING'),
-        endedAt: z.date().nullable().optional(),
+        // coerce: tRPC's httpBatchLink has no transformer, so a Date arrives as
+        // an ISO string over the wire; coerce it back. nullable() short-circuits
+        // an explicit null (clear) before coercion runs.
+        endedAt: z.coerce.date().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -649,7 +652,10 @@ export const simsRouter = router({
         simAId: z.string(),
         simBId: z.string(),
         romanticStatus: z.nativeEnum(RomanticStatus),
-        endedAt: z.date().nullable().optional(),
+        // coerce: tRPC's httpBatchLink has no transformer, so a Date arrives as
+        // an ISO string over the wire; coerce it back. nullable() short-circuits
+        // an explicit null (clear) before coercion runs.
+        endedAt: z.coerce.date().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

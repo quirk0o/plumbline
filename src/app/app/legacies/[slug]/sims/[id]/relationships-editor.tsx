@@ -248,6 +248,12 @@ export function RelationshipsEditor({
               <button
                 type="button"
                 className={styles.endRelBtn}
+                data-testid={`end-relationship-btn-${rel.sim.id}`}
+                aria-label={
+                  rel.romanticStatus === RomanticStatus.MARRIED
+                    ? `Divorce ${rel.sim.firstName}`
+                    : `End relationship with ${rel.sim.firstName}`
+                }
                 onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEndChange(rel, new Date()) }}
               >
                 {rel.romanticStatus === RomanticStatus.MARRIED ? 'Divorce' : 'End relationship'}
@@ -257,6 +263,8 @@ export function RelationshipsEditor({
               <button
                 type="button"
                 className={styles.endRelBtn}
+                data-testid={`reopen-relationship-btn-${rel.sim.id}`}
+                aria-label={`Reopen relationship with ${rel.sim.firstName}`}
                 onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEndChange(rel, null) }}
               >
                 Reopen

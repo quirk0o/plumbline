@@ -58,10 +58,12 @@ export function SimInspector({ simId, legacySlug, founderSimId, onClose }: SimIn
   const parents = sim?.childOf?.map((r) => r.parent) ?? []
   const partner =
     [
-      ...(sim?.socialRelationshipsA ?? []).map((r) => ({ status: r.romanticStatus, p: r.simB })),
-      ...(sim?.socialRelationshipsB ?? []).map((r) => ({ status: r.romanticStatus, p: r.simA })),
+      ...(sim?.socialRelationshipsA ?? []).map((r) => ({ status: r.romanticStatus, endedAt: r.endedAt, p: r.simB })),
+      ...(sim?.socialRelationshipsB ?? []).map((r) => ({ status: r.romanticStatus, endedAt: r.endedAt, p: r.simA })),
     ]
-      .filter((r) => PARTNER_STATUSES.includes(r.status))
+      // Exclude deliberately-ended bonds (divorce / break-up); a widowed spouse
+      // (endedAt === null, deceased partner) is still a current partner and stays.
+      .filter((r) => r.endedAt === null && PARTNER_STATUSES.includes(r.status))
       .sort((a, b) => PARTNER_STATUSES.indexOf(a.status) - PARTNER_STATUSES.indexOf(b.status))[0]
       ?.p ?? null
 

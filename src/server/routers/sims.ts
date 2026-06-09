@@ -6,6 +6,7 @@ import { assertNoTraitConflicts } from './validate-traits'
 import { recomputeLegacyTrackers } from '../lib/trackerComputation'
 import { imageUrlSchema } from '../lib/image-url-schema'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/ownership'
+import { deriveGeneration, recomputeGenerations } from '../lib/generation'
 import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {
@@ -66,18 +67,23 @@ export const simsRouter = router({
         if (parents.length !== input.parentIds.length) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'One or more parentIds do not belong to this legacy' })
         }
-        if (!generationNumber) {
-          const parentGens = parents.map((p) => p.generationNumber).filter((g): g is number => g !== null)
-          if (parentGens.length > 0) generationNumber = Math.min(...parentGens) + 1
-        }
+        // A sim with parents is derived; derivation always wins.
+        const parentGens = parents.map((p) => p.generationNumber).filter((g): g is number => g !== null)
+        generationNumber = parentGens.length > 0 ? deriveGeneration(parentGens) : null
       }
 
-      // A legacy with no founder adopts its first parentless sim as the founder
-      // (matching the creation wizard), so the "Add your founder" affordance
-      // actually establishes the lineage root. Founders are always generation 1
-      // (domain invariant); only fill it in when no generation was specified.
+      // A legacy with no founder adopts its first parentless sim as the founder.
       const willBeFounder = !legacy.founderSimId && parents.length === 0
-      if (willBeFounder && generationNumber === null) generationNumber = 1
+
+      if (generationNumber === null) {
+        // Parentless sims (founders, partners, separate subtree roots) are roots:
+        // default to the legacy's current latest generation, or 1 when empty.
+        const agg = await ctx.db.sim.aggregate({
+          where: { legacyId: input.legacyId },
+          _max: { generationNumber: true },
+        })
+        generationNumber = agg._max.generationNumber ?? 1
+      }
 
       return ctx.db.$transaction(async (tx) => {
         const newSim = await tx.sim.create({
@@ -149,7 +155,7 @@ export const simsRouter = router({
             include: { child: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
           },
           childOf: {
-            include: { parent: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
+            include: { parent: { select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true } } },
           },
           socialRelationshipsA: {
             include: { simB: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
@@ -541,31 +547,16 @@ export const simsRouter = router({
       if (parent.legacyId !== child.legacyId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
       }
-      const { created, derivedGeneration } = await ctx.db.$transaction(async (tx) => {
-        const created = await tx.familyRelationship.create({
+      await ctx.db.$transaction(async (tx) => {
+        await tx.familyRelationship.create({
           data: { parentId: input.parentId, childId: input.childId, type: input.type },
         })
-        let derivedGeneration = false
-        if (child.generationNumber === null) {
-          const allParents = await tx.familyRelationship.findMany({
-            where: { childId: input.childId },
-            select: { parent: { select: { generationNumber: true } } },
-          })
-          const parentGens = allParents
-            .map((r) => r.parent.generationNumber)
-            .filter((g): g is number => g !== null)
-          if (parentGens.length > 0) {
-            await tx.sim.update({
-              where: { id: input.childId },
-              data: { generationNumber: Math.min(...parentGens) + 1 },
-            })
-            derivedGeneration = true
-          }
-        }
-        return { created, derivedGeneration }
+        await recomputeGenerations(tx, child.legacyId)
       })
-      if (derivedGeneration) void recomputeLegacyTrackers(ctx.db, child.legacyId)
-      return created
+      void recomputeLegacyTrackers(ctx.db, child.legacyId)
+      return ctx.db.familyRelationship.findUniqueOrThrow({
+        where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
+      })
     }),
 
   removeFamilyRelationship: protectedProcedure
@@ -573,33 +564,14 @@ export const simsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const [, child] = await assertSimsOwned(ctx.db, [input.parentId, input.childId], userId)
-      const { deleted, generationChanged } = await ctx.db.$transaction(async (tx) => {
-        const deleted = await tx.familyRelationship.delete({
+      await ctx.db.$transaction(async (tx) => {
+        await tx.familyRelationship.delete({
           where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
         })
-        const remainingParents = await tx.familyRelationship.findMany({
-          where: { childId: input.childId },
-          select: { parent: { select: { generationNumber: true } } },
-        })
-        const parentGens = remainingParents
-          .map((r) => r.parent.generationNumber)
-          .filter((g): g is number => g !== null)
-        let newGen: number | null
-        if (parentGens.length > 0) {
-          newGen = Math.min(...parentGens) + 1
-        } else if (remainingParents.length === 0) {
-          newGen = null
-        } else {
-          return { deleted, generationChanged: false }
-        }
-        if (newGen !== child.generationNumber) {
-          await tx.sim.update({ where: { id: input.childId }, data: { generationNumber: newGen } })
-          return { deleted, generationChanged: true }
-        }
-        return { deleted, generationChanged: false }
+        await recomputeGenerations(tx, child.legacyId)
       })
-      if (generationChanged) void recomputeLegacyTrackers(ctx.db, child.legacyId)
-      return deleted
+      void recomputeLegacyTrackers(ctx.db, child.legacyId)
+      return { parentId: input.parentId, childId: input.childId }
     }),
 
   addSocialRelationship: protectedProcedure
@@ -621,10 +593,20 @@ export const simsRouter = router({
       const userId = ctx.session.user.id
       const [simA, simB] = await assertSimsOwned(ctx.db, [input.simAId, input.simBId], userId)
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
-      const noGenSim =
-        simA.generationNumber === null && simB.generationNumber !== null ? simA
-        : simB.generationNumber === null && simA.generationNumber !== null ? simB
-        : null
+
+      // Partner adoption: when exactly one sim is a root (no parents) and the
+      // other is derived (has parents), the root adopts the derived sim's
+      // generation. Overridable later via the detail page.
+      const [aParents, bParents] = await Promise.all([
+        ctx.db.familyRelationship.count({ where: { childId: simA.id } }),
+        ctx.db.familyRelationship.count({ where: { childId: simB.id } }),
+      ])
+      const aIsRoot = aParents === 0
+      const bIsRoot = bParents === 0
+      let adopt: { id: string; generationNumber: number } | null = null
+      if (aIsRoot && !bIsRoot) adopt = { id: simA.id, generationNumber: simB.generationNumber }
+      else if (bIsRoot && !aIsRoot) adopt = { id: simB.id, generationNumber: simA.generationNumber }
+
       const created = await ctx.db.$transaction(async (tx) => {
         const created = await tx.socialRelationship.create({
           data: {
@@ -636,13 +618,13 @@ export const simsRouter = router({
             romanceScore: 0,
           },
         })
-        if (noGenSim !== null) {
-          const gen = (noGenSim === simA ? simB : simA).generationNumber!
-          await tx.sim.update({ where: { id: noGenSim.id }, data: { generationNumber: gen } })
+        if (adopt) {
+          await tx.sim.update({ where: { id: adopt.id }, data: { generationNumber: adopt.generationNumber } })
+          await recomputeGenerations(tx, simA.legacyId)
         }
         return created
       })
-      if (noGenSim !== null) void recomputeLegacyTrackers(ctx.db, noGenSim.legacyId)
+      if (adopt) void recomputeLegacyTrackers(ctx.db, simA.legacyId)
       return created
     }),
 

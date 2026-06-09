@@ -14,6 +14,10 @@ import type { RomanticStatus } from '@prisma/client'
 const edge = (a: string, b: string, romanticStatus: RomanticStatus = 'MARRIED'): LineagePartnerEdge => ({
   simAId: a, simBId: b, romanticStatus, endedAt: null,
 })
+/** A deliberately-ended bond (a break-up / divorce — an "ex"). */
+const endedEdge = (a: string, b: string, romanticStatus: RomanticStatus = 'MARRIED'): LineagePartnerEdge => ({
+  simAId: a, simBId: b, romanticStatus, endedAt: new Date('2026-01-01'),
+})
 const sim = (id: string, generationNumber: number | null): LayoutSim => ({ id, generationNumber })
 
 function expectNoRowOverlap(layout: ReturnType<typeof computeLineageLayout>) {
@@ -68,16 +72,16 @@ describe('computeLineageLayout — couples', () => {
     const l = computeLineageLayout(
       [sim('alice', 1), sim('bob', 1), sim('dana', 1)],
       [],
-      [edge('alice', 'bob', 'EX_PARTNER'), edge('bob', 'dana', 'MARRIED')],
+      [endedEdge('alice', 'bob', 'MARRIED'), edge('bob', 'dana', 'MARRIED')],
     )
     expect(l.couples).toEqual([{ a: 'bob', b: 'dana', romanticStatus: 'MARRIED' }])
   })
-  it('keeps widowed couples adjacent', () => {
-    const l = computeLineageLayout([sim('ann', 1), sim('joe', 1)], [], [edge('ann', 'joe', 'WIDOWED')])
-    expect(l.couples).toEqual([{ a: 'ann', b: 'joe', romanticStatus: 'WIDOWED' }])
+  it('keeps a current married couple adjacent (widowhood does not unseat them)', () => {
+    const l = computeLineageLayout([sim('ann', 1), sim('joe', 1)], [], [edge('ann', 'joe', 'MARRIED')])
+    expect(l.couples).toEqual([{ a: 'ann', b: 'joe', romanticStatus: 'MARRIED' }])
   })
-  it('emits no couple for ex-only pairs', () => {
-    const l = computeLineageLayout([sim('a', 1), sim('b', 1)], [], [edge('a', 'b', 'EX_PARTNER')])
+  it('emits no couple for ended (ex) pairs', () => {
+    const l = computeLineageLayout([sim('a', 1), sim('b', 1)], [], [endedEdge('a', 'b', 'MARRIED')])
     expect(l.couples).toEqual([])
   })
 })
@@ -90,7 +94,7 @@ describe('computeLineageLayout — hanging unions', () => {
     { parentId: 'bob', childId: 'evan' },
     { parentId: 'dana', childId: 'evan' },
   ]
-  const layout = computeLineageLayout(sims, familyEdges, [edge('alice', 'bob', 'EX_PARTNER'), edge('bob', 'dana', 'MARRIED')])
+  const layout = computeLineageLayout(sims, familyEdges, [endedEdge('alice', 'bob', 'MARRIED'), edge('bob', 'dana', 'MARRIED')])
 
   it('one hanging union for the non-adjacent co-parent pair', () => {
     expect(layout.couples).toEqual([{ a: 'bob', b: 'dana', romanticStatus: 'MARRIED' }])
@@ -104,7 +108,7 @@ describe('computeLineageLayout — hanging unions', () => {
     expect(u.y).toBe(layout.byId['alice'].y + HANGING_UNION_BASE_OFFSET)
   })
   it('no hanging union for childless exes', () => {
-    const l = computeLineageLayout([sim('a', 1), sim('b', 1)], [], [edge('a', 'b', 'EX_PARTNER')])
+    const l = computeLineageLayout([sim('a', 1), sim('b', 1)], [], [endedEdge('a', 'b', 'MARRIED')])
     expect(l.hangingUnions).toEqual([])
   })
   it('stacks two same-row hanging unions into distinct lanes', () => {
@@ -175,11 +179,11 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     expect(l.couples).toHaveLength(1)
   })
 
-  it('emits no bond for cross-gen EX or DATING relationships', () => {
+  it('emits no bond for cross-gen ended (ex) or DATING relationships', () => {
     const ex = computeLineageLayout(
       [sim('a', 1), sim('b', 2)],
       [],
-      [{ simAId: 'a', simBId: 'b', romanticStatus: 'EX_PARTNER', endedAt: null }],
+      [endedEdge('a', 'b', 'MARRIED')],
     )
     expect(ex.bonds).toEqual([])
 

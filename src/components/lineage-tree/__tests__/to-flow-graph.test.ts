@@ -13,6 +13,7 @@ const sim = (id: string, gen: number | null, extra: Partial<LineageFlowSim> = {}
   generationNumber: gen,
   lifeStage: 'ADULT',
   isHeir: false,
+  isDeceased: false,
   ...extra,
 })
 
@@ -186,12 +187,12 @@ describe('toFlowGraph', () => {
   })
 
   describe('marriage edge styling', () => {
-    it('marks current bonds solid', () => {
+    it('marks bonds with both partners alive solid', () => {
       expect(graph.edges.find((e) => e.type === 'marriage')!.data).toMatchObject({ dashed: false })
     })
-    it('marks widowed bonds dashed', () => {
-      const s = [sim('ann', 1), sim('joe', 1)]
-      const l = computeLineageLayout(s, [], [{ simAId: 'ann', simBId: 'joe', romanticStatus: 'WIDOWED' as const, endedAt: null }])
+    it('dashes a marriage bond when a partner is deceased (widowed)', () => {
+      const s = [sim('ann', 1), sim('joe', 1, { isDeceased: true })]
+      const l = computeLineageLayout(s, [], [{ simAId: 'ann', simBId: 'joe', romanticStatus: 'MARRIED' as const, endedAt: null }])
       const g = toFlowGraph(l, s, [], {})
       expect(g.edges.find((e) => e.type === 'marriage')!.data).toMatchObject({ dashed: true })
     })
@@ -248,7 +249,7 @@ describe('toFlowGraph — hanging unions', () => {
   const hSims = [sim('alice', 1), sim('bob', 1), sim('dana', 1), sim('carol', 2)]
   const hFamily = [{ parentId: 'alice', childId: 'carol' }, { parentId: 'bob', childId: 'carol' }]
   const hPartners = [
-    { simAId: 'alice', simBId: 'bob', romanticStatus: 'EX_PARTNER' as const, endedAt: null },
+    { simAId: 'alice', simBId: 'bob', romanticStatus: 'MARRIED' as const, endedAt: new Date('2026-01-01') },
     { simAId: 'bob', simBId: 'dana', romanticStatus: 'MARRIED' as const, endedAt: null },
   ]
   const hLayout = computeLineageLayout(hSims, hFamily, hPartners)
@@ -356,12 +357,12 @@ describe('toFlowGraph — cross-gen bonds', () => {
     expect(data.points.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('marks current bonds solid and widowed bonds dashed', () => {
+  it('marks bonds with both partners alive solid and widowed (deceased-partner) bonds dashed', () => {
     const current = bGraph.edges.find((e) => e.type === 'bond')!
     expect(current.data).toMatchObject({ dashed: false })
 
-    const wSims = [sim('a', 1), sim('b', 2)]
-    const wLayout = computeLineageLayout(wSims, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'WIDOWED' as const, endedAt: null }])
+    const wSims = [sim('a', 1), sim('b', 2, { isDeceased: true })]
+    const wLayout = computeLineageLayout(wSims, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'MARRIED' as const, endedAt: null }])
     const wGraph = toFlowGraph(wLayout, wSims, [], {})
     expect(wGraph.edges.find((e) => e.type === 'bond')!.data).toMatchObject({ dashed: true })
   })

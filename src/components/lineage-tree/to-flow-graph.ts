@@ -46,6 +46,7 @@ export type LineageFlowSim = {
   generationNumber: number | null
   lifeStage: LifeStage
   isHeir: boolean
+  isDeceased: boolean
 }
 
 export type CrestNodeData = {
@@ -323,6 +324,16 @@ function groupParentsByChild(
   return parentsByChild
 }
 
+/**
+ * [low] A current couple is "widowed" — and its bond dashes — when either
+ * partner is deceased. Ended bonds never reach the layout's couples/bonds
+ * (layout-clusters filters them out), so an adjacent/bonded couple with a dead
+ * member is a widowhood, not a break-up.
+ */
+function coupleIsWidowed(aId: string, bId: string, simById: Map<string, LineageFlowSim>): boolean {
+  return simById.get(aId)?.isDeceased === true || simById.get(bId)?.isDeceased === true
+}
+
 /** [low] Bonds only between placed, present couples; left medallion is source. */
 function buildMarriageEdges(layout: LineageLayout, simById: Map<string, LineageFlowSim>): Edge[] {
   return layout.couples.flatMap((couple) => {
@@ -330,20 +341,20 @@ function buildMarriageEdges(layout: LineageLayout, simById: Map<string, LineageF
     const pb = layout.byId[couple.b]
     if (!pa || !pb) return []
     if (!simById.has(couple.a) || !simById.has(couple.b)) return []
-    return [marriageEdge(couple, pa.x <= pb.x)]
+    return [marriageEdge(couple, pa.x <= pb.x, coupleIsWidowed(couple.a, couple.b, simById))]
   })
 }
 
 /**
  * [low] One routed amber polyline per cross-gen bond, between placed, present
  * partners. The edge carries the canvas-space waypoints; the BondEdge renderer
- * draws them as a polyline. Dashed only when widowed.
+ * draws them as a polyline. Dashed only when widowed (a deceased partner).
  */
 function buildBondEdges(layout: LineageLayout, simById: Map<string, LineageFlowSim>): Edge[] {
   return layout.bonds.flatMap((bond) => {
     if (!layout.byId[bond.a] || !layout.byId[bond.b]) return []
     if (!simById.has(bond.a) || !simById.has(bond.b)) return []
-    return [bondEdge(bond)]
+    return [bondEdge(bond, coupleIsWidowed(bond.a, bond.b, simById))]
   })
 }
 
@@ -481,8 +492,8 @@ function descentEdge(
   }
 }
 
-/** [constructor] Solid for current bonds, dashed for widowed. */
-function marriageEdge(couple: LineageCouple, aIsLeft: boolean): Edge {
+/** [constructor] Solid for current bonds, dashed for widowed (a deceased partner). */
+function marriageEdge(couple: LineageCouple, aIsLeft: boolean, dashed: boolean): Edge {
   const [left, right] = aIsLeft ? [couple.a, couple.b] : [couple.b, couple.a]
   return {
     id: `marriage-${couple.a}-${couple.b}`,
@@ -492,7 +503,7 @@ function marriageEdge(couple: LineageCouple, aIsLeft: boolean): Edge {
     target: right,
     targetHandle: 'left',
     focusable: false,
-    data: { dashed: couple.romanticStatus === 'WIDOWED' } satisfies MarriageEdgeData,
+    data: { dashed } satisfies MarriageEdgeData,
     ...A11Y_HIDDEN,
   }
 }
@@ -502,16 +513,16 @@ function marriageEdge(couple: LineageCouple, aIsLeft: boolean): Edge {
  * waypoints already live in canvas space, so the edge's source/target handles
  * are unused for geometry — the renderer draws straight from `points`. Source
  * and target are the two partners so xyflow still treats it as a real edge.
- * Dashed only when widowed.
+ * Dashed only when widowed (a deceased partner).
  */
-function bondEdge(bond: BondPath): Edge {
+function bondEdge(bond: BondPath, dashed: boolean): Edge {
   return {
     id: `bond-${bond.a}-${bond.b}`,
     type: 'bond',
     source: bond.a,
     target: bond.b,
     focusable: false,
-    data: { points: bond.points, dashed: bond.romanticStatus === 'WIDOWED' } satisfies BondEdgeData,
+    data: { points: bond.points, dashed } satisfies BondEdgeData,
     ...A11Y_HIDDEN,
   }
 }

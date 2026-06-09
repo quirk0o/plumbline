@@ -14,6 +14,7 @@ const sim: LineageFlowSim = {
   generationNumber: 2,
   lifeStage: 'TEEN',
   isHeir: false,
+  isDeceased: false,
 }
 
 const data = (overrides: Partial<CrestNodeData> = {}): CrestNodeData => ({

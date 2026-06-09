@@ -6,38 +6,42 @@ import type { RomanticStatus } from '@prisma/client'
 const edge = (a: string, b: string, romanticStatus: RomanticStatus): LineagePartnerEdge => ({
   simAId: a, simBId: b, romanticStatus, endedAt: null,
 })
+/** A deliberately-ended bond (a break-up / divorce — an "ex"). */
+const endedEdge = (a: string, b: string, romanticStatus: RomanticStatus): LineagePartnerEdge => ({
+  simAId: a, simBId: b, romanticStatus, endedAt: new Date('2026-01-01'),
+})
 const row0 = (...ids: string[]) => new Map<string, number>(ids.map((id) => [id, 0]))
 
 describe('matchCouples', () => {
   it('prefers the current spouse over an ex (never "first partner wins")', () => {
     const couples = matchCouples(
-      [edge('bob', 'a', 'EX_PARTNER'), edge('bob', 'z', 'MARRIED')],
+      [endedEdge('bob', 'a', 'MARRIED'), edge('bob', 'z', 'MARRIED')],
       new Set(['a', 'bob', 'z']),
       row0('a', 'bob', 'z'),
     )
     expect(couples).toEqual([{ a: 'bob', b: 'z', romanticStatus: 'MARRIED' }])
   })
 
-  it('ranks MARRIED > ENGAGED > PARTNER > WIDOWED for the single slot', () => {
+  it('ranks MARRIED above ENGAGED for the single slot', () => {
     const couples = matchCouples(
-      [edge('bob', 'late', 'WIDOWED'), edge('bob', 'new', 'MARRIED')],
-      new Set(['bob', 'late', 'new']),
-      row0('bob', 'late', 'new'),
+      [edge('bob', 'eng', 'ENGAGED'), edge('bob', 'new', 'MARRIED')],
+      new Set(['bob', 'eng', 'new']),
+      row0('bob', 'eng', 'new'),
     )
     expect(couples).toEqual([{ a: 'bob', b: 'new', romanticStatus: 'MARRIED' }])
   })
 
-  it('keeps a widowed-only pair adjacent', () => {
+  it('keeps a current married couple adjacent (widowhood does not unseat them)', () => {
     const couples = matchCouples(
-      [edge('ann', 'joe', 'WIDOWED')],
+      [edge('ann', 'joe', 'MARRIED')],
       new Set(['ann', 'joe']),
       row0('ann', 'joe'),
     )
-    expect(couples).toEqual([{ a: 'ann', b: 'joe', romanticStatus: 'WIDOWED' }])
+    expect(couples).toEqual([{ a: 'ann', b: 'joe', romanticStatus: 'MARRIED' }])
   })
 
-  it('never pairs exes', () => {
-    const couples = matchCouples([edge('a', 'b', 'EX_PARTNER')], new Set(['a', 'b']), row0('a', 'b'))
+  it('an ended relationship never claims an adjacency slot', () => {
+    const couples = matchCouples([endedEdge('a', 'b', 'MARRIED')], new Set(['a', 'b']), row0('a', 'b'))
     expect(couples).toEqual([])
   })
 
@@ -62,13 +66,13 @@ describe('matchCouples', () => {
     expect(couples).toEqual([{ a: 'a', b: 'b', romanticStatus: 'PARTNER' }])
   })
 
-  it('ranks PARTNER above WIDOWED but below ENGAGED', () => {
+  it('ranks ENGAGED above PARTNER for the single slot', () => {
     const couples = matchCouples(
-      [edge('bob', 'wid', 'WIDOWED'), edge('bob', 'par', 'PARTNER')],
-      new Set(['bob', 'wid', 'par']),
-      row0('bob', 'wid', 'par'),
+      [edge('bob', 'par', 'PARTNER'), edge('bob', 'eng', 'ENGAGED')],
+      new Set(['bob', 'par', 'eng']),
+      row0('bob', 'par', 'eng'),
     )
-    expect(couples).toEqual([{ a: 'bob', b: 'par', romanticStatus: 'PARTNER' }])
+    expect(couples).toEqual([{ a: 'bob', b: 'eng', romanticStatus: 'ENGAGED' }])
   })
 
   it('does not draw a bond for casual DATING (not an adjacency candidate)', () => {
@@ -84,10 +88,10 @@ describe('crossGenCurrentPairs', () => {
     expect(pairs).toEqual([{ a: 'bex', b: 'sol', romanticStatus: 'PARTNER' }])
   })
 
-  it('excludes DATING and EX from cross-gen bonds', () => {
+  it('excludes DATING and ended bonds from cross-gen bonds', () => {
     const rowOf = new Map<string, number>([['a', 0], ['b', 1]])
     expect(crossGenCurrentPairs([edge('a', 'b', 'DATING')], new Set(['a', 'b']), rowOf)).toEqual([])
-    expect(crossGenCurrentPairs([edge('a', 'b', 'EX_PARTNER')], new Set(['a', 'b']), rowOf)).toEqual([])
+    expect(crossGenCurrentPairs([endedEdge('a', 'b', 'MARRIED')], new Set(['a', 'b']), rowOf)).toEqual([])
   })
 
   it('excludes same-row pairs (those become adjacent couples, not bonds)', () => {

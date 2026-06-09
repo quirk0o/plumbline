@@ -1,7 +1,7 @@
 /**
  * Partner ranking + greedy matching, and cluster construction. One adjacency
- * slot per sim; EX_PARTNER never gets adjacency (exes connect only through
- * shared children — see placeHangingUnions in layout.ts).
+ * slot per sim; ended bonds (endedAt set) never get adjacency (exes connect
+ * only through shared children — see placeHangingUnions in layout.ts).
  */
 import type { RomanticStatus } from '@prisma/client'
 import {
@@ -13,18 +13,21 @@ import {
   type LineagePartnerEdge,
 } from './layout-shared'
 
-/** Lower = more current. DATING (casual) and EX_PARTNER are deliberately absent. */
+/**
+ * Lower = stronger bond wins the adjacency slot. Casual DATING and ended bonds
+ * are deliberately absent; ended bonds are filtered out before ranking.
+ */
 const ADJACENCY_RANK: Partial<Record<RomanticStatus, number>> = {
   MARRIED: 0,
   ENGAGED: 1,
   PARTNER: 2,
-  WIDOWED: 3,
 }
 
 type RankedCandidate = {
   lo: string
   hi: string
   romanticStatus: RomanticStatus
+  endedAt: Date | null
   rank: number
 }
 
@@ -93,12 +96,13 @@ function listRankedCandidates(
   sameRow: boolean,
 ): RankedCandidate[] {
   return partnerEdges
-    .map(({ simAId, simBId, romanticStatus }) => {
+    .map(({ simAId, simBId, romanticStatus, endedAt }) => {
       const [lo, hi] = [simAId, simBId].sort()
-      return { lo, hi, romanticStatus, rank: ADJACENCY_RANK[romanticStatus] }
+      return { lo, hi, romanticStatus, endedAt, rank: ADJACENCY_RANK[romanticStatus] }
     })
     .filter((c): c is RankedCandidate => {
-      if (c.rank === undefined || c.lo === c.hi) return false
+      // Ended bonds (break-ups / divorces) never claim an adjacency slot.
+      if (c.rank === undefined || c.endedAt !== null || c.lo === c.hi) return false
       if (!idSet.has(c.lo) || !idSet.has(c.hi)) return false
       const rowLo = rowOf.get(c.lo)
       const rowHi = rowOf.get(c.hi)

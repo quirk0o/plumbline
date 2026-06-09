@@ -134,6 +134,59 @@ describe('cousin degrees and removal', () => {
   })
 })
 
+describe('intermarriage — closest relationship wins', () => {
+  // F and X are related by two distinct blood paths:
+  //
+  // PATERNAL (first cousins, total 4):
+  //   PG1+PG2 → FD (F's father) and XD (X's father) are siblings.
+  //   F→FD→PG1/PG2←XD←X  ⇒  up=2, down=2  (total 4)
+  //
+  // MATERNAL (second cousins, total 6):
+  //   MG1+MG2 → MFP (FM's parent) and XFP (XM's parent) are siblings.
+  //   FM is MFP's child; XM is XFP's child.
+  //   F→FM→MFP→MG1/MG2←XFP←XM←X  ⇒  up=3, down=3  (total 6)
+  //
+  // The (2,2) path has total 4 < 6, so X should be labelled "First cousin".
+  const sims: KinshipSim[] = [
+    // Paternal grandparents
+    { id: 'PG1', gender: 'MALE',   isDeceased: false },
+    { id: 'PG2', gender: 'FEMALE', isDeceased: false },
+    // F's father and X's father (paternal-side brothers)
+    { id: 'FD',  gender: 'MALE',   isDeceased: false },
+    { id: 'XD',  gender: 'MALE',   isDeceased: false },
+    // Maternal great-grandparents
+    { id: 'MG1', gender: 'MALE',   isDeceased: false },
+    { id: 'MG2', gender: 'FEMALE', isDeceased: false },
+    // FM's parent and XM's parent (maternal-side siblings)
+    { id: 'MFP', gender: 'FEMALE', isDeceased: false },
+    { id: 'XFP', gender: 'FEMALE', isDeceased: false },
+    // F's mother and X's mother (first cousins to each other)
+    { id: 'FM',  gender: 'FEMALE', isDeceased: false },
+    { id: 'XM',  gender: 'FEMALE', isDeceased: false },
+    // Focus sim and target
+    { id: 'F',   gender: 'FEMALE', isDeceased: false },
+    { id: 'X',   gender: 'FEMALE', isDeceased: false },
+  ]
+  const edges: LineageFamilyEdge[] = [
+    // Paternal grandparents → FD and XD
+    { parentId: 'PG1', childId: 'FD' }, { parentId: 'PG2', childId: 'FD' },
+    { parentId: 'PG1', childId: 'XD' }, { parentId: 'PG2', childId: 'XD' },
+    // Maternal great-grandparents → MFP and XFP
+    { parentId: 'MG1', childId: 'MFP' }, { parentId: 'MG2', childId: 'MFP' },
+    { parentId: 'MG1', childId: 'XFP' }, { parentId: 'MG2', childId: 'XFP' },
+    // MFP → FM; XFP → XM
+    { parentId: 'MFP', childId: 'FM' },
+    { parentId: 'XFP', childId: 'XM' },
+    // FD+FM → F; XD+XM → X
+    { parentId: 'FD', childId: 'F' }, { parentId: 'FM', childId: 'F' },
+    { parentId: 'XD', childId: 'X' }, { parentId: 'XM', childId: 'X' },
+  ]
+
+  it('picks the closer (first-cousin) path over the farther (second-cousin) path', () => {
+    expect(computeKinshipLabels('F', sims, edges, []).get('X')).toBe('First cousin')
+  })
+})
+
 // Helper: a straight maternal line F ← m1 ← m2 ← ... of length `up`, all female.
 function greatChain(up: number): string | undefined {
   const sims: KinshipSim[] = [{ id: 'F', gender: 'FEMALE', isDeceased: false }]

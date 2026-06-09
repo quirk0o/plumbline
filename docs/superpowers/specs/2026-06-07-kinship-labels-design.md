@@ -54,8 +54,11 @@ Pure, deterministic, no React, no DOM — same character as `layout.ts` and
    shortest *(up, down)* path — `up` steps to a common ancestor, then `down`
    steps to the relative. Implemented as: BFS upward from the focus recording
    ancestor depths, then BFS downward from each ancestor recording descendant
-   depths; each sim keeps the minimal (up + down) pair. Ties prefer direct
-   lines (pure-up or pure-down) over collateral paths.
+   depths; each sim keeps the minimal (up + down) pair. Ties (multiple common
+   ancestors giving the same total distance) are broken by the most balanced
+   path — the smallest |up − down| — which is deterministic. (A target can
+   only be both a direct ancestor and a same-sum collateral relative in cyclic,
+   invalid data, which the tree never contains.)
 3. **Term mapping** — see vocabulary table below.
 4. **Partner layer**, applied after blood relations and never overwriting
    them. Each partner edge is first reduced to a `RomanticState` via
@@ -164,8 +167,9 @@ captions short on the 140 px crest, per the agreed distance handling.
 
 - **Cycles** (bad data, e.g. a sim accidentally its own ancestor): BFS visit
   sets make traversal terminate; labels still resolve from shortest paths.
-- **Multiple paths** (intermarriage): shortest (up + down) wins; tie → direct
-  line beats collateral.
+- **Multiple paths** (intermarriage): shortest (up + down) wins; equal-sum
+  ties are broken by the most balanced path (smallest |up − down|), which is
+  always deterministic in acyclic data.
 - **Generation filter in the Atlas**: edges are pre-filtered to visible sims,
   so kinship is computed on the filtered graph — a sim whose connecting
   parent is filtered out simply shows life stage. Acceptable: the visible

@@ -225,6 +225,9 @@ function applyPartnerLabels(
   labels: Map<string, string>,
 ): void {
   const partnersOf = buildPartnersOf(byId, partnerEdges)
+  // The non-null assertion is safe: byId is the source of truth for every id, and
+  // the parent/child/partner maps were all built with a `byId.has` guard, so any
+  // id reachable through them is guaranteed to be present in byId.
   const genderOf = (id: string): Gender => byId.get(id)!.gender
 
   // 1. The focus sim's own partners.

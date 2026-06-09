@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import type { RomanticStatus } from '@prisma/client'
 import { computeKinshipLabels, type KinshipSim } from '../kinship'
 import type { LineageFamilyEdge, LineagePartnerEdge } from '../layout-shared'
 
@@ -147,8 +148,6 @@ function greatChain(up: number): string | undefined {
   return computeKinshipLabels('F', sims, edges, []).get(`a${up}`)
 }
 
-import type { RomanticStatus } from '@prisma/client'
-
 function partner(a: string, b: string, status: RomanticStatus, endedAt: Date | null = null): LineagePartnerEdge {
   const [simAId, simBId] = [a, b].sort()
   return { simAId, simBId, romanticStatus: status, endedAt }
@@ -218,5 +217,28 @@ describe('in-laws (marriage only, one hop)', () => {
   })
   it('blood relations win over in-law derivation', () => {
     expect(l.get('SON')).toBe('Son')         // not relabelled by SONWIFE's marriage
+  })
+})
+
+describe('partner layer — edge cases', () => {
+  it('labels a non-binary spouse with the neutral term', () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'NB', gender: 'NON_BINARY', isDeceased: false },
+    ]
+    const l = computeKinshipLabels('F', sims, [], [partner('F', 'NB', 'MARRIED')])
+    expect(l.get('NB')).toBe('Spouse')
+  })
+
+  it('keeps in-laws through a widowed marriage (death does not sever them)', () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'HUS', gender: 'MALE', isDeceased: true }, // deceased spouse, no endedAt → widowed
+      { id: 'HMUM', gender: 'FEMALE', isDeceased: false }, // husband's mother
+    ]
+    const edges: LineageFamilyEdge[] = [{ parentId: 'HMUM', childId: 'HUS' }]
+    const l = computeKinshipLabels('F', sims, edges, [partner('F', 'HUS', 'MARRIED')])
+    expect(l.get('HUS')).toBe('Late husband')
+    expect(l.get('HMUM')).toBe('Mother-in-law')
   })
 })

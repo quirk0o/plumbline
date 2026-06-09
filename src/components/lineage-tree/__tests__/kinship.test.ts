@@ -146,3 +146,77 @@ function greatChain(up: number): string | undefined {
   }
   return computeKinshipLabels('F', sims, edges, []).get(`a${up}`)
 }
+
+import type { RomanticStatus } from '@prisma/client'
+
+function partner(a: string, b: string, status: RomanticStatus, endedAt: Date | null = null): LineagePartnerEdge {
+  const [simAId, simBId] = [a, b].sort()
+  return { simAId, simBId, romanticStatus: status, endedAt }
+}
+
+describe('partner layer (focus F, female)', () => {
+  const base: KinshipSim[] = [
+    { id: 'F', gender: 'FEMALE', isDeceased: false },
+    { id: 'HUS', gender: 'MALE', isDeceased: false },
+    { id: 'GF2', gender: 'FEMALE', isDeceased: false }, // girlfriend (other relationship)
+    { id: 'EX', gender: 'MALE', isDeceased: false },
+    { id: 'DEAD', gender: 'MALE', isDeceased: true },
+  ]
+
+  it('labels the focus current spouse by bond and gender', () => {
+    const l = computeKinshipLabels('F', base, [], [partner('F', 'HUS', 'MARRIED')])
+    expect(l.get('HUS')).toBe('Husband')
+  })
+  it('labels a deceased spouse as the late partner', () => {
+    const l = computeKinshipLabels('F', base, [], [partner('F', 'DEAD', 'MARRIED')])
+    expect(l.get('DEAD')).toBe('Late husband')
+  })
+  it('distinguishes an ex-spouse (divorce) from a girlfriend break-up', () => {
+    const l = computeKinshipLabels('F', base, [], [
+      partner('F', 'EX', 'MARRIED', new Date('2026-01-01')),
+      partner('F', 'GF2', 'DATING'),
+    ])
+    expect(l.get('EX')).toBe('Ex-husband')
+    expect(l.get('GF2')).toBe('Girlfriend')
+  })
+})
+
+describe('in-laws (marriage only, one hop)', () => {
+  const sims: KinshipSim[] = [
+    { id: 'F', gender: 'FEMALE', isDeceased: false },
+    { id: 'HUS', gender: 'MALE', isDeceased: false },
+    { id: 'HMUM', gender: 'FEMALE', isDeceased: false }, // husband's mother
+    { id: 'HSIS', gender: 'FEMALE', isDeceased: false }, // husband's sister
+    { id: 'SON', gender: 'MALE', isDeceased: false },     // F's son
+    { id: 'SONWIFE', gender: 'FEMALE', isDeceased: false },
+    { id: 'BF', gender: 'MALE', isDeceased: false },      // F's fiancé (not a marriage)
+    { id: 'BFMUM', gender: 'FEMALE', isDeceased: false },
+  ]
+  const edges: LineageFamilyEdge[] = [
+    { parentId: 'HMUM', childId: 'HUS' },
+    { parentId: 'HMUM', childId: 'HSIS' },
+    { parentId: 'F', childId: 'SON' },
+    { parentId: 'BFMUM', childId: 'BF' },
+  ]
+  const partners: LineagePartnerEdge[] = [
+    partner('F', 'HUS', 'MARRIED'),
+    partner('SON', 'SONWIFE', 'MARRIED'),
+    partner('F', 'BF', 'ENGAGED'),
+  ]
+  const l = computeKinshipLabels('F', sims, edges, partners)
+
+  it('derives mother- and sister-in-law through a marriage', () => {
+    expect(l.get('HMUM')).toBe('Mother-in-law')
+    expect(l.get('HSIS')).toBe('Sister-in-law')
+  })
+  it('derives a daughter-in-law (child\'s spouse)', () => {
+    expect(l.get('SONWIFE')).toBe('Daughter-in-law')
+  })
+  it('does NOT derive in-laws through a non-marriage bond', () => {
+    expect(l.get('BF')).toBe('Fiancé')      // direct partner labelled…
+    expect(l.has('BFMUM')).toBe(false)       // …but the fiancé's mother is not
+  })
+  it('blood relations win over in-law derivation', () => {
+    expect(l.get('SON')).toBe('Son')         // not relabelled by SONWIFE's marriage
+  })
+})

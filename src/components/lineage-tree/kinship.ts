@@ -1,5 +1,6 @@
 import type { Gender } from '@prisma/client'
 import type { LineageFamilyEdge, LineagePartnerEdge } from './layout-shared'
+import { deriveRomanticState, type RomanticState } from '@/lib/romantic-status'
 
 /**
  * Minimal sim shape the labeller needs; LineageFlowSim satisfies it.
@@ -17,7 +18,7 @@ export function computeKinshipLabels(
   focusId: string,
   sims: KinshipSim[],
   familyEdges: LineageFamilyEdge[],
-  _partnerEdges: LineagePartnerEdge[],
+  partnerEdges: LineagePartnerEdge[],
 ): Map<string, string> {
   const byId = new Map(sims.map((s) => [s.id, s]))
   const labels = new Map<string, string>()
@@ -38,6 +39,9 @@ export function computeKinshipLabels(
     const rel = bloodRelation(focusId, x.id, parents, focusAnc)
     if (rel) labels.set(x.id, bloodTerm(rel.up, rel.down, x.gender, rel.isHalf))
   }
+
+  // --- Partner layer (applied after blood; never overwrites it) ---
+  applyPartnerLabels(focusId, byId, parents, children, partnerEdges, labels)
 
   return labels
 }
@@ -160,4 +164,116 @@ function bloodTerm(up: number, down: number, g: Gender, isHalf: boolean): string
   }
   if (lo <= 4 && diff <= 2) return cousinTerm(lo, diff)
   return 'Distant cousin'
+}
+
+// --- Partner layer -------------------------------------------------------
+
+type PartnerLink = { otherId: string; state: RomanticState }
+
+/** Index each sim's partner links; state is derived for labelling the OTHER sim. */
+function buildPartnersOf(
+  byId: Map<string, KinshipSim>,
+  partnerEdges: LineagePartnerEdge[],
+): Map<string, PartnerLink[]> {
+  const map = new Map<string, PartnerLink[]>()
+  const push = (ownerId: string, otherId: string, e: LineagePartnerEdge) => {
+    const other = byId.get(otherId)
+    if (!other) return
+    const state = deriveRomanticState(e.romanticStatus, e.endedAt, other.isDeceased)
+    if (!state) return
+    const list = map.get(ownerId) ?? []
+    list.push({ otherId, state })
+    map.set(ownerId, list)
+  }
+  for (const e of partnerEdges) {
+    if (!byId.has(e.simAId) || !byId.has(e.simBId)) continue
+    push(e.simAId, e.simBId, e)
+    push(e.simBId, e.simAId, e)
+  }
+  return map
+}
+
+/** In-laws flow only through a marriage that wasn't deliberately ended. */
+function isMarriageBond(state: RomanticState): boolean {
+  return state.bond === 'MARRIED' && state.kind !== 'ended'
+}
+
+function siblingsOf(
+  id: string,
+  parents: Map<string, Set<string>>,
+  children: Map<string, Set<string>>,
+): Set<string> {
+  const sibs = new Set<string>()
+  for (const p of parents.get(id) ?? []) {
+    for (const c of children.get(p) ?? []) {
+      if (c !== id) sibs.add(c)
+    }
+  }
+  return sibs
+}
+
+function setIfAbsent(labels: Map<string, string>, id: string, focusId: string, term: string): void {
+  if (id !== focusId && !labels.has(id)) labels.set(id, term)
+}
+
+function applyPartnerLabels(
+  focusId: string,
+  byId: Map<string, KinshipSim>,
+  parents: Map<string, Set<string>>,
+  children: Map<string, Set<string>>,
+  partnerEdges: LineagePartnerEdge[],
+  labels: Map<string, string>,
+): void {
+  const partnersOf = buildPartnersOf(byId, partnerEdges)
+  const genderOf = (id: string): Gender => byId.get(id)!.gender
+
+  // 1. The focus sim's own partners.
+  for (const { otherId, state } of partnersOf.get(focusId) ?? []) {
+    setIfAbsent(labels, otherId, focusId, partnerTerm(state, genderOf(otherId)))
+  }
+
+  // 2a. Through a married spouse: the spouse's parents and siblings.
+  for (const { otherId: spouseId, state } of partnersOf.get(focusId) ?? []) {
+    if (!isMarriageBond(state)) continue
+    for (const pid of parents.get(spouseId) ?? []) {
+      setIfAbsent(labels, pid, focusId, pick(genderOf(pid), 'Mother-in-law', 'Father-in-law', 'Parent-in-law'))
+    }
+    for (const sibId of siblingsOf(spouseId, parents, children)) {
+      setIfAbsent(labels, sibId, focusId, pick(genderOf(sibId), 'Sister-in-law', 'Brother-in-law', 'Sibling-in-law'))
+    }
+  }
+
+  // 2b. The focus's children's and siblings' married spouses.
+  for (const childId of children.get(focusId) ?? []) {
+    for (const { otherId: spouseId, state } of partnersOf.get(childId) ?? []) {
+      if (!isMarriageBond(state)) continue
+      setIfAbsent(labels, spouseId, focusId, pick(genderOf(spouseId), 'Daughter-in-law', 'Son-in-law', 'Child-in-law'))
+    }
+  }
+  for (const sibId of siblingsOf(focusId, parents, children)) {
+    for (const { otherId: spouseId, state } of partnersOf.get(sibId) ?? []) {
+      if (!isMarriageBond(state)) continue
+      setIfAbsent(labels, spouseId, focusId, pick(genderOf(spouseId), 'Sister-in-law', 'Brother-in-law', 'Sibling-in-law'))
+    }
+  }
+}
+
+function partnerTerm(state: RomanticState, g: Gender): string {
+  const { kind, bond } = state
+  if (kind === 'active') {
+    if (bond === 'MARRIED') return pick(g, 'Wife', 'Husband', 'Spouse')
+    if (bond === 'ENGAGED') return pick(g, 'Fiancée', 'Fiancé', 'Fiancé')
+    if (bond === 'PARTNER') return 'Partner'
+    return pick(g, 'Girlfriend', 'Boyfriend', 'Partner')
+  }
+  if (kind === 'widowed') {
+    if (bond === 'MARRIED') return pick(g, 'Late wife', 'Late husband', 'Late partner')
+    if (bond === 'ENGAGED') return pick(g, 'Late fiancée', 'Late fiancé', 'Late partner')
+    if (bond === 'PARTNER') return 'Late partner'
+    return pick(g, 'Late girlfriend', 'Late boyfriend', 'Late partner')
+  }
+  if (bond === 'MARRIED') return pick(g, 'Ex-wife', 'Ex-husband', 'Ex-spouse')
+  if (bond === 'ENGAGED') return pick(g, 'Ex-fiancée', 'Ex-fiancé', 'Ex-partner')
+  if (bond === 'PARTNER') return 'Ex-partner'
+  return pick(g, 'Ex-girlfriend', 'Ex-boyfriend', 'Ex-partner')
 }

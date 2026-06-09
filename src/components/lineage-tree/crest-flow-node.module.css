@@ -98,4 +98,7 @@ button.hit:focus-visible .medallion {
   font-size: 8.5px;
   letter-spacing: 0.22em;
   color: var(--text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

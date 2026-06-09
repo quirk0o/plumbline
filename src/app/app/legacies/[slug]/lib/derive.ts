@@ -344,6 +344,9 @@ export function deriveMilestones(legacy: FetchedLegacy): Milestone[] {
     }),
   )
 
+  // --- Ended bonds: Divorces (MARRIED) and Break-ups (other bonds) ---
+  entries.push(...deriveEndedMilestones(legacy.socialRelationships, simMap))
+
   entries.sort((a, b) => {
     if (b.sortOrder !== a.sortOrder) return b.sortOrder - a.sortOrder
     return a.id.localeCompare(b.id)
@@ -404,6 +407,54 @@ function deriveCoupleMilestones(
       blurb: null,
       userAuthored: false,
       sortOrder: rel.createdAt.getTime(),
+    })
+  }
+
+  return entries
+}
+
+/**
+ * Derive Divorce / Break-up milestones: one per unique unordered pair whose
+ * bond was deliberately ended (endedAt set). A MARRIED bond ending is a
+ * Divorce; any other bond ending is a Break-up. De-duplicated by canonical
+ * pair; gen = min non-null generation of the two sims; sortOrder = endedAt.
+ *
+ * Widowhood is NOT an ended bond — it derives from a partner's death and has
+ * no endedAt — so a widowed couple never produces a Divorce/Break-up here.
+ */
+function deriveEndedMilestones(
+  socialRelationships: FetchedLegacy['socialRelationships'],
+  simMap: Map<string, FetchedSim>,
+): Milestone[] {
+  const seenPairs = new Set<string>()
+  const entries: Milestone[] = []
+
+  for (const rel of socialRelationships) {
+    if (rel.endedAt === null || rel.romanticStatus === 'NONE') continue
+    const [idA, idB] = [rel.simAId, rel.simBId].sort()
+    const pairKey = `${idA}:${idB}`
+    if (seenPairs.has(pairKey)) continue
+    seenPairs.add(pairKey)
+
+    const simA = simMap.get(idA)
+    const simB = simMap.get(idB)
+    const aName = simDisplayName(simA)
+    const bName = simDisplayName(simB)
+    const gens = [simA?.generationNumber, simB?.generationNumber].filter(
+      (g): g is number => g !== null && g !== undefined,
+    )
+    const gen: number | null = gens.length > 0 ? Math.min(...gens) : null
+
+    const isDivorce = rel.romanticStatus === 'MARRIED'
+    entries.push({
+      id: `${isDivorce ? 'divorce' : 'breakup'}-${idA}-${idB}`,
+      kind: isDivorce ? 'Divorce' : 'Breakup',
+      gen,
+      simIds: [idA, idB],
+      title: `${aName} and ${bName} ${isDivorce ? 'divorce' : 'break up'}`,
+      blurb: null,
+      userAuthored: false,
+      sortOrder: rel.endedAt.getTime(),
     })
   }
 

@@ -234,6 +234,7 @@ const fixture: FetchedLegacy = {
       simAId: HEIR_GEN1_ID,
       simBId: SPOUSE1_ID,
       romanticStatus: 'MARRIED',
+      endedAt: null,
       createdAt: d('05'),
     },
     // Marriage 2: HEIR_GEN2 ↔ SPOUSE2 — canonical order: "sim-heir-2" < "sim-spouse-2"
@@ -242,6 +243,7 @@ const fixture: FetchedLegacy = {
       simAId: HEIR_GEN2_ID,
       simBId: SPOUSE2_ID,
       romanticStatus: 'MARRIED',
+      endedAt: null,
       createdAt: d('12'),
     },
     // Reciprocal duplicate of marriage 2 — should be de-duplicated
@@ -250,6 +252,7 @@ const fixture: FetchedLegacy = {
       simAId: SPOUSE2_ID,
       simBId: HEIR_GEN2_ID,
       romanticStatus: 'MARRIED',
+      endedAt: null,
       createdAt: d('12'),
     },
     // Non-MARRIED relationship — should NOT appear as a milestone
@@ -258,6 +261,7 @@ const fixture: FetchedLegacy = {
       simAId: HEIR_GEN3_ID,
       simBId: NO_GEN_SIM_ID,
       romanticStatus: 'DATING',
+      endedAt: null,
       createdAt: d('21'),
     },
   ],
@@ -559,6 +563,7 @@ describe('deriveMilestones', () => {
           simAId: PRESENT,
           simBId: MISSING,
           romanticStatus: 'MARRIED',
+          endedAt: null,
           createdAt: d('02'),
         },
       ],
@@ -620,6 +625,7 @@ describe('deriveMilestones', () => {
           simAId: PARTNER_A_ID,
           simBId: PARTNER_B_ID,
           romanticStatus: 'PARTNER',
+          endedAt: null,
           createdAt: d('05'),
         },
         // Reciprocal duplicate — should be de-duplicated
@@ -628,6 +634,7 @@ describe('deriveMilestones', () => {
           simAId: PARTNER_B_ID,
           simBId: PARTNER_A_ID,
           romanticStatus: 'PARTNER',
+          endedAt: null,
           createdAt: d('05'),
         },
       ],
@@ -647,6 +654,69 @@ describe('deriveMilestones', () => {
     const result = deriveMilestones(fixture)
     expect(result.some((m) => m.kind === 'Marriage')).toBe(true)
     expect(result.some((m) => m.kind === 'Partnership')).toBe(false)
+  })
+
+  it('derives a Divorce milestone from an ended marriage, sorted by endedAt', () => {
+    const legacy: FetchedLegacy = {
+      id: 'legacy-d', name: 'Divorce Legacy', description: null, founderSimId: 'sim-a',
+      households: [], familyRelationships: [], userMilestones: [],
+      sims: [
+        withDeathFields({ id: 'sim-a', firstName: 'Ada', lastName: '', imageUrl: null, generationNumber: 1, isHeir: false, lifeStage: 'ADULT', createdAt: d('01'), aspirations: [] }),
+        withDeathFields({ id: 'sim-b', firstName: 'Ben', lastName: '', imageUrl: null, generationNumber: 1, isHeir: false, lifeStage: 'ADULT', createdAt: d('01'), aspirations: [] }),
+      ],
+      socialRelationships: [
+        { id: 'r1', simAId: 'sim-a', simBId: 'sim-b', romanticStatus: 'MARRIED', endedAt: new Date('2026-05-01'), createdAt: new Date('2020-01-01') },
+      ],
+    }
+    const rows = deriveMilestones(legacy)
+    const divorce = rows.find((m) => m.kind === 'Divorce')
+    expect(divorce).toMatchObject({
+      id: 'divorce-sim-a-sim-b',
+      kind: 'Divorce',
+      gen: 1,
+      simIds: ['sim-a', 'sim-b'],
+      title: 'Ada and Ben divorce',
+      sortOrder: new Date('2026-05-01').getTime(),
+    })
+    // The wedding milestone is still present.
+    expect(rows.some((m) => m.kind === 'Marriage' && m.id === 'marriage-sim-a-sim-b')).toBe(true)
+  })
+
+  it('derives a Break-up milestone from an ended dating or engaged bond', () => {
+    const legacy: FetchedLegacy = {
+      id: 'legacy-bu', name: 'Breakup Legacy', description: null, founderSimId: 'sim-a',
+      households: [], familyRelationships: [], userMilestones: [],
+      sims: [
+        withDeathFields({ id: 'sim-a', firstName: 'Ada', lastName: '', imageUrl: null, generationNumber: 2, isHeir: false, lifeStage: 'ADULT', createdAt: d('01'), aspirations: [] }),
+        withDeathFields({ id: 'sim-c', firstName: 'Cy', lastName: '', imageUrl: null, generationNumber: 2, isHeir: false, lifeStage: 'ADULT', createdAt: d('01'), aspirations: [] }),
+      ],
+      socialRelationships: [
+        { id: 'r2', simAId: 'sim-a', simBId: 'sim-c', romanticStatus: 'DATING', endedAt: new Date('2026-06-01'), createdAt: new Date('2025-01-01') },
+      ],
+    }
+    const breakup = deriveMilestones(legacy).find((m) => m.kind === 'Breakup')
+    expect(breakup).toMatchObject({
+      id: 'breakup-sim-a-sim-c',
+      kind: 'Breakup',
+      title: 'Ada and Cy break up',
+      sortOrder: new Date('2026-06-01').getTime(),
+    })
+  })
+
+  it('does not derive divorce/break-up milestones for current (endedAt: null) bonds', () => {
+    const legacy: FetchedLegacy = {
+      id: 'legacy-cur', name: 'Current Legacy', description: null, founderSimId: 'sim-a',
+      households: [], familyRelationships: [], userMilestones: [],
+      sims: [
+        withDeathFields({ id: 'sim-a', firstName: 'Ada', lastName: '', imageUrl: null, generationNumber: 1, isHeir: false, lifeStage: 'ADULT', createdAt: d('01'), aspirations: [] }),
+        withDeathFields({ id: 'sim-b', firstName: 'Ben', lastName: '', imageUrl: null, generationNumber: 1, isHeir: false, lifeStage: 'ADULT', createdAt: d('01'), aspirations: [] }),
+      ],
+      socialRelationships: [
+        { id: 'r3', simAId: 'sim-a', simBId: 'sim-b', romanticStatus: 'MARRIED', endedAt: null, createdAt: new Date('2020-01-01') },
+      ],
+    }
+    const rows = deriveMilestones(legacy)
+    expect(rows.some((m) => m.kind === 'Divorce' || m.kind === 'Breakup')).toBe(false)
   })
 })
 

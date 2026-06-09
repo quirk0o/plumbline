@@ -96,6 +96,7 @@ export default async function LegacyDetailPage({ params }: Props) {
       simAId: true,
       simBId: true,
       romanticStatus: true,
+      endedAt: true,
       createdAt: true,
     },
   })

@@ -42,17 +42,19 @@ export interface FetchedSim {
 }
 
 /**
- * Minimal social-relationship row.
+ * Minimal social-relationship row (bond + deliberate-end timestamp).
  *
  * Both MARRIED and PARTNER rows are consumed by milestone derivation
- * (MARRIED → Marriage milestones, PARTNER → Partnership milestones), so
- * do not filter the fetch down to MARRIED only.
+ * (MARRIED → Marriage milestones, PARTNER → Partnership milestones), and any
+ * ended row (endedAt set) additionally derives a Divorce or Break-up
+ * milestone, so do not filter the fetch down to MARRIED only.
  */
 export interface FetchedSocialRelationship {
   id: string
   simAId: string
   simBId: string
   romanticStatus: RomanticStatus
+  endedAt: Date | null
   createdAt: Date
 }
 
@@ -95,8 +97,9 @@ export interface FetchedLegacy {
    * All social relationships for sims in this legacy.
    * Rows where romanticStatus === 'MARRIED' derive Marriage milestones and
    * rows where romanticStatus === 'PARTNER' derive Partnership milestones;
-   * other statuses are ignored. Do not filter the fetch to MARRIED only or
-   * Partnership milestones will silently disappear.
+   * any row with endedAt set additionally derives a Divorce (MARRIED) or
+   * Break-up (other bonds) milestone. Do not filter the fetch to MARRIED only,
+   * or Partnership and ended-relationship milestones will silently disappear.
    *
    * Note: the schema enforces simAId < simBId at the application layer
    * (see schema comment), but we de-duplicate by unordered pair anyway
@@ -144,7 +147,7 @@ export interface Milestone {
   /** Stable id: synthetic for derived rows ("birth-{simId}", "death-{simId}",
    *  "marriage-{aId}-{bId}"); the real cuid for user-authored rows. */
   id: string
-  kind: 'Founding' | 'Birth' | 'Marriage' | 'Partnership' | 'Death' | 'Note'
+  kind: 'Founding' | 'Birth' | 'Marriage' | 'Partnership' | 'Divorce' | 'Breakup' | 'Death' | 'Note'
   gen: number | null
   /** The sim(s) involved in this milestone event. */
   simIds: string[]

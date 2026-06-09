@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import { Combobox } from '@/components/ui'
+import { deriveRomanticState, romanticStateBadge } from '@/lib/romantic-status'
 import { AddRelationshipModal } from './add-relationship-modal'
 import styles from './page.module.css'
 
@@ -22,26 +23,28 @@ interface FamilyMember {
 interface SocialRel {
   sim: SimMini
   romanticStatus: RomanticStatus
+  endedAt: Date | null
+  partnerDeceased: boolean
   simAId: string
   simBId: string
 }
+
+type PartnerMini = SimMini & { causeOfDeath: string | null }
 
 interface SimProp {
   id: string
   legacyId: string
   parentsOf: { child: SimMini; type: string }[]
   childOf: { parent: SimMini; type: string }[]
-  socialRelationshipsA: { simB: SimMini; romanticStatus: string }[]
-  socialRelationshipsB: { simA: SimMini; romanticStatus: string }[]
+  socialRelationshipsA: { simAId: string; simBId: string; romanticStatus: string; endedAt: Date | null; simB: PartnerMini }[]
+  socialRelationshipsB: { simAId: string; simBId: string; romanticStatus: string; endedAt: Date | null; simA: PartnerMini }[]
 }
 
 const ROMANTIC_STATUS_OPTIONS: RomanticStatus[] = [
   RomanticStatus.DATING,
+  RomanticStatus.PARTNER,
   RomanticStatus.ENGAGED,
   RomanticStatus.MARRIED,
-  RomanticStatus.PARTNER,
-  RomanticStatus.EX_PARTNER,
-  RomanticStatus.WIDOWED,
 ]
 
 function formatStatus(s: string) {
@@ -91,13 +94,27 @@ export function RelationshipsEditor({
       .filter((r) => r.romanticStatus !== RomanticStatus.NONE)
       .map((r) => {
         const [a, b] = [sim.id, r.simB.id].sort()
-        return { sim: r.simB, romanticStatus: r.romanticStatus as RomanticStatus, simAId: a, simBId: b }
+        return {
+          sim: r.simB,
+          romanticStatus: r.romanticStatus as RomanticStatus,
+          endedAt: r.endedAt,
+          partnerDeceased: r.simB.causeOfDeath !== null,
+          simAId: a,
+          simBId: b,
+        }
       }),
     ...sim.socialRelationshipsB
       .filter((r) => r.romanticStatus !== RomanticStatus.NONE)
       .map((r) => {
         const [a, b] = [sim.id, r.simA.id].sort()
-        return { sim: r.simA, romanticStatus: r.romanticStatus as RomanticStatus, simAId: a, simBId: b }
+        return {
+          sim: r.simA,
+          romanticStatus: r.romanticStatus as RomanticStatus,
+          endedAt: r.endedAt,
+          partnerDeceased: r.simA.causeOfDeath !== null,
+          simAId: a,
+          simBId: b,
+        }
       }),
   ])
 
@@ -110,7 +127,7 @@ export function RelationshipsEditor({
 
   function handleAddPartner(picked: SimMini, romanticStatus: RomanticStatus) {
     const [a, b] = [sim.id, picked.id].sort()
-    const rel: SocialRel = { sim: picked, romanticStatus, simAId: a, simBId: b }
+    const rel: SocialRel = { sim: picked, romanticStatus, endedAt: null, partnerDeceased: false, simAId: a, simBId: b }
     setPartners((prev) => [...prev, rel])
     addSocial.mutate(
       { simAId: a, simBId: b, romanticStatus },
@@ -146,6 +163,15 @@ export function RelationshipsEditor({
     )
   }
 
+  function handleEndChange(rel: SocialRel, endedAt: Date | null) {
+    const previous = rel.endedAt
+    setPartners((prev) => prev.map((r) => (r.sim.id === rel.sim.id ? { ...r, endedAt } : r)))
+    updateSocial.mutate(
+      { simAId: rel.simAId, simBId: rel.simBId, romanticStatus: rel.romanticStatus, endedAt },
+      { onError: () => setPartners((prev) => prev.map((r) => (r.sim.id === rel.sim.id ? { ...r, endedAt: previous } : r))) },
+    )
+  }
+
   function handleRemovePartner(rel: SocialRel) {
     setPartners((prev) => prev.filter((r) => r.sim.id !== rel.sim.id))
     removeSocial.mutate(
@@ -175,7 +201,12 @@ export function RelationshipsEditor({
           <span className={styles.simCardName}>Add</span>
         </button>
 
-        {partners.map((rel) => (
+        {partners.map((rel) => {
+          const state = deriveRomanticState(rel.romanticStatus, rel.endedAt, rel.partnerDeceased)
+          const badge = state ? romanticStateBadge(state) : 'Partner'
+          const canEnd = state?.kind === 'active'
+          const isEnded = state?.kind === 'ended'
+          return (
           <div key={rel.sim.id} className={styles.simCard}>
             <Link href={`/app/legacies/${slug}/sims/${rel.sim.id}`} style={{ display: 'contents' }}>
               <div className={styles.simPortraitOuter}>
@@ -194,22 +225,43 @@ export function RelationshipsEditor({
                     </span>
                   )}
                 </div>
-                <span className={styles.partnerBadge} aria-hidden="true">Partner</span>
+                <span className={styles.partnerBadge} aria-hidden="true">{badge}</span>
               </div>
               <span className={styles.simCardName}>{rel.sim.firstName} {rel.sim.lastName}</span>
             </Link>
-            <div onClick={(e) => e.stopPropagation()}>
-              <Combobox
-                value={rel.romanticStatus}
-                onChange={(v) => handleStatusChange(rel, v as RomanticStatus)}
-                size="sm"
-                aria-label={`Romantic status with ${rel.sim.firstName}`}
+            {/* Bond picker stays for active/widowed; hidden once ended to avoid implying a live bond. */}
+            {!isEnded && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <Combobox
+                  value={rel.romanticStatus}
+                  onChange={(v) => handleStatusChange(rel, v as RomanticStatus)}
+                  size="sm"
+                  aria-label={`Romantic status with ${rel.sim.firstName}`}
+                >
+                  {ROMANTIC_STATUS_OPTIONS.map((s) => (
+                    <Combobox.Item key={s} value={s}>{formatStatus(s)}</Combobox.Item>
+                  ))}
+                </Combobox>
+              </div>
+            )}
+            {canEnd && (
+              <button
+                type="button"
+                className={styles.endRelBtn}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEndChange(rel, new Date()) }}
               >
-                {ROMANTIC_STATUS_OPTIONS.map((s) => (
-                  <Combobox.Item key={s} value={s}>{formatStatus(s)}</Combobox.Item>
-                ))}
-              </Combobox>
-            </div>
+                {rel.romanticStatus === RomanticStatus.MARRIED ? 'Divorce' : 'End relationship'}
+              </button>
+            )}
+            {isEnded && (
+              <button
+                type="button"
+                className={styles.endRelBtn}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEndChange(rel, null) }}
+              >
+                Reopen
+              </button>
+            )}
             <button
               className={styles.simCardRemove}
               aria-label={`Remove ${rel.sim.firstName}`}
@@ -222,7 +274,8 @@ export function RelationshipsEditor({
               ×
             </button>
           </div>
-        ))}
+          )
+        })}
 
         {members.map((m) => (
           <div key={`${m.sim.id}-${m.role}`} className={styles.simCard}>

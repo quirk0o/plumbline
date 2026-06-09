@@ -30,10 +30,16 @@ export default async function SimDetailPage({ params }: Props) {
           include: { parent: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
         },
         socialRelationshipsA: {
-          include: { simB: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
+          select: {
+            simAId: true, simBId: true, romanticStatus: true, endedAt: true,
+            simB: { select: { id: true, firstName: true, lastName: true, imageUrl: true, causeOfDeath: true } },
+          },
         },
         socialRelationshipsB: {
-          include: { simA: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
+          select: {
+            simAId: true, simBId: true, romanticStatus: true, endedAt: true,
+            simA: { select: { id: true, firstName: true, lastName: true, imageUrl: true, causeOfDeath: true } },
+          },
         },
       },
     }),

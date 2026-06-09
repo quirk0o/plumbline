@@ -698,6 +698,28 @@
   z-index: 1;
 }
 
+/* Small ghost control to end (divorce / break up) or reopen a partner bond. */
+.endRelBtn {
+  font-size: var(--text-sm);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  appearance: none;
+}
+
+.endRelBtn:hover {
+  border-color: var(--green);
+  background: var(--bg-card);
+}
+
+.endRelBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* Honest form select for Goals & Career */
 .goalSelect {
   width: 100%;

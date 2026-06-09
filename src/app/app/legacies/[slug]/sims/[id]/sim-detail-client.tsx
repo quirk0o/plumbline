@@ -35,8 +35,8 @@ interface Props {
     skills: { skill: { id: string; name: string; maxLevel: number }; level: number }[]
     parentsOf: { child: { id: string; firstName: string; lastName: string; imageUrl: string | null }; type: string }[]
     childOf: { parent: { id: string; firstName: string; lastName: string; imageUrl: string | null }; type: string }[]
-    socialRelationshipsA: { simB: { id: string; firstName: string; lastName: string; imageUrl: string | null }; romanticStatus: string }[]
-    socialRelationshipsB: { simA: { id: string; firstName: string; lastName: string; imageUrl: string | null }; romanticStatus: string }[]
+    socialRelationshipsA: { simAId: string; simBId: string; romanticStatus: string; endedAt: Date | null; simB: { id: string; firstName: string; lastName: string; imageUrl: string | null; causeOfDeath: CauseOfDeath | null } }[]
+    socialRelationshipsB: { simAId: string; simBId: string; romanticStatus: string; endedAt: Date | null; simA: { id: string; firstName: string; lastName: string; imageUrl: string | null; causeOfDeath: CauseOfDeath | null } }[]
   }
   slug: string
   legacySims: { id: string; firstName: string; lastName: string; imageUrl: string | null }[]

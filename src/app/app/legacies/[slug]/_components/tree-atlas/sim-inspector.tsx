@@ -6,13 +6,12 @@ import { Button, ButtonLink, Eyebrow, PortraitAvatar, Badge } from '@/components
 import { formatLifeStage, roman } from '@/lib/legacy-format'
 import styles from './sim-inspector.module.css'
 
-/** Romantic statuses worth surfacing a "Partner" for, strongest first. */
+/** Current bonds worth surfacing a "Partner" for, strongest first. */
 const PARTNER_STATUSES: RomanticStatus[] = [
   RomanticStatus.MARRIED,
   RomanticStatus.ENGAGED,
   RomanticStatus.PARTNER,
   RomanticStatus.DATING,
-  RomanticStatus.WIDOWED,
 ]
 
 export interface SimInspectorProps {

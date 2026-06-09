@@ -1811,22 +1811,26 @@ describe('sims.getMiniTreeData', () => {
     expect(ids).not.toContain(greatGrandparent.id)
   })
 
-  it('includes EX_PARTNER in partnerEdges', async () => {
+  it('includes ended (ex) relationships in partnerEdges, carrying endedAt', async () => {
     const caller = authedCaller(userId)
     const focused = await createTestSim(legacyId, { firstName: 'Focused' })
     const exPartner = await createTestSim(legacyId, { firstName: 'ExPartner' })
     const [idA, idB] = [focused.id, exPartner.id].sort()
+    const when = new Date('2026-01-01T00:00:00Z')
     await db.socialRelationship.create({
       data: {
         simAId: idA,
         simBId: idB,
-        romanticStatus: RomanticStatus.EX_PARTNER,
+        romanticStatus: RomanticStatus.MARRIED,
+        endedAt: when,
         friendshipScore: 0,
         romanceScore: 0,
       },
     })
     const result = await caller.sims.getMiniTreeData({ simId: focused.id })
-    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.EX_PARTNER, endedAt: null })
+    const edge = result.partnerEdges.find((e) => e.simAId === idA && e.simBId === idB)
+    expect(edge?.romanticStatus).toBe(RomanticStatus.MARRIED)
+    expect(edge?.endedAt?.toISOString()).toBe(when.toISOString())
     expect(result.sims.map((s) => s.id)).toContain(exPartner.id)
   })
 

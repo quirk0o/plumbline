@@ -20,7 +20,7 @@ export type RomanticState =
  *
  * Precedence: a deliberate end beats death (a couple who divorced and then one
  * ex died stays `ended`, not `widowed`). Non-romantic bonds → null. The bond
- * guard also absorbs the legacy EX_PARTNER/WIDOWED values during the
+ * guard also absorbs `NONE` and any legacy non-bond values during the
  * expand-phase migration without naming them.
  */
 export function deriveRomanticState(

@@ -10,11 +10,9 @@ type SimMini = { id: string; firstName: string; lastName: string; imageUrl: stri
 
 const ROMANTIC_STATUS_OPTIONS: RomanticStatus[] = [
   RomanticStatus.DATING,
+  RomanticStatus.PARTNER,
   RomanticStatus.ENGAGED,
   RomanticStatus.MARRIED,
-  RomanticStatus.PARTNER,
-  RomanticStatus.EX_PARTNER,
-  RomanticStatus.WIDOWED,
 ]
 
 function formatStatus(s: string) {

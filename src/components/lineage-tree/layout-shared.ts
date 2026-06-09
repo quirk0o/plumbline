@@ -55,6 +55,13 @@ export const ROW_PITCH = 160
 export const MARRIAGE_BOND_GAP = 20
 /** Horizontal gap between unrelated sims / couple clusters within a row. */
 export const CLUSTER_GAP = 40
+/**
+ * [constructor] Offset from a medallion's right edge to the vertical lane of an
+ * on-column partner bond. Half of CLUSTER_GAP lands the lane in the middle of
+ * the inter-column gutter — clear of every medallion, and clear of the descent
+ * lines (which always run on column CENTERS, not edges).
+ */
+export const BOND_LANE_GUTTER = 20
 /** Horizontal gap between disconnected family-tree components. */
 export const COMPONENT_GAP = 96
 /** Left gutter reserved for the generation-row labels. */

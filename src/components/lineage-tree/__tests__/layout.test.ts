@@ -5,6 +5,7 @@ import {
   HANGING_UNION_BASE_OFFSET,
   MARRIAGE_BOND_GAP,
   NODE_WIDTH,
+  TREE_PADDING,
   type LayoutSim,
   type LineagePartnerEdge,
 } from '../layout'
@@ -184,6 +185,53 @@ describe('computeLineageLayout — cross-gen bonds', () => {
       [{ simAId: 'a', simBId: 'b', romanticStatus: 'DATING' }],
     )
     expect(dating.bonds).toEqual([])
+  })
+
+  it('reroutes an on-column bond into a side gutter so it never overlaps the lower partner’s descent', () => {
+    // The bug scenario: jt(gen1) partners gj(gen4); the engine aligns gj directly
+    // under jt (a parent-edge model), so a center-to-center bond would run straight
+    // down gj's own parental-descent column. The fix re-routes it as a side bracket.
+    const l = computeLineageLayout(
+      [sim('jt', 1), sim('dh', 2), sim('hh', 3), sim('th', 3), sim('gj', 4)],
+      [
+        { parentId: 'jt', childId: 'dh' },
+        { parentId: 'dh', childId: 'hh' },
+        { parentId: 'hh', childId: 'gj' },
+        { parentId: 'th', childId: 'gj' },
+      ],
+      [
+        { simAId: 'hh', simBId: 'th', romanticStatus: 'MARRIED' },
+        { simAId: 'gj', simBId: 'jt', romanticStatus: 'PARTNER' },
+      ],
+    )
+
+    expect(l.bonds).toHaveLength(1)
+    const bond = l.bonds[0]
+    const gjCenterX = l.byId['gj'].x + CREST_ANCHORS.cx
+    const gjRightEdge = l.byId['gj'].x + NODE_WIDTH
+
+    // No bond point runs on gj's center column (where its parental descent lives).
+    expect(bond.points.some((p) => p.x === gjCenterX)).toBe(false)
+    // Regression guard for the complaint: no consecutive pair shares gj's center x.
+    for (let i = 1; i < bond.points.length; i++) {
+      const colinearOnCenter = bond.points[i].x === gjCenterX && bond.points[i - 1].x === gjCenterX
+      expect(colinearOnCenter).toBe(false)
+    }
+
+    // The two interior points share one laneX, strictly right of the column.
+    expect(bond.points).toHaveLength(4)
+    const [p0, p1, p2, p3] = bond.points
+    expect(p1.x).toBe(p2.x)
+    expect(p1.x).toBeGreaterThan(gjRightEdge)
+
+    // First/last points attach to the partners' right edges at center height.
+    const upper = l.byId['jt'].y < l.byId['gj'].y ? l.byId['jt'] : l.byId['gj']
+    const lower = l.byId['jt'].y < l.byId['gj'].y ? l.byId['gj'] : l.byId['jt']
+    expect(p0).toEqual({ x: upper.x + NODE_WIDTH, y: upper.y + CREST_ANCHORS.cy })
+    expect(p3).toEqual({ x: lower.x + NODE_WIDTH, y: lower.y + CREST_ANCHORS.cy })
+
+    // The right-gutter lane must not be clipped by the viewBox.
+    expect(l.viewBox.width).toBeGreaterThanOrEqual(p1.x + TREE_PADDING)
   })
 })
 

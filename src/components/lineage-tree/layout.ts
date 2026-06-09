@@ -5,6 +5,7 @@
  */
 export * from './layout-shared'
 import {
+  BOND_LANE_GUTTER,
   CREST_ANCHORS,
   HANGING_UNION_BASE_OFFSET,
   HANGING_UNION_LANE_PITCH,
@@ -49,8 +50,8 @@ export function computeLineageLayout(
   const rowYs = computeRowYs(rowGenerations)
   const { nodes, byId } = placeMedallions(clusters, xByCluster, rowYs)
   const hangingUnions = placeHangingUnions({ familyEdges: cleanFamily, couples, byId, rowOf, rowYs })
-  const bonds = toBondPaths(bondPaths, bondPairs, rowYs)
-  const viewBox = computeViewBox(nodes, rowYs)
+  const bonds = toBondPaths(bondPaths, bondPairs, rowYs, byId)
+  const viewBox = computeViewBox(nodes, rowYs, bonds)
   return { nodes, byId, rowYs, rowGenerations, couples, hangingUnions, bonds, viewBox }
 }
 
@@ -89,29 +90,70 @@ function mapBondChildrenToLowerParent(
 
 /** [low] Engine bonds carry cluster ids + interpolated rows; finish the canvas
  *  transform: add the gutter/padding baseX to x, resolve row → medallion-center
- *  y, and re-attach the actual partner sim-id pair (id-sorted, like couples). */
+ *  y, and re-attach the actual partner sim-id pair (id-sorted, like couples).
+ *
+ *  When the engine routed the lane onto the partners' shared column (the common
+ *  aligned case), a center-to-center polyline would coincide with the lower
+ *  partner's own parental descent. Re-route those as a side bracket in the empty
+ *  gutter beside the column; leave already-offset gutter lanes unchanged. */
 function toBondPaths(
   routed: RoutedBondPath[],
   bondPairs: LineageCouple[],
   rowYs: number[],
+  byId: Record<string, PositionedNode>,
 ): BondPath[] {
   const baseX = ROW_LABEL_GUTTER + TREE_PADDING
   const pairByKey = new Map(bondPairs.map((p) => [pairKey([p.a, p.b]), p]))
   return routed.flatMap((path) => {
     const pair = pairByKey.get(pairKey([path.a, path.b]))
     if (!pair) return []
-    return [
-      {
-        a: pair.a,
-        b: pair.b,
-        romanticStatus: pair.romanticStatus,
-        points: path.waypoints.map((w) => ({
-          x: baseX + w.x,
-          y: rowYs[Math.round(w.row)] + CREST_ANCHORS.cy,
-        })),
-      },
-    ]
+    const points = path.waypoints.map((w) => ({
+      x: baseX + w.x,
+      y: rowYs[Math.round(w.row)] + CREST_ANCHORS.cy,
+    }))
+    const { upper, lower } = orderPartnersByRow(byId[pair.a], byId[pair.b])
+    const routedPoints = isOnColumn(points, upper, lower) ? sideBracketPoints(upper, lower) : points
+    return [{ a: pair.a, b: pair.b, romanticStatus: pair.romanticStatus, points: routedPoints }]
   })
+}
+
+/** [utility] The partner with the smaller y is the upper one. */
+function orderPartnersByRow(
+  a: PositionedNode,
+  b: PositionedNode,
+): { upper: PositionedNode; lower: PositionedNode } {
+  return a.y <= b.y ? { upper: a, lower: b } : { upper: b, lower: a }
+}
+
+/**
+ * [utility] True when every waypoint sits within a partner medallion's
+ * horizontal extent — i.e. the lane runs on the shared column rather than an
+ * off-column gutter the engine opened to clear intervening crests.
+ */
+function isOnColumn(
+  points: { x: number; y: number }[],
+  upper: PositionedNode,
+  lower: PositionedNode,
+): boolean {
+  const within = (x: number, n: PositionedNode) => x >= n.x && x <= n.x + NODE_WIDTH
+  return points.every((p) => within(p.x, upper) || within(p.x, lower))
+}
+
+/**
+ * [low] A 4-point bracket attaching to the partners' RIGHT side edges and
+ * running the vertical lane just right of the column, so it never coincides with
+ * any descent (descents make their vertical approach on column CENTERS).
+ */
+function sideBracketPoints(upper: PositionedNode, lower: PositionedNode): { x: number; y: number }[] {
+  const laneX = Math.max(upper.x, lower.x) + NODE_WIDTH + BOND_LANE_GUTTER
+  const upperY = upper.y + CREST_ANCHORS.cy
+  const lowerY = lower.y + CREST_ANCHORS.cy
+  return [
+    { x: upper.x + NODE_WIDTH, y: upperY },
+    { x: laneX, y: upperY },
+    { x: laneX, y: lowerY },
+    { x: lower.x + NODE_WIDTH, y: lowerY },
+  ]
 }
 
 /** [low] Drop self-edges and edges referencing unknown sims; dedupe family edges. */
@@ -349,10 +391,19 @@ function stackIntoLanes(junctions: CoParentJunction[], rowYs: number[]): Hanging
   return hangingUnions
 }
 
-/** [low] Width = rightmost medallion + padding; height = last row + medallion + padding. */
-function computeViewBox(nodes: PositionedNode[], rowYs: number[]): { width: number; height: number } {
+/** [low] Width = rightmost medallion OR bond-lane point + padding; height = last
+ *  row + medallion + padding. Bonds are included so a right-gutter bond lane
+ *  near the edge isn't clipped. */
+function computeViewBox(
+  nodes: PositionedNode[],
+  rowYs: number[],
+  bonds: BondPath[],
+): { width: number; height: number } {
   let widest = ROW_LABEL_GUTTER + NODE_WIDTH + TREE_PADDING * 2
   for (const n of nodes) widest = Math.max(widest, n.x + NODE_WIDTH + TREE_PADDING)
+  for (const bond of bonds) {
+    for (const p of bond.points) widest = Math.max(widest, p.x + TREE_PADDING)
+  }
   const lastRowTop = rowYs.length > 0 ? rowYs[rowYs.length - 1] : TREE_PADDING
   return { width: widest, height: lastRowTop + NODE_HEIGHT + TREE_PADDING }
 }

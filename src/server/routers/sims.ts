@@ -10,7 +10,7 @@ import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {
   id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
-  lifeStage: true, isHeir: true,
+  lifeStage: true, isHeir: true, causeOfDeath: true,
 } as const
 
 export type MiniTreeSimData = Prisma.SimGetPayload<{ select: typeof miniTreeSimSelect }>
@@ -192,6 +192,7 @@ export const simsRouter = router({
             generationNumber: true,
             lifeStage: true,
             isHeir: true,
+            causeOfDeath: true,
           },
           orderBy: { id: 'asc' },
         }),
@@ -212,15 +213,24 @@ export const simsRouter = router({
             ],
             romanticStatus: { not: RomanticStatus.NONE },
           },
-          select: { simAId: true, simBId: true, romanticStatus: true },
+          select: { simAId: true, simBId: true, romanticStatus: true, endedAt: true },
           orderBy: { simAId: 'asc' },
         }),
       ])
 
       return {
-        sims: sims.map((s) => ({ ...s, href: `/app/legacies/${input.legacySlug}/sims/${s.id}` })),
+        sims: sims.map(({ causeOfDeath, ...s }) => ({
+          ...s,
+          isDeceased: causeOfDeath !== null,
+          href: `/app/legacies/${input.legacySlug}/sims/${s.id}`,
+        })),
         familyEdges: familyEdges.map((e) => ({ parentId: e.parentId, childId: e.childId })),
-        partnerEdges: partnerEdges.map((e) => ({ simAId: e.simAId, simBId: e.simBId, romanticStatus: e.romanticStatus })),
+        partnerEdges: partnerEdges.map((e) => ({
+          simAId: e.simAId,
+          simBId: e.simBId,
+          romanticStatus: e.romanticStatus,
+          endedAt: e.endedAt,
+        })),
       }
     }),
 
@@ -253,12 +263,12 @@ export const simsRouter = router({
                   },
                   socialRelationshipsA: {
                     where: { romanticStatus: { not: RomanticStatus.NONE } },
-                    select: { simAId: true, simBId: true, romanticStatus: true },
+                    select: { simAId: true, simBId: true, romanticStatus: true, endedAt: true },
                     orderBy: { simAId: 'asc' },
                   },
                   socialRelationshipsB: {
                     where: { romanticStatus: { not: RomanticStatus.NONE } },
-                    select: { simAId: true, simBId: true, romanticStatus: true },
+                    select: { simAId: true, simBId: true, romanticStatus: true, endedAt: true },
                     orderBy: { simAId: 'asc' },
                   },
                 },
@@ -274,12 +284,12 @@ export const simsRouter = router({
           },
           socialRelationshipsA: {
             where: { romanticStatus: { not: RomanticStatus.NONE } },
-            select: { simAId: true, simBId: true, romanticStatus: true },
+            select: { simAId: true, simBId: true, romanticStatus: true, endedAt: true },
             orderBy: { simAId: 'asc' },
           },
           socialRelationshipsB: {
             where: { romanticStatus: { not: RomanticStatus.NONE } },
-            select: { simAId: true, simBId: true, romanticStatus: true },
+            select: { simAId: true, simBId: true, romanticStatus: true, endedAt: true },
             orderBy: { simAId: 'asc' },
           },
         },
@@ -292,7 +302,7 @@ export const simsRouter = router({
       const familyEdgeSet = new Set<string>()
       const partnerEdgeSet = new Set<string>()
       const familyEdges: { parentId: string; childId: string }[] = []
-      const partnerEdges: { simAId: string; simBId: string; romanticStatus: RomanticStatus }[] = []
+      const partnerEdges: { simAId: string; simBId: string; romanticStatus: RomanticStatus; endedAt: Date | null }[] = []
 
       function addSim(s: MiniTreeSimData) {
         if (!simMap.has(s.id)) simMap.set(s.id, { ...s, href: `/app/legacies/${legacySlug}/sims/${s.id}` })
@@ -301,22 +311,22 @@ export const simsRouter = router({
         const key = `${parentId}-${childId}`
         if (!familyEdgeSet.has(key)) { familyEdgeSet.add(key); familyEdges.push({ parentId, childId }) }
       }
-      function addPartnerEdge(simAId: string, simBId: string, romanticStatus: RomanticStatus) {
+      function addPartnerEdge(simAId: string, simBId: string, romanticStatus: RomanticStatus, endedAt: Date | null) {
         const [a, b] = [simAId, simBId].sort()
         const key = `${a}-${b}`
-        if (!partnerEdgeSet.has(key)) { partnerEdgeSet.add(key); partnerEdges.push({ simAId: a, simBId: b, romanticStatus }) }
+        if (!partnerEdgeSet.has(key)) { partnerEdgeSet.add(key); partnerEdges.push({ simAId: a, simBId: b, romanticStatus, endedAt }) }
       }
 
       addSim(focusedSim)
-      focusedSim.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
-      focusedSim.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
+      focusedSim.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus, r.endedAt))
+      focusedSim.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus, r.endedAt))
 
       for (const parentRel of focusedSim.childOf) {
         const parent = parentRel.parent
         addSim(parent)
         addFamilyEdge(parent.id, focusedSim.id)
-        parent.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
-        parent.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus))
+        parent.socialRelationshipsA.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus, r.endedAt))
+        parent.socialRelationshipsB.forEach((r) => addPartnerEdge(r.simAId, r.simBId, r.romanticStatus, r.endedAt))
         for (const gpRel of parent.childOf) {
           addSim(gpRel.parent)
           addFamilyEdge(gpRel.parent.id, parent.id)
@@ -346,7 +356,11 @@ export const simsRouter = router({
         partnerSims.forEach(addSim)
       }
 
-      return { sims: Array.from(simMap.values()), familyEdges, partnerEdges }
+      return {
+        sims: Array.from(simMap.values()).map(({ causeOfDeath, ...s }) => ({ ...s, isDeceased: causeOfDeath !== null })),
+        familyEdges,
+        partnerEdges,
+      }
     }),
 
   update: protectedProcedure
@@ -594,6 +608,7 @@ export const simsRouter = router({
         simAId: z.string(),
         simBId: z.string(),
         romanticStatus: z.nativeEnum(RomanticStatus).default('DATING'),
+        endedAt: z.date().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -613,6 +628,7 @@ export const simsRouter = router({
             simAId: normalA,
             simBId: normalB,
             romanticStatus: input.romanticStatus,
+            endedAt: input.endedAt ?? null,
             friendshipScore: 0,
             romanceScore: 0,
           },
@@ -633,6 +649,7 @@ export const simsRouter = router({
         simAId: z.string(),
         simBId: z.string(),
         romanticStatus: z.nativeEnum(RomanticStatus),
+        endedAt: z.date().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -641,7 +658,10 @@ export const simsRouter = router({
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
       return ctx.db.socialRelationship.update({
         where: { simAId_simBId: { simAId: normalA, simBId: normalB } },
-        data: { romanticStatus: input.romanticStatus },
+        data: {
+          romanticStatus: input.romanticStatus,
+          ...(input.endedAt !== undefined ? { endedAt: input.endedAt } : {}),
+        },
       })
     }),
 

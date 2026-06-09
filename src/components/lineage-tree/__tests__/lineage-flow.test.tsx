@@ -15,7 +15,7 @@ const familyEdges = [
   { parentId: 'founder', childId: 'heir' },
   { parentId: 'spouse', childId: 'heir' },
 ]
-const partnerEdges = [{ simAId: 'founder', simBId: 'spouse', romanticStatus: 'MARRIED' as const }]
+const partnerEdges = [{ simAId: 'founder', simBId: 'spouse', romanticStatus: 'MARRIED' as const, endedAt: null }]
 
 function renderTree(props: Partial<React.ComponentProps<typeof LineageFlow>> = {}) {
   return render(

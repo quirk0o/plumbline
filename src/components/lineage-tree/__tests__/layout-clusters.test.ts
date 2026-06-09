@@ -4,7 +4,7 @@ import { COUPLE_WIDTH, NODE_WIDTH, type LineagePartnerEdge } from '../layout-sha
 import type { RomanticStatus } from '@prisma/client'
 
 const edge = (a: string, b: string, romanticStatus: RomanticStatus): LineagePartnerEdge => ({
-  simAId: a, simBId: b, romanticStatus,
+  simAId: a, simBId: b, romanticStatus, endedAt: null,
 })
 const row0 = (...ids: string[]) => new Map<string, number>(ids.map((id) => [id, 0]))
 

@@ -19,6 +19,7 @@ export type LineagePartnerEdge = {
   simAId: string
   simBId: string
   romanticStatus: RomanticStatus
+  endedAt: Date | null
 }
 
 /** Node bounding box (matches the design's 140×90 with the Crest medallion). */

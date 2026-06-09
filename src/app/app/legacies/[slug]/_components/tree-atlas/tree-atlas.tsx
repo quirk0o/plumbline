@@ -162,7 +162,12 @@ export function TreeAtlas({ legacySlug, legacyName, founderSimId }: TreeAtlasPro
     [data, visibleIds],
   )
   const partnerEdges = useMemo(
-    () => (data?.partnerEdges ?? []).filter((e) => visibleIds.has(e.simAId) && visibleIds.has(e.simBId)),
+    () =>
+      (data?.partnerEdges ?? [])
+        .filter((e) => visibleIds.has(e.simAId) && visibleIds.has(e.simBId))
+        // tRPC serialises endedAt over the wire as an ISO string; the layout
+        // type is Date | null, so revive it at the client boundary.
+        .map((e) => ({ ...e, endedAt: e.endedAt ? new Date(e.endedAt) : null })),
     [data, visibleIds],
   )
 

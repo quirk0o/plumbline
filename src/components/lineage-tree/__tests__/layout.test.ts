@@ -12,7 +12,7 @@ import {
 import type { RomanticStatus } from '@prisma/client'
 
 const edge = (a: string, b: string, romanticStatus: RomanticStatus = 'MARRIED'): LineagePartnerEdge => ({
-  simAId: a, simBId: b, romanticStatus,
+  simAId: a, simBId: b, romanticStatus, endedAt: null,
 })
 const sim = (id: string, generationNumber: number | null): LayoutSim => ({ id, generationNumber })
 
@@ -137,7 +137,7 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     const l = computeLineageLayout(
       [sim('sol', 1), sim('bex', 2), sim('pip', 3)],
       [{ parentId: 'sol', childId: 'pip' }, { parentId: 'bex', childId: 'pip' }],
-      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' }],
+      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER', endedAt: null }],
     )
     expect(l.bonds).toHaveLength(1)
     expect(l.bonds[0].points.length).toBeGreaterThanOrEqual(2)
@@ -147,7 +147,7 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     const l = computeLineageLayout(
       [sim('sol', 1), sim('bex', 2)],
       [],
-      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' }],
+      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER', endedAt: null }],
     )
     expect(l.bonds).toEqual([
       expect.objectContaining({ a: 'bex', b: 'sol', romanticStatus: 'PARTNER' }),
@@ -158,7 +158,7 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     const l = computeLineageLayout(
       [sim('sol', 1), sim('bex', 2)],
       [],
-      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' }],
+      [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER', endedAt: null }],
     )
     const ys = l.bonds[0].points.map((p) => p.y)
     expect(Math.min(...ys)).toBe(l.byId['sol'].y + CREST_ANCHORS.cy)
@@ -169,7 +169,7 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     const l = computeLineageLayout(
       [sim('a', 1), sim('b', 1)],
       [],
-      [{ simAId: 'a', simBId: 'b', romanticStatus: 'PARTNER' }],
+      [{ simAId: 'a', simBId: 'b', romanticStatus: 'PARTNER', endedAt: null }],
     )
     expect(l.bonds).toEqual([])
     expect(l.couples).toHaveLength(1)
@@ -179,14 +179,14 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     const ex = computeLineageLayout(
       [sim('a', 1), sim('b', 2)],
       [],
-      [{ simAId: 'a', simBId: 'b', romanticStatus: 'EX_PARTNER' }],
+      [{ simAId: 'a', simBId: 'b', romanticStatus: 'EX_PARTNER', endedAt: null }],
     )
     expect(ex.bonds).toEqual([])
 
     const dating = computeLineageLayout(
       [sim('a', 1), sim('b', 2)],
       [],
-      [{ simAId: 'a', simBId: 'b', romanticStatus: 'DATING' }],
+      [{ simAId: 'a', simBId: 'b', romanticStatus: 'DATING', endedAt: null }],
     )
     expect(dating.bonds).toEqual([])
   })
@@ -204,8 +204,8 @@ describe('computeLineageLayout — cross-gen bonds', () => {
         { parentId: 'th', childId: 'gj' },
       ],
       [
-        { simAId: 'hh', simBId: 'th', romanticStatus: 'MARRIED' },
-        { simAId: 'gj', simBId: 'jt', romanticStatus: 'PARTNER' },
+        { simAId: 'hh', simBId: 'th', romanticStatus: 'MARRIED', endedAt: null },
+        { simAId: 'gj', simBId: 'jt', romanticStatus: 'PARTNER', endedAt: null },
       ],
     )
 

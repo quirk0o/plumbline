@@ -3,7 +3,7 @@ import { deriveRows } from '../layout-rows'
 import type { LayoutSim, LineagePartnerEdge } from '../layout-shared'
 
 const married = (a: string, b: string): LineagePartnerEdge => ({
-  simAId: a, simBId: b, romanticStatus: 'MARRIED',
+  simAId: a, simBId: b, romanticStatus: 'MARRIED', endedAt: null,
 })
 
 describe('deriveRows', () => {

@@ -22,7 +22,7 @@ const familyEdges = [
   { parentId: 'f1', childId: 'c1' },
   { parentId: 'f2', childId: 'c1' },
 ]
-const partnerEdges = [{ simAId: 'f1', simBId: 'f2', romanticStatus: 'MARRIED' as const }]
+const partnerEdges = [{ simAId: 'f1', simBId: 'f2', romanticStatus: 'MARRIED' as const, endedAt: null }]
 const layout = computeLineageLayout(sims, familyEdges, partnerEdges)
 
 function isCrestNode(n: Node): n is Node<CrestNodeData, 'crest'> {
@@ -191,7 +191,7 @@ describe('toFlowGraph', () => {
     })
     it('marks widowed bonds dashed', () => {
       const s = [sim('ann', 1), sim('joe', 1)]
-      const l = computeLineageLayout(s, [], [{ simAId: 'ann', simBId: 'joe', romanticStatus: 'WIDOWED' as const }])
+      const l = computeLineageLayout(s, [], [{ simAId: 'ann', simBId: 'joe', romanticStatus: 'WIDOWED' as const, endedAt: null }])
       const g = toFlowGraph(l, s, [], {})
       expect(g.edges.find((e) => e.type === 'marriage')!.data).toMatchObject({ dashed: true })
     })
@@ -205,7 +205,7 @@ describe('toFlowGraph', () => {
     })
     it('emits no union node for a childless couple', () => {
       const s = [sim('a', 1), sim('b', 1)]
-      const l = computeLineageLayout(s, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'MARRIED' as const }])
+      const l = computeLineageLayout(s, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'MARRIED' as const, endedAt: null }])
       const g = toFlowGraph(l, s, [], {})
       expect(g.nodes.filter((n) => n.type === 'union')).toHaveLength(0)
       expect(g.edges.filter((e) => e.type === 'marriage')).toHaveLength(1)
@@ -248,8 +248,8 @@ describe('toFlowGraph — hanging unions', () => {
   const hSims = [sim('alice', 1), sim('bob', 1), sim('dana', 1), sim('carol', 2)]
   const hFamily = [{ parentId: 'alice', childId: 'carol' }, { parentId: 'bob', childId: 'carol' }]
   const hPartners = [
-    { simAId: 'alice', simBId: 'bob', romanticStatus: 'EX_PARTNER' as const },
-    { simAId: 'bob', simBId: 'dana', romanticStatus: 'MARRIED' as const },
+    { simAId: 'alice', simBId: 'bob', romanticStatus: 'EX_PARTNER' as const, endedAt: null },
+    { simAId: 'bob', simBId: 'dana', romanticStatus: 'MARRIED' as const, endedAt: null },
   ]
   const hLayout = computeLineageLayout(hSims, hFamily, hPartners)
   const hGraph = toFlowGraph(hLayout, hSims, hFamily, {})
@@ -344,7 +344,7 @@ describe('toFlowGraph — cross-gen bonds', () => {
     { parentId: 'sol', childId: 'pip' },
     { parentId: 'bex', childId: 'pip' },
   ]
-  const bPartners = [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' as const }]
+  const bPartners = [{ simAId: 'sol', simBId: 'bex', romanticStatus: 'PARTNER' as const, endedAt: null }]
   const bLayout = computeLineageLayout(bSims, bFamily, bPartners)
   const bGraph = toFlowGraph(bLayout, bSims, bFamily, {})
 
@@ -361,7 +361,7 @@ describe('toFlowGraph — cross-gen bonds', () => {
     expect(current.data).toMatchObject({ dashed: false })
 
     const wSims = [sim('a', 1), sim('b', 2)]
-    const wLayout = computeLineageLayout(wSims, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'WIDOWED' as const }])
+    const wLayout = computeLineageLayout(wSims, [], [{ simAId: 'a', simBId: 'b', romanticStatus: 'WIDOWED' as const, endedAt: null }])
     const wGraph = toFlowGraph(wLayout, wSims, [], {})
     expect(wGraph.edges.find((e) => e.type === 'bond')!.data).toMatchObject({ dashed: true })
   })

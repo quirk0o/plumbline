@@ -902,6 +902,23 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
     expect(row?.romanticStatus).toBe(RomanticStatus.MARRIED)
   })
 
+  it('addSocialRelationship persists endedAt when provided', async () => {
+    const when = new Date('2026-02-02T00:00:00Z')
+    const rel = await authedCaller(userId).sims.addSocialRelationship({
+      simAId, simBId, romanticStatus: RomanticStatus.MARRIED, endedAt: when,
+    })
+    expect(rel.endedAt?.toISOString()).toBe(when.toISOString())
+  })
+
+  it('updateSocialRelationship can set and clear endedAt', async () => {
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.MARRIED })
+    const when = new Date('2026-03-03T00:00:00Z')
+    const ended = await authedCaller(userId).sims.updateSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.MARRIED, endedAt: when })
+    expect(ended.endedAt?.toISOString()).toBe(when.toISOString())
+    const reopened = await authedCaller(userId).sims.updateSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.MARRIED, endedAt: null })
+    expect(reopened.endedAt).toBeNull()
+  })
+
   it('removes the relationship', async () => {
     await db.socialRelationship.create({
       data: { simAId, simBId, romanticStatus: RomanticStatus.NONE, friendshipScore: 0, romanceScore: 0 },
@@ -1533,8 +1550,27 @@ describe('sims.getTreeData', () => {
       },
     })
     const result = await caller.sims.getTreeData({ legacySlug })
-    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.MARRIED })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.MARRIED, endedAt: null })
     expect(result.partnerEdges.map((e) => [e.simAId, e.simBId])).not.toContainEqual([idA2, idC])
+  })
+
+  it('returns endedAt on partner edges and isDeceased on sims', async () => {
+    const caller = authedCaller(userId)
+    const simA = await createTestSim(legacyId, { firstName: 'Alive' })
+    const simB = await createTestSim(legacyId, { firstName: 'Gone' })
+    await db.sim.update({ where: { id: simB.id }, data: { causeOfDeath: 'OLD_AGE' } })
+    const [idA, idB] = [simA.id, simB.id].sort()
+    const when = new Date('2026-04-04T00:00:00Z')
+    await db.socialRelationship.create({
+      data: { simAId: idA, simBId: idB, romanticStatus: RomanticStatus.MARRIED, endedAt: when, friendshipScore: 0, romanceScore: 0 },
+    })
+
+    const result = await caller.sims.getTreeData({ legacySlug })
+
+    const edge = result.partnerEdges.find((e) => e.simAId === idA && e.simBId === idB)
+    expect(edge?.endedAt?.toISOString()).toBe(when.toISOString())
+    expect(result.sims.find((s) => s.id === simB.id)?.isDeceased).toBe(true)
+    expect(result.sims.find((s) => s.id === simA.id)?.isDeceased).toBe(false)
   })
 
   it('includes romanticStatus on every partner edge', async () => {
@@ -1561,6 +1597,7 @@ describe('sims.getTreeData', () => {
       simAId: idA,
       simBId: idB,
       romanticStatus: RomanticStatus.MARRIED,
+      endedAt: null,
     })
   })
 
@@ -1696,7 +1733,7 @@ describe('sims.getMiniTreeData', () => {
     const ids = result.sims.map((s) => s.id)
     expect(ids).toContain(focused.id)
     expect(ids).toContain(partner.id)
-    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.MARRIED })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.MARRIED, endedAt: null })
   })
 
   it('includes romanticStatus on every partner edge', async () => {
@@ -1722,6 +1759,7 @@ describe('sims.getMiniTreeData', () => {
       simAId: idA,
       simBId: idB,
       romanticStatus: RomanticStatus.MARRIED,
+      endedAt: null,
     })
   })
 
@@ -1788,7 +1826,7 @@ describe('sims.getMiniTreeData', () => {
       },
     })
     const result = await caller.sims.getMiniTreeData({ simId: focused.id })
-    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.EX_PARTNER })
+    expect(result.partnerEdges).toContainEqual({ simAId: idA, simBId: idB, romanticStatus: RomanticStatus.EX_PARTNER, endedAt: null })
     expect(result.sims.map((s) => s.id)).toContain(exPartner.id)
   })
 

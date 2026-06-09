@@ -1,7 +1,11 @@
 import type { Gender } from '@prisma/client'
 import type { LineageFamilyEdge, LineagePartnerEdge } from './layout-shared'
 
-/** Minimal sim shape the labeller needs; LineageFlowSim satisfies it. */
+/**
+ * Minimal sim shape the labeller needs; LineageFlowSim satisfies it.
+ * `isDeceased` feeds the partner layer (Task 3) to derive widowhood
+ * (e.g. "Late husband"); it is not read by the blood-relation half.
+ */
 export type KinshipSim = { id: string; gender: Gender; isDeceased: boolean }
 
 /**
@@ -93,6 +97,9 @@ function bloodRelation(
   if (best === null) return null
   let isHalf = false
   if (best.up === 1 && best.down === 1) {
+    // Fewer than two shared parents ⇒ half-sibling. A sim with only one
+    // recorded parent is therefore treated as a half-sibling (we can't prove
+    // the second parent is shared).
     const xParents = parents.get(xId) ?? new Set<string>()
     const shared = [...(parents.get(focusId) ?? [])].filter((p) => xParents.has(p))
     isHalf = shared.length < 2
@@ -128,7 +135,8 @@ function siblingTerm(g: Gender, isHalf: boolean): string {
 const COUSIN_ORDINALS = ['First', 'Second', 'Third']
 
 function cousinTerm(lo: number, diff: number): string {
-  const ord = COUSIN_ORDINALS[lo - 2] // lo=2 → "First"
+  // lo=2 (parents are siblings) → "First"; lo=3 → "Second"; lo=4 → "Third".
+  const ord = COUSIN_ORDINALS[lo - 2]
   if (diff === 0) return `${ord} cousin`
   return `${ord} cousin ${diff === 1 ? 'once' : 'twice'} removed`
 }

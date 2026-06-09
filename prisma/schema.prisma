@@ -517,6 +517,7 @@ model SocialRelationship {
   friendshipScore Int
   romanceScore    Int
   romanticStatus  RomanticStatus
+  endedAt         DateTime?      // non-null = bond deliberately ended (break-up / divorce) while both alive; widowhood is derived from partner death, never stored here
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 

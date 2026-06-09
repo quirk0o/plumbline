@@ -56,15 +56,14 @@ export async function createTestSim(
     lastName?: string
     gender?: Gender
     householdId?: string | null
-    generationNumber?: number | null
+    generationNumber?: number
   } = {},
 ) {
   return db.sim.create({
     data: {
       legacyId,
       householdId: overrides.householdId ?? null,
-      generationNumber:
-        overrides.generationNumber === undefined ? 1 : overrides.generationNumber,
+      generationNumber: overrides.generationNumber ?? 1,
       firstName: overrides.firstName ?? 'Test',
       lastName: overrides.lastName ?? 'Sim',
       gender: overrides.gender ?? Gender.FEMALE,

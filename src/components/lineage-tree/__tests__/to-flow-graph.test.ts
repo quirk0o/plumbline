@@ -281,6 +281,18 @@ describe('toFlowGraph — hanging unions', () => {
     expect(d).toHaveLength(1)
     expect(d[0].source).toBe(`union-${hu.key}`)
   })
+  it("gives each coParent elbow a gap covering its parent's text band", () => {
+    // The elbow leaves the parent's medallion bottom (above the band) and drops
+    // to the hanging union below — it must skip the parent's name/stage text.
+    const co = hGraph.edges.filter((e) => e.type === 'coParent')
+    for (const e of co) {
+      const parentY = hLayout.byId[e.source].y
+      expect(e.data).toEqual({
+        gapTop: parentY + CREST_TEXT_BAND_TOP,
+        gapBottom: parentY + CREST_TEXT_BAND_BOTTOM,
+      })
+    }
+  })
   it('paints coParent elbows after descents and before marriage bonds', () => {
     const types = hGraph.edges.map((e) => e.type)
     const lastDescent = types.lastIndexOf('descent')

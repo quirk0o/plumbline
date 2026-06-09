@@ -94,14 +94,28 @@ export function DescentEdge({ sourceX, sourceY, targetX, targetY, data }: EdgePr
  * run lands on it (contrast descentPath, which continues down to the child's
  * top handle).
  */
-export function coParentPath(sourceX: number, sourceY: number, targetX: number, targetY: number): string {
-  return `M ${sourceX} ${sourceY} V ${targetY} H ${targetX}`
+export function coParentPath(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  gapTop?: number,
+  gapBottom?: number,
+): string {
+  // No band → plain elbow. With a band, skip the source crest's name/stage
+  // text: the elbow starts at the medallion bottom (above the band) and would
+  // otherwise paint straight down across it.
+  if (gapTop === undefined || gapBottom === undefined) {
+    return `M ${sourceX} ${sourceY} V ${targetY} H ${targetX}`
+  }
+  return `M ${sourceX} ${sourceY} V ${gapTop} M ${sourceX} ${gapBottom} V ${targetY} H ${targetX}`
 }
 
-export function CoParentEdge({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
+export function CoParentEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
+  const { gapTop, gapBottom } = (data as DescentEdgeData | undefined) ?? {}
   return (
     <path
-      d={coParentPath(sourceX, sourceY, targetX, targetY)}
+      d={coParentPath(sourceX, sourceY, targetX, targetY, gapTop, gapBottom)}
       stroke="var(--border-bright)"
       strokeWidth="1.5"
       fill="none"

@@ -152,7 +152,7 @@ function buildUnionsAndDescents(
   for (const [childId, parentIds] of parentsByChild) {
     const kind = classifyDescent(parentIds, coupleKeys, hangingByKey, bondByKey)
     if (kind === 'row') emitRowDescent(build, layout, childId, parentIds)
-    else if (kind === 'hanging') emitHangingDescent(build, hangingByKey, childId, parentIds)
+    else if (kind === 'hanging') emitHangingDescent(build, layout, hangingByKey, childId, parentIds)
     else if (kind === 'bond') emitBondDescent(build, layout, bondByKey, childId, parentIds)
     else emitPerParentDescents(build, childId, parentIds, layout)
   }
@@ -247,6 +247,7 @@ function crestGapData(parentNode: PositionedNode | undefined): DescentEdgeData |
  *  descend the child from it. */
 function emitHangingDescent(
   build: DescentBuild,
+  layout: LineageLayout,
   hangingByKey: Map<string, HangingUnion>,
   childId: string,
   parentIds: string[],
@@ -258,8 +259,10 @@ function emitHangingDescent(
     unionId = `union-${key}`
     build.unionIdByKey.set(key, unionId)
     build.unionNodes.push(hangingUnionNode(unionId, hanging))
-    build.coParentEdges.push(coParentEdge(key, hanging.parentA, unionId))
-    build.coParentEdges.push(coParentEdge(key, hanging.parentB, unionId))
+    // The elbow leaves each co-parent's medallion bottom (above the text band),
+    // so it carries that parent's gap data to skip the name/stage text.
+    build.coParentEdges.push(coParentEdge(key, hanging.parentA, unionId, crestGapData(layout.byId[hanging.parentA])))
+    build.coParentEdges.push(coParentEdge(key, hanging.parentB, unionId, crestGapData(layout.byId[hanging.parentB])))
   }
   build.descentEdges.push(descentEdge(`descent-${childId}`, unionId, 'out', childId))
 }
@@ -441,8 +444,9 @@ function lowerPartnerUnion(id: string, lowerId: string, layout: LineageLayout): 
   return unionNode(id, { x: p.x + CREST_ANCHORS.cx - 0.5, y: p.y + CREST_ANCHORS.cy - 1 }, true)
 }
 
-/** [constructor] Elbow from one parent's bottom handle to a hanging union. */
-function coParentEdge(key: string, parentId: string, unionId: string): Edge {
+/** [constructor] Elbow from one parent's bottom handle to a hanging union. The
+ *  parent is a crest, so it carries gap data to skip its own text band. */
+function coParentEdge(key: string, parentId: string, unionId: string, gapData?: DescentEdgeData): Edge {
   return {
     id: `coparent-${key}-${parentId}`,
     type: 'coParent',
@@ -450,6 +454,7 @@ function coParentEdge(key: string, parentId: string, unionId: string): Edge {
     sourceHandle: 'bottom',
     target: unionId,
     targetHandle: 'in',
+    data: gapData,
     focusable: false,
     ...A11Y_HIDDEN,
   }

@@ -7,9 +7,9 @@ import { LineageFlow } from '../lineage-flow'
 import type { LineageFlowSim } from '../to-flow-graph'
 
 const sims: LineageFlowSim[] = [
-  { id: 'founder', firstName: 'Bella', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, isDeceased: false },
-  { id: 'spouse', firstName: 'Mortimer', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, isDeceased: false },
-  { id: 'heir', firstName: 'Cassandra', lastName: 'Goth', imageUrl: null, generationNumber: 2, lifeStage: 'TEEN', isHeir: true, isDeceased: false },
+  { id: 'founder', firstName: 'Bella', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, isDeceased: false, gender: 'FEMALE' },
+  { id: 'spouse', firstName: 'Mortimer', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, isDeceased: false, gender: 'MALE' },
+  { id: 'heir', firstName: 'Cassandra', lastName: 'Goth', imageUrl: null, generationNumber: 2, lifeStage: 'TEEN', isHeir: true, isDeceased: false, gender: 'FEMALE' },
 ]
 const familyEdges = [
   { parentId: 'founder', childId: 'heir' },

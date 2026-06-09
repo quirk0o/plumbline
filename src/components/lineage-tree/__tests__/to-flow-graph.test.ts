@@ -14,6 +14,7 @@ const sim = (id: string, gen: number | null, extra: Partial<LineageFlowSim> = {}
   lifeStage: 'ADULT',
   isHeir: false,
   isDeceased: false,
+  gender: 'FEMALE',
   ...extra,
 })
 

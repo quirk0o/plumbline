@@ -11,7 +11,7 @@ import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {
   id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
-  lifeStage: true, isHeir: true, causeOfDeath: true,
+  lifeStage: true, isHeir: true, gender: true, causeOfDeath: true,
 } as const
 
 export type MiniTreeSimData = Prisma.SimGetPayload<{ select: typeof miniTreeSimSelect }>
@@ -198,6 +198,7 @@ export const simsRouter = router({
             generationNumber: true,
             lifeStage: true,
             isHeir: true,
+            gender: true,
             causeOfDeath: true,
           },
           orderBy: { id: 'asc' },

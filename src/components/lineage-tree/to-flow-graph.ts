@@ -14,7 +14,7 @@
  * marriage edges, so bonds paint on top (matching the old SVG render order).
  */
 import type { Edge, Node } from '@xyflow/react'
-import type { LifeStage } from '@prisma/client'
+import type { Gender, LifeStage } from '@prisma/client'
 import {
   CREST_ANCHORS,
   CREST_TEXT_BAND_BOTTOM,
@@ -47,6 +47,7 @@ export type LineageFlowSim = {
   lifeStage: LifeStage
   isHeir: boolean
   isDeceased: boolean
+  gender: Gender
 }
 
 export type CrestNodeData = {

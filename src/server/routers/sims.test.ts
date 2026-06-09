@@ -1667,6 +1667,13 @@ describe('sims.getTreeData', () => {
     expect(result).toEqual({ sims: [], familyEdges: [], partnerEdges: [] })
   })
 
+  it('getTreeData includes gender on each sim', async () => {
+    const caller = authedCaller(userId)
+    await createTestSim(legacyId, { firstName: 'Bella', gender: Gender.FEMALE })
+    const data = await caller.sims.getTreeData({ legacySlug })
+    expect(data.sims[0]).toHaveProperty('gender', 'FEMALE')
+  })
+
   it('does not return partner edges that cross legacy boundaries', async () => {
     // Two users, each with their own legacy and a MARRIED pair
     const userA = await createTestUser()

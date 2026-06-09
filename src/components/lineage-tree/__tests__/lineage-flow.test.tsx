@@ -109,6 +109,35 @@ describe('LineageFlow', () => {
     expect(screen.getByRole('group', { name: 'Goth tree — 3 sims' })).toBeInTheDocument()
   })
 
+  it('labels other crests by relationship when a sim is selected', () => {
+    const kinshipSims: LineageFlowSim[] = [
+      { id: 'mum', firstName: 'Mum', lastName: 'X', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, isDeceased: false, gender: 'FEMALE' },
+      { id: 'kid', firstName: 'Kid', lastName: 'X', imageUrl: null, generationNumber: 2, lifeStage: 'CHILD', isHeir: false, isDeceased: false, gender: 'FEMALE' },
+    ]
+    const kinshipFamilyEdges = [{ parentId: 'mum', childId: 'kid' }]
+
+    const { rerender } = render(
+      <ReactFlowProvider>
+        <div style={{ width: 800, height: 600 }}>
+          <LineageFlow sims={kinshipSims} familyEdges={kinshipFamilyEdges} partnerEdges={[]} selectedId="kid" />
+        </div>
+      </ReactFlowProvider>,
+    )
+    // From kid's perspective, mum is "Mother" (rendered uppercased).
+    expect(screen.getByText('MOTHER')).toBeInTheDocument()
+
+    // Deselect → labels revert to life stages.
+    rerender(
+      <ReactFlowProvider>
+        <div style={{ width: 800, height: 600 }}>
+          <LineageFlow sims={kinshipSims} familyEdges={kinshipFamilyEdges} partnerEdges={[]} />
+        </div>
+      </ReactFlowProvider>,
+    )
+    expect(screen.queryByText('MOTHER')).not.toBeInTheDocument()
+    expect(screen.getByText(/ADULT/i)).toBeInTheDocument()
+  })
+
   it('omits aria-roledescription from rendered crest node wrappers', () => {
     // xyflow sets aria-roledescription="node" on every wrapper, but crest nodes
     // have nodesFocusable=false (no role) which makes that a WAI-ARIA violation.

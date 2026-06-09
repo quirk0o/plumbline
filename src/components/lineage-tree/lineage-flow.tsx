@@ -17,6 +17,7 @@ import {
   type LineagePartnerEdge,
 } from './layout'
 import { toFlowGraph, type LineageFlowSim } from './to-flow-graph'
+import { computeKinshipLabels } from './kinship'
 import { FIT_VIEW_OPTIONS, MIN_ZOOM, MAX_ZOOM } from './fit-options'
 import { CrestFlowNode } from './crest-flow-node'
 import { BondEdge, CoParentEdge, DescentEdge, GenLabelNode, MarriageEdge, UnionNode } from './flow-parts'
@@ -119,6 +120,15 @@ export function LineageFlow({
     [layout, getViewport, setCenter, store],
   )
 
+  const kinshipFocusId = selectedId ?? focusSimId
+  const kinshipLabels = useMemo(
+    () =>
+      kinshipFocusId
+        ? computeKinshipLabels(kinshipFocusId, sims, familyEdges, partnerEdges)
+        : undefined,
+    [kinshipFocusId, sims, familyEdges, partnerEdges],
+  )
+
   const { nodes, edges } = useMemo(
     () =>
       toFlowGraph(layout, sims, familyEdges, {
@@ -126,10 +136,11 @@ export function LineageFlow({
         focusSimId,
         selectedId,
         dimmedIds,
+        kinshipLabels,
         onSelect: onSelectSim,
         onNodeFocus: handleNodeFocus,
       }),
-    [layout, sims, familyEdges, founderSimId, focusSimId, selectedId, dimmedIds, onSelectSim, handleNodeFocus],
+    [layout, sims, familyEdges, founderSimId, focusSimId, selectedId, dimmedIds, kinshipLabels, onSelectSim, handleNodeFocus],
   )
 
   // Re-fit when the caller's filter changes (initial fit comes from fitView prop).

@@ -17,10 +17,11 @@ import flowStyles from './lineage-flow.module.css'
  * `data`, so the component takes just that — keeps it directly testable.
  */
 export function CrestFlowNode({ data }: { data: CrestNodeData }) {
-  const { sim, isFounder, isSelected, isDimmed, isFocused, onSelect, onNodeFocus } = data
+  const { sim, isFounder, isSelected, isDimmed, isFocused, kinshipLabel, onSelect, onNodeFocus } = data
   const fullName = `${sim.firstName} ${sim.lastName}`.trim()
   const lifeStageLabel = formatLifeStage(sim.lifeStage)
-  const accessibleName = `${fullName}, ${lifeStageLabel}`
+  const caption = kinshipLabel ?? lifeStageLabel
+  const accessibleName = `${fullName}, ${caption}`
   const isAccent = isFounder || sim.isHeir
 
   const medallion = (
@@ -42,7 +43,7 @@ export function CrestFlowNode({ data }: { data: CrestNodeData }) {
       <span className={styles.divider} aria-hidden="true" />
       <span className={styles.name}>{fullName}</span>
       <span className={styles.stage} aria-hidden="true">
-        {lifeStageLabel.toUpperCase()}
+        {caption.toUpperCase()}
       </span>
     </>
   )

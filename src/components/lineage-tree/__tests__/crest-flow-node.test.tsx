@@ -84,6 +84,18 @@ describe('CrestFlowNode', () => {
     expect(container.querySelector('[data-tree-node]')).toHaveAttribute('data-dimmed')
   })
 
+  it('shows the kinship label in place of the life stage when present', () => {
+    renderNode(data({ onSelect: vi.fn(), kinshipLabel: 'Mother' }))
+    expect(screen.getByText('MOTHER')).toBeInTheDocument()
+    expect(screen.queryByText(/teen/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button')).toHaveAccessibleName(/, Mother$/)
+  })
+
+  it('falls back to the life stage when no kinship label', () => {
+    renderNode(data({ onSelect: vi.fn(), kinshipLabel: undefined }))
+    expect(screen.getByText(/TEEN/i)).toBeInTheDocument()
+  })
+
   it('shows the heir plumbob crown only for heirs', () => {
     const { rerender } = renderNode(data({ sim: { ...sim, isHeir: true } }))
     expect(screen.getByTestId('heir-crown')).toBeInTheDocument()

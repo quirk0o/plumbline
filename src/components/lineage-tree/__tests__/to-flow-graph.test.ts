@@ -164,6 +164,19 @@ describe('toFlowGraph', () => {
     expect(f1Node.data.isFocused).toBe(true)
   })
 
+  it('puts the kinship label on the crest node data', () => {
+    const kinshipLabels = new Map([['f1', 'Mother']])
+    const { nodes } = toFlowGraph(layout, sims, familyEdges, { kinshipLabels })
+    const crest = nodes.find((n) => n.id === 'f1' && n.type === 'crest')
+    expect((crest?.data as { kinshipLabel?: string }).kinshipLabel).toBe('Mother')
+  })
+
+  it('leaves kinshipLabel undefined when no map is supplied', () => {
+    const { nodes } = toFlowGraph(layout, sims, familyEdges, {})
+    const crest = nodes.find((n) => n.type === 'crest')
+    expect((crest?.data as { kinshipLabel?: string }).kinshipLabel).toBeUndefined()
+  })
+
   it('skips descent edges referencing parents or children missing from the layout', () => {
     const graph2 = toFlowGraph(
       layout,

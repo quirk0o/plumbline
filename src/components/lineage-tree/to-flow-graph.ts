@@ -56,6 +56,8 @@ export type CrestNodeData = {
   isSelected: boolean
   isDimmed: boolean
   isFocused: boolean
+  /** Relationship to the current focus sim; replaces the life-stage caption when set. */
+  kinshipLabel?: string
   onSelect?: (id: string) => void
   /** Fired on keyboard focus so the canvas can pan an off-screen node into view. */
   onNodeFocus?: (id: string) => void
@@ -95,6 +97,7 @@ export type FlowGraphOptions = {
   focusSimId?: string
   selectedId?: string
   dimmedIds?: Set<string>
+  kinshipLabels?: Map<string, string>
   onSelect?: (id: string) => void
   onNodeFocus?: (id: string) => void
 }
@@ -573,6 +576,7 @@ function crestNode(sim: LineageFlowSim, n: PositionedNode, opts: FlowGraphOption
       isSelected: opts.selectedId === n.id,
       isDimmed: opts.dimmedIds?.has(n.id) ?? false,
       isFocused: opts.focusSimId === n.id,
+      kinshipLabel: opts.kinshipLabels?.get(n.id),
       onSelect: opts.onSelect,
       onNodeFocus: opts.onNodeFocus,
     },

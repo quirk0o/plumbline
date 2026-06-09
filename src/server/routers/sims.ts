@@ -385,13 +385,23 @@ export const simsRouter = router({
         causeOfDeath: z.nativeEnum(CauseOfDeath).nullable().optional(),
         aspirationId: z.string().nullable().optional(),
         careerId: z.string().nullable().optional(),
-        generationNumber: z.number().int().min(1).nullable().optional(),
+        generationNumber: z.number().int().min(1).optional(),
         isHeir: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       const sim = await assertSimOwned(ctx.db, input.id, userId)
+
+      if (input.generationNumber !== undefined) {
+        const parentCount = await ctx.db.familyRelationship.count({ where: { childId: input.id } })
+        if (parentCount > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Generation is derived from parents and cannot be set directly',
+          })
+        }
+      }
 
       const { id, aspirationId, careerId, ...fields } = input
 
@@ -424,17 +434,15 @@ export const simsRouter = router({
                     select: { generationNumber: true },
                   })
                 ).generationNumber
-          if (targetGeneration !== null) {
-            await tx.sim.updateMany({
-              where: {
-                legacyId: sim.legacyId,
-                generationNumber: targetGeneration,
-                isHeir: true,
-                NOT: { id: input.id },
-              },
-              data: { isHeir: false },
-            })
-          }
+          await tx.sim.updateMany({
+            where: {
+              legacyId: sim.legacyId,
+              generationNumber: targetGeneration,
+              isHeir: true,
+              NOT: { id: input.id },
+            },
+            data: { isHeir: false },
+          })
         }
 
         return tx.sim.update({ where: { id }, data: fields })
@@ -442,6 +450,9 @@ export const simsRouter = router({
 
       const recomputeFields = ['generationNumber', 'lifeStage', 'isHeir', 'causeOfDeath', 'occultType'] as const
       const needsRecompute = recomputeFields.some((f) => input[f] !== undefined)
+      if (input.generationNumber !== undefined) {
+        await ctx.db.$transaction((tx) => recomputeGenerations(tx, result.legacyId))
+      }
       if (needsRecompute) void recomputeLegacyTrackers(ctx.db, result.legacyId)
       return result
     }),

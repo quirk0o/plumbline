@@ -62,7 +62,7 @@ describe('runBackfill', () => {
     const sim = await db.sim.create({
       data: {
         firstName: 'A', lastName: 'B', legacyId: legacy.id,
-        lifeStage: 'ADULT', gender: 'FEMALE', imageUrl: '/uploads/face.png',
+        lifeStage: 'ADULT', gender: 'FEMALE', imageUrl: '/uploads/face.png', generationNumber: 1,
       },
     })
 

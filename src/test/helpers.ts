@@ -63,7 +63,8 @@ export async function createTestSim(
     data: {
       legacyId,
       householdId: overrides.householdId ?? null,
-      generationNumber: overrides.generationNumber ?? null,
+      generationNumber:
+        overrides.generationNumber === undefined ? 1 : overrides.generationNumber,
       firstName: overrides.firstName ?? 'Test',
       lastName: overrides.lastName ?? 'Sim',
       gender: overrides.gender ?? Gender.FEMALE,

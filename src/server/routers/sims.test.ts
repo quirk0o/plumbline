@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { Gender, FamilyRelationshipType, RomanticStatus, LifeStage } from '@prisma/client'
 import { authedCaller, unauthCaller } from '@/test/caller'
+import { deriveRomanticState } from '@/lib/romantic-status'
 import {
   createTestUser,
   cleanupUser,
@@ -1475,6 +1476,20 @@ describe('sims — isHeir with null generationNumber', () => {
     await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
     const recordA = await db.sim.findUnique({ where: { id: simA.id } })
     expect(recordA?.isHeir).toBe(true)
+  })
+})
+
+describe('RomanticStatus narrowing — migrated rows derive correctly', () => {
+  // The narrow_romantic_status migration remaps the two dropped values:
+  //   former ex-partner rows -> DATING + endedAt (a generic break-up)
+  //   former widowed rows    -> MARRIED (widowhood now derives from the partner's death)
+  // These pin the display contract the backfill targets.
+  it('migrated ex-partners read as an ended (broke-up) dating bond', () => {
+    expect(deriveRomanticState('DATING', new Date('2026-01-01'), false)).toEqual({ kind: 'ended', bond: 'DATING' })
+  })
+  it('migrated widows read as a current marriage that derives widowed once the partner is deceased', () => {
+    expect(deriveRomanticState('MARRIED', null, false)).toEqual({ kind: 'active', bond: 'MARRIED' })
+    expect(deriveRomanticState('MARRIED', null, true)).toEqual({ kind: 'widowed', bond: 'MARRIED' })
   })
 })
 

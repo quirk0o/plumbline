@@ -48,6 +48,7 @@ const baseSim = {
   imageUrl: null,
   occultType: null,
   isHeir: false,
+  generationNumber: 1,
 }
 
 describe('IdentitySection — heir toggle', () => {
@@ -56,7 +57,7 @@ describe('IdentitySection — heir toggle', () => {
   })
 
   it('renders the heir toggle unpressed for a non-heir sim', () => {
-    render(<IdentitySection sim={baseSim} />)
+    render(<IdentitySection sim={baseSim} hasParents={false} />)
     expect(screen.getByRole('button', { name: 'Heir' })).toHaveAttribute(
       'aria-pressed',
       'false',
@@ -65,7 +66,7 @@ describe('IdentitySection — heir toggle', () => {
 
   it('marks the sim as heir on click and persists via the update mutation', async () => {
     const user = userEvent.setup()
-    render(<IdentitySection sim={baseSim} />)
+    render(<IdentitySection sim={baseSim} hasParents={false} />)
 
     const toggle = screen.getByRole('button', { name: 'Heir' })
     await user.click(toggle)
@@ -76,7 +77,7 @@ describe('IdentitySection — heir toggle', () => {
 
   it('reflects an existing heir as pressed and can unset it', async () => {
     const user = userEvent.setup()
-    render(<IdentitySection sim={{ ...baseSim, isHeir: true }} />)
+    render(<IdentitySection sim={{ ...baseSim, isHeir: true }} hasParents={false} />)
 
     const toggle = screen.getByRole('button', { name: 'Heir' })
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
@@ -90,7 +91,7 @@ describe('IdentitySection — heir toggle', () => {
   it('reverts the toggle and surfaces an error when the save fails', async () => {
     const user = userEvent.setup()
     mutateAsync.mockRejectedValueOnce(new Error('save failed'))
-    render(<IdentitySection sim={baseSim} />)
+    render(<IdentitySection sim={baseSim} hasParents={false} />)
 
     const toggle = screen.getByRole('button', { name: 'Heir' })
     await user.click(toggle)
@@ -98,5 +99,17 @@ describe('IdentitySection — heir toggle', () => {
     // The optimistic flip rolls back once the mutation rejects.
     expect(await screen.findByText('Failed to save')).toBeInTheDocument()
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('shows generation read-only for a sim with parents', () => {
+    render(<IdentitySection sim={{ ...baseSim, generationNumber: 3 }} hasParents />)
+    expect(screen.getByText('Gen III')).toBeInTheDocument()
+    // No editable Generation control for a derived sim.
+    expect(screen.queryByLabelText('Generation')).not.toBeInTheDocument()
+  })
+
+  it('shows an editable Generation control for a root sim', () => {
+    render(<IdentitySection sim={{ ...baseSim, generationNumber: 1 }} hasParents={false} />)
+    expect(screen.getByLabelText('Generation')).toBeInTheDocument()
   })
 })

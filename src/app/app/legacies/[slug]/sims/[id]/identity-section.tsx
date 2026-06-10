@@ -6,6 +6,7 @@ import { Gender, LifeStage, OccultType } from '@prisma/client'
 import { trpc } from '@/trpc/client'
 import { ImageUpload } from '@/app/components/image-upload'
 import { Combobox } from '@/components/ui'
+import { roman } from '@/lib/legacy-format'
 import styles from './page.module.css'
 
 const GENDER_OPTIONS: Gender[] = [Gender.MALE, Gender.FEMALE, Gender.NON_BINARY]
@@ -47,9 +48,10 @@ interface SimProp {
   imageUrl: string | null
   occultType: string | null
   isHeir: boolean
+  generationNumber: number
 }
 
-export function IdentitySection({ sim, onLifeStageChange }: { sim: SimProp; onLifeStageChange?: (ls: LifeStage) => void }) {
+export function IdentitySection({ sim, hasParents, onLifeStageChange }: { sim: SimProp; hasParents: boolean; onLifeStageChange?: (ls: LifeStage) => void }) {
   const update = trpc.sims.update.useMutation()
 
   function save(fields: Parameters<typeof update.mutate>[0]) {
@@ -128,6 +130,7 @@ export function IdentitySection({ sim, onLifeStageChange }: { sim: SimProp; onLi
           </Combobox>
 
           <HeirToggle sim={sim} onSave={save} />
+          <GenerationField sim={sim} hasParents={hasParents} onSave={save} />
         </div>
 
       </div>
@@ -258,6 +261,55 @@ function InlineTextField({
           if (e.key === 'Escape') { setCurrent(saved); e.currentTarget.blur() }
         }}
       />
+      {error && <span className={styles.inlineError}>{error}</span>}
+    </span>
+  )
+}
+
+/**
+ * Generation: read-only for derived sims (has parents — the value is
+ * max(parent)+1 and maintained by the server), an editable chip select for
+ * root sims (founders, partners, separate subtree roots).
+ */
+function GenerationField({
+  sim,
+  hasParents,
+  onSave,
+}: {
+  sim: SimProp
+  hasParents: boolean
+  onSave: (fields: { id: string; generationNumber: number }) => Promise<unknown>
+}) {
+  const [value, setValue] = useState(sim.generationNumber)
+  const [error, setError] = useState('')
+
+  if (hasParents) {
+    return <span className={styles.metaChipReadOnly}>Gen {roman(sim.generationNumber)}</span>
+  }
+
+  const ceiling = Math.max(10, value)
+  const options = Array.from({ length: ceiling }, (_, i) => i + 1)
+
+  async function change(next: string) {
+    const n = Number(next)
+    const prev = value
+    setValue(n)
+    try {
+      await onSave({ id: sim.id, generationNumber: n })
+      setError('')
+    } catch {
+      setValue(prev)
+      setError('Failed to save')
+    }
+  }
+
+  return (
+    <span className={styles.generationField}>
+      <Combobox value={String(value)} onChange={change} variant="chip" aria-label="Generation">
+        {options.map((g) => (
+          <Combobox.Item key={g} value={String(g)}>Gen {roman(g)}</Combobox.Item>
+        ))}
+      </Combobox>
       {error && <span className={styles.inlineError}>{error}</span>}
     </span>
   )

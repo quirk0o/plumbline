@@ -34,7 +34,8 @@ interface Props {
     careers: { career: { id: string; name: string; type: string } | null }[]
     skills: { skill: { id: string; name: string; maxLevel: number }; level: number }[]
     parentsOf: { child: { id: string; firstName: string; lastName: string; imageUrl: string | null }; type: string }[]
-    childOf: { parent: { id: string; firstName: string; lastName: string; imageUrl: string | null }; type: string }[]
+    generationNumber: number
+    childOf: { parent: { id: string; firstName: string; lastName: string; imageUrl: string | null; generationNumber: number }; type: string }[]
     socialRelationshipsA: { simAId: string; simBId: string; romanticStatus: string; endedAt: Date | null; simB: { id: string; firstName: string; lastName: string; imageUrl: string | null; causeOfDeath: CauseOfDeath | null } }[]
     socialRelationshipsB: { simAId: string; simBId: string; romanticStatus: string; endedAt: Date | null; simA: { id: string; firstName: string; lastName: string; imageUrl: string | null; causeOfDeath: CauseOfDeath | null } }[]
   }
@@ -67,7 +68,7 @@ export function SimDetailClient({ sim, slug, legacySims, traits, aspirations, ca
       </nav>
 
       <div className={styles.card}>
-        <IdentitySection sim={sim} onLifeStageChange={setCurrentLifeStage} />
+        <IdentitySection sim={sim} hasParents={sim.childOf.length > 0} onLifeStageChange={setCurrentLifeStage} />
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}>

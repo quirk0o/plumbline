@@ -662,11 +662,18 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
   })
 
   it('keeps the relationship when the generation recompute write fails on removal', async () => {
-    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
-    await db.sim.update({ where: { id: childId }, data: { generationNumber: 2 } })
-    await db.familyRelationship.create({
-      data: { parentId, childId, type: FamilyRelationshipType.BIOLOGICAL },
+    const { legacyId } = await db.sim.findUniqueOrThrow({ where: { id: parentId }, select: { legacyId: true } })
+    const parent2 = await createTestSim(legacyId, { firstName: 'Parent2', generationNumber: 3 })
+    await db.sim.update({ where: { id: parentId }, data: { generationNumber: 2 } })
+    await db.sim.update({ where: { id: childId }, data: { generationNumber: 99 } })
+    await db.familyRelationship.createMany({
+      data: [
+        { parentId, childId, type: FamilyRelationshipType.BIOLOGICAL },
+        { parentId: parent2.id, childId, type: FamilyRelationshipType.BIOLOGICAL },
+      ],
     })
+    // After removing parentId (gen=2), only parent2 (gen=3) remains.
+    // recompute derives child=4 which differs from 99 → sim.update fires → injected failure rolls back.
     await expect(
       authedCaller(userId, failingDb('sim', 'update')).sims.removeFamilyRelationship({ parentId, childId })
     ).rejects.toThrow()
@@ -675,7 +682,7 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
       where: { parentId_childId: { parentId, childId } },
     })
     expect(row).not.toBeNull()
-    expect((await db.sim.findUnique({ where: { id: childId } }))?.generationNumber).toBe(2)
+    expect((await db.sim.findUnique({ where: { id: childId } }))?.generationNumber).toBe(99)
   })
 
   it('removes a family relationship', async () => {
@@ -770,33 +777,32 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
     expect(record?.generationNumber).toBe(2)
   })
 
-  it('does not override child generationNumber if already set', async () => {
+  it('overrides child generationNumber to max+1 when a parent is added', async () => {
     await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
     await db.sim.update({ where: { id: childId }, data: { generationNumber: 5 } })
     await authedCaller(userId).sims.addFamilyRelationship({
-      parentId,
-      childId,
-      type: FamilyRelationshipType.BIOLOGICAL,
+      parentId, childId, type: FamilyRelationshipType.BIOLOGICAL,
     })
     const record = await db.sim.findUnique({ where: { id: childId } })
-    expect(record?.generationNumber).toBe(5)
+    expect(record?.generationNumber).toBe(2) // derived: max(1)+1, prior value discarded
   })
 
-  it('uses minimum parent gen when multiple parents already exist', async () => {
+  it('uses max parent gen and cascades to descendants when a parent is added', async () => {
     const { legacyId } = await db.sim.findUniqueOrThrow({ where: { id: parentId }, select: { legacyId: true } })
-    const existingParent = await createTestSim(legacyId, { firstName: 'OtherParent' })
-    await db.sim.update({ where: { id: existingParent.id }, data: { generationNumber: 3 } })
+    const existingParent = await createTestSim(legacyId, { firstName: 'OtherParent', generationNumber: 3 })
     await db.sim.update({ where: { id: parentId }, data: { generationNumber: 2 } })
-    await db.familyRelationship.create({
-      data: { parentId: existingParent.id, childId, type: FamilyRelationshipType.BIOLOGICAL },
+    const grandchild = await createTestSim(legacyId, { firstName: 'GC', generationNumber: 99 })
+    await db.familyRelationship.createMany({
+      data: [
+        { parentId: existingParent.id, childId, type: FamilyRelationshipType.BIOLOGICAL },
+        { parentId: childId, childId: grandchild.id, type: FamilyRelationshipType.BIOLOGICAL },
+      ],
     })
     await authedCaller(userId).sims.addFamilyRelationship({
-      parentId,
-      childId,
-      type: FamilyRelationshipType.BIOLOGICAL,
+      parentId, childId, type: FamilyRelationshipType.BIOLOGICAL,
     })
-    const record = await db.sim.findUnique({ where: { id: childId } })
-    expect(record?.generationNumber).toBe(3)
+    expect((await db.sim.findUnique({ where: { id: childId } }))?.generationNumber).toBe(4)      // max(2,3)+1
+    expect((await db.sim.findUnique({ where: { id: grandchild.id } }))?.generationNumber).toBe(5) // cascaded
   })
 
   it('updates child generationNumber after removing one parent when another remains', async () => {
@@ -816,7 +822,7 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
     expect(record?.generationNumber).toBe(4)
   })
 
-  it('clears child generationNumber when all parents are removed', async () => {
+  it('retains the child generation as a root value when the last parent is removed', async () => {
     await db.sim.update({ where: { id: parentId }, data: { generationNumber: 1 } })
     await db.sim.update({ where: { id: childId }, data: { generationNumber: 2 } })
     await db.familyRelationship.create({
@@ -824,7 +830,7 @@ describe('sims.addFamilyRelationship / sims.removeFamilyRelationship', () => {
     })
     await authedCaller(userId).sims.removeFamilyRelationship({ parentId, childId })
     const record = await db.sim.findUnique({ where: { id: childId } })
-    expect(record?.generationNumber).toBeNull()
+    expect(record?.generationNumber).toBe(2) // kept; child is now a root
   })
 })
 
@@ -859,21 +865,31 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
     expect(row?.friendshipScore).toBe(0)
   })
 
-  it('does not persist the relationship when the partner generation backfill fails', async () => {
-    await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
+  it('does not persist the relationship when the partner adoption write fails', async () => {
+    const legacyId = (await db.sim.findUniqueOrThrow({ where: { id: simBId }, select: { legacyId: true } })).legacyId
+    const parent = await createTestSim(legacyId, { firstName: 'ParentOfB', generationNumber: 1 })
+    await db.familyRelationship.create({ data: { parentId: parent.id, childId: simBId, type: FamilyRelationshipType.BIOLOGICAL } })
+    await db.sim.update({ where: { id: simBId }, data: { generationNumber: 2 } })
 
     await expect(
       authedCaller(userId, failingDb('sim', 'update')).sims.addSocialRelationship({
-        simAId,
-        simBId,
-        romanticStatus: RomanticStatus.DATING,
+        simAId, simBId, romanticStatus: RomanticStatus.DATING,
       })
     ).rejects.toThrow()
 
-    const row = await db.socialRelationship.findUnique({
-      where: { simAId_simBId: { simAId, simBId } },
-    })
+    const row = await db.socialRelationship.findUnique({ where: { simAId_simBId: { simAId, simBId } } })
     expect(row).toBeNull()
+  })
+
+  it('a root partner adopts a derived partner generation', async () => {
+    const legacyId = (await db.sim.findUniqueOrThrow({ where: { id: simBId }, select: { legacyId: true } })).legacyId
+    const parent = await createTestSim(legacyId, { firstName: 'ParentOfB2', generationNumber: 4 })
+    await db.familyRelationship.create({ data: { parentId: parent.id, childId: simBId, type: FamilyRelationshipType.BIOLOGICAL } })
+    await db.sim.update({ where: { id: simBId }, data: { generationNumber: 5 } })
+
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.MARRIED })
+
+    expect((await db.sim.findUnique({ where: { id: simAId } }))?.generationNumber).toBe(5)
   })
 
   it('normalises ID order regardless of input order', async () => {
@@ -968,36 +984,47 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 
-  it('assigns generationNumber to partner with no gen when one sim has a gen', async () => {
-    await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
+  it('root partner adopts the generation of a derived partner', async () => {
+    const legacyId = (await db.sim.findUniqueOrThrow({ where: { id: simBId }, select: { legacyId: true } })).legacyId
+    const parent = await createTestSim(legacyId, { firstName: 'ParentForAdopt', generationNumber: 1 })
+    await db.familyRelationship.create({ data: { parentId: parent.id, childId: simBId, type: FamilyRelationshipType.BIOLOGICAL } })
+    await db.sim.update({ where: { id: simBId }, data: { generationNumber: 2 } })
     await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
-    const record = await db.sim.findUnique({ where: { id: simBId } })
+    const record = await db.sim.findUnique({ where: { id: simAId } })
     expect(record?.generationNumber).toBe(2)
   })
 
-  it('assigns generation regardless of which partner has it', async () => {
-    await db.sim.update({ where: { id: simBId }, data: { generationNumber: 3 } })
+  it('adoption works regardless of which partner is the derived one', async () => {
+    const legacyId = (await db.sim.findUniqueOrThrow({ where: { id: simAId }, select: { legacyId: true } })).legacyId
+    const parent = await createTestSim(legacyId, { firstName: 'ParentForAdopt2', generationNumber: 2 })
+    await db.familyRelationship.create({ data: { parentId: parent.id, childId: simAId, type: FamilyRelationshipType.BIOLOGICAL } })
+    await db.sim.update({ where: { id: simAId }, data: { generationNumber: 3 } })
     await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
-    const record = await db.sim.findUnique({ where: { id: simAId } })
+    const record = await db.sim.findUnique({ where: { id: simBId } })
     expect(record?.generationNumber).toBe(3)
   })
 
-  it('does not override partner generationNumber if already set', async () => {
+  it('does not change either partner generation when both are roots', async () => {
+    const genA = (await db.sim.findUniqueOrThrow({ where: { id: simAId }, select: { generationNumber: true } })).generationNumber
+    const genB = (await db.sim.findUniqueOrThrow({ where: { id: simBId }, select: { generationNumber: true } })).generationNumber
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
+    expect((await db.sim.findUnique({ where: { id: simAId } }))?.generationNumber).toBe(genA)
+    expect((await db.sim.findUnique({ where: { id: simBId } }))?.generationNumber).toBe(genB)
+  })
+
+  it('does not override partner generationNumber if both are derived', async () => {
+    const legacyId = (await db.sim.findUniqueOrThrow({ where: { id: simAId }, select: { legacyId: true } })).legacyId
+    const parentA = await createTestSim(legacyId, { firstName: 'ParA', generationNumber: 1 })
+    const parentB = await createTestSim(legacyId, { firstName: 'ParB', generationNumber: 4 })
+    await db.familyRelationship.createMany({ data: [
+      { parentId: parentA.id, childId: simAId, type: FamilyRelationshipType.BIOLOGICAL },
+      { parentId: parentB.id, childId: simBId, type: FamilyRelationshipType.BIOLOGICAL },
+    ] })
     await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
     await db.sim.update({ where: { id: simBId }, data: { generationNumber: 5 } })
     await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
-    const record = await db.sim.findUnique({ where: { id: simBId } })
-    expect(record?.generationNumber).toBe(5)
-  })
-
-  it('does not assign generationNumber when both sims have no generation', async () => {
-    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
-    const [recordA, recordB] = await Promise.all([
-      db.sim.findUnique({ where: { id: simAId } }),
-      db.sim.findUnique({ where: { id: simBId } }),
-    ])
-    expect(recordA?.generationNumber).toBeNull()
-    expect(recordB?.generationNumber).toBeNull()
+    expect((await db.sim.findUnique({ where: { id: simAId } }))?.generationNumber).toBe(2)
+    expect((await db.sim.findUnique({ where: { id: simBId } }))?.generationNumber).toBe(5)
   })
 })
 
@@ -1040,7 +1067,7 @@ describe('sims — generationNumber population', () => {
     expect(record?.generationNumber).toBe(2)
   })
 
-  it('uses min parent generationNumber when multiple parents', async () => {
+  it('uses max parent generationNumber when multiple parents', async () => {
     const parent1 = await createTestSim(legacyId, { firstName: 'P1' })
     const parent2 = await createTestSim(legacyId, { firstName: 'P2' })
     await db.sim.update({ where: { id: parent1.id }, data: { generationNumber: 2 } })
@@ -1050,7 +1077,16 @@ describe('sims — generationNumber population', () => {
       parentIds: [parent1.id, parent2.id],
     })
     const record = await db.sim.findUnique({ where: { id: result.id } })
-    expect(record?.generationNumber).toBe(3)
+    expect(record?.generationNumber).toBe(4) // max(2,3)+1
+  })
+
+  it('a later parentless sim defaults to the legacy latest generation', async () => {
+    const caller = authedCaller(userId)
+    await caller.sims.create({ legacyId, firstName: 'Founder', lastName: 'X', gender: Gender.FEMALE }) // gen 1
+    await createTestSim(legacyId, { firstName: 'Heir', generationNumber: 3 })
+    const newcomer = await caller.sims.create({ legacyId, firstName: 'Townie', lastName: 'Y', gender: Gender.MALE })
+    const record = await db.sim.findUnique({ where: { id: newcomer.id } })
+    expect(record?.generationNumber).toBe(3) // legacy latest
   })
 
   it('sims.update accepts generationNumber override', async () => {
@@ -1058,6 +1094,24 @@ describe('sims — generationNumber population', () => {
     await authedCaller(userId).sims.update({ id: sim.id, generationNumber: 5 })
     const record = await db.sim.findUnique({ where: { id: sim.id } })
     expect(record?.generationNumber).toBe(5)
+  })
+
+  it('sims.update rejects a generation edit on a sim with parents', async () => {
+    const parent = await createTestSim(legacyId, { firstName: 'P', generationNumber: 1 })
+    const child = await createTestSim(legacyId, { firstName: 'C', generationNumber: 2 })
+    await db.familyRelationship.create({ data: { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL } })
+    await expect(
+      authedCaller(userId).sims.update({ id: child.id, generationNumber: 7 }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('editing a root generation cascades to descendants', async () => {
+    const root = await createTestSim(legacyId, { firstName: 'Root', generationNumber: 1 })
+    const child = await createTestSim(legacyId, { firstName: 'Child', generationNumber: 2 })
+    await db.familyRelationship.create({ data: { parentId: root.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL } })
+    await authedCaller(userId).sims.update({ id: root.id, generationNumber: 4 })
+    expect((await db.sim.findUnique({ where: { id: root.id } }))?.generationNumber).toBe(4)
+    expect((await db.sim.findUnique({ where: { id: child.id } }))?.generationNumber).toBe(5)
   })
 
   it('sims.update accepts isHeir flag', async () => {
@@ -1149,23 +1203,6 @@ describe('sims.update — heir cohort', () => {
     expect(moved?.generationNumber).toBe(3)
   })
 
-  it('does not clear the previous cohort when the sim moves to a null generation', async () => {
-    const gen2Heir = await db.sim.create({
-      data: { legacyId, firstName: 'Gen2Heir', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
-    })
-    const mover = await db.sim.create({
-      data: { legacyId, firstName: 'NullMover', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2 },
-    })
-
-    await authedCaller(userId).sims.update({ id: mover.id, generationNumber: null, isHeir: true })
-
-    // The mover leaves generation 2 — its existing heir keeps the title.
-    expect((await db.sim.findUnique({ where: { id: gen2Heir.id } }))?.isHeir).toBe(true)
-    const moved = await db.sim.findUnique({ where: { id: mover.id } })
-    expect(moved?.generationNumber).toBeNull()
-    expect(moved?.isHeir).toBe(true)
-  })
-
   it("clears heirs in the sim's current generation even when it changed concurrently", async () => {
     const gen3Heir = await db.sim.create({
       data: { legacyId, firstName: 'Gen3Heir', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 3, isHeir: true },
@@ -1217,16 +1254,6 @@ describe('one heir per generation — database constraint', () => {
         data: { legacyId, firstName: 'Second', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: 2, isHeir: true },
       })
     ).rejects.toMatchObject({ code: 'P2002' })
-  })
-
-  it('allows multiple heirs with no generation (null is not a cohort)', async () => {
-    await db.sim.create({
-      data: { legacyId, firstName: 'NullA', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: null, isHeir: true },
-    })
-    await db.sim.create({
-      data: { legacyId, firstName: 'NullB', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: null, isHeir: true },
-    })
-    expect(await db.sim.count({ where: { legacyId, isHeir: true } })).toBe(2)
   })
 
   it('allows non-heir sims to share a generation', async () => {
@@ -1461,31 +1488,6 @@ describe('sims.endCareer', () => {
     await expect(
       authedCaller(userId).sims.endCareer({ simId })
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
-  })
-})
-
-describe('sims — isHeir with null generationNumber', () => {
-  let userId: string
-  let legacyId: string
-
-  beforeEach(async () => {
-    const user = await createTestUser()
-    userId = user.id
-    const legacy = await createTestLegacy(userId)
-    legacyId = legacy.id
-  })
-  afterEach(async () => { await cleanupUser(userId) })
-
-  it('does not clear other null-gen sims when setting isHeir on a null-gen sim', async () => {
-    const simA = await db.sim.create({
-      data: { legacyId, firstName: 'A', lastName: 'X', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: null, isHeir: true },
-    })
-    const simB = await db.sim.create({
-      data: { legacyId, firstName: 'B', lastName: 'X', gender: 'MALE', lifeStage: 'YOUNG_ADULT', generationNumber: null },
-    })
-    await authedCaller(userId).sims.update({ id: simB.id, isHeir: true })
-    const recordA = await db.sim.findUnique({ where: { id: simA.id } })
-    expect(recordA?.isHeir).toBe(true)
   })
 })
 

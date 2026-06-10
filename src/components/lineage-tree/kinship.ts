@@ -260,6 +260,60 @@ function applyPartnerLabels(
       setIfAbsent(labels, spouseId, focusId, pick(genderOf(spouseId), 'Sister-in-law', 'Brother-in-law', 'Sibling-in-law'))
     }
   }
+
+  // 3. Step relations (a parent's marriage, or the focus's own). Applied last so
+  //    blood and in-law labels already in the map win.
+  applyStepLabels(focusId, parents, children, partnersOf, genderOf, labels)
+}
+
+/**
+ * Step relations derive from a parent's (or the focus's own) active/widowed
+ * MARRIED bond — never a mere partnership. Applied after blood + in-laws via
+ * setIfAbsent, so a sim who is both a step- and a blood relative keeps the
+ * blood term. One hop only, matching in-laws.
+ */
+function applyStepLabels(
+  focusId: string,
+  parents: Map<string, Set<string>>,
+  children: Map<string, Set<string>>,
+  partnersOf: Map<string, PartnerLink[]>,
+  genderOf: (id: string) => Gender,
+  labels: Map<string, string>,
+): void {
+  const focusParents = parents.get(focusId) ?? new Set<string>()
+  const focusChildren = children.get(focusId) ?? new Set<string>()
+
+  // Stepparents: a married spouse of one of F's parents who is not also F's parent.
+  const stepparents = new Set<string>()
+  for (const parentId of focusParents) {
+    for (const { otherId: spouseId, state } of partnersOf.get(parentId) ?? []) {
+      if (!isMarriageBond(state)) continue
+      if (focusParents.has(spouseId)) continue // an actual parent of F, not a step
+      stepparents.add(spouseId)
+      setIfAbsent(labels, spouseId, focusId, pick(genderOf(spouseId), 'Stepmother', 'Stepfather', 'Stepparent'))
+    }
+  }
+
+  // Stepchildren: a married spouse's child that is not also F's own child.
+  for (const { otherId: spouseId, state } of partnersOf.get(focusId) ?? []) {
+    if (!isMarriageBond(state)) continue
+    for (const childId of children.get(spouseId) ?? []) {
+      if (focusChildren.has(childId)) continue // F's own child
+      setIfAbsent(labels, childId, focusId, pick(genderOf(childId), 'Stepdaughter', 'Stepson', 'Stepchild'))
+    }
+  }
+
+  // Step-siblings: a stepparent's child that shares no parent with F (a shared
+  // parent makes them a half/full sibling, already labelled by the blood pass).
+  for (const stepparentId of stepparents) {
+    for (const childId of children.get(stepparentId) ?? []) {
+      if (childId === focusId) continue
+      const childParents = parents.get(childId) ?? new Set<string>()
+      const sharesParent = [...focusParents].some((p) => childParents.has(p))
+      if (sharesParent) continue
+      setIfAbsent(labels, childId, focusId, pick(genderOf(childId), 'Step-sister', 'Step-brother', 'Step-sibling'))
+    }
+  }
 }
 
 function partnerTerm(state: RomanticState, g: Gender): string {

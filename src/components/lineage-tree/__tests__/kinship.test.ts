@@ -295,3 +295,117 @@ describe('partner layer — edge cases', () => {
     expect(l.get('HMUM')).toBe('Mother-in-law')
   })
 })
+
+describe('step relations (marriage-derived, focus F female)', () => {
+  it("labels a stepfather (mother's husband, not a bio parent) and a stepmother", () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'DAD', gender: 'MALE', isDeceased: false },
+      { id: 'MUM', gender: 'FEMALE', isDeceased: false },
+      { id: 'STEPDAD', gender: 'MALE', isDeceased: false },
+      { id: 'STEPMUM', gender: 'FEMALE', isDeceased: false },
+    ]
+    const edges: LineageFamilyEdge[] = [
+      { parentId: 'DAD', childId: 'F' }, { parentId: 'MUM', childId: 'F' },
+    ]
+    const l = computeKinshipLabels('F', sims, edges, [
+      partner('MUM', 'STEPDAD', 'MARRIED'),
+      partner('DAD', 'STEPMUM', 'MARRIED'),
+    ])
+    expect(l.get('STEPDAD')).toBe('Stepfather')
+    expect(l.get('STEPMUM')).toBe('Stepmother')
+  })
+
+  it("labels a stepchild (spouse's child that is not F's child)", () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'HUS', gender: 'MALE', isDeceased: false },
+      { id: 'SCHILD', gender: 'FEMALE', isDeceased: false },
+    ]
+    const edges: LineageFamilyEdge[] = [{ parentId: 'HUS', childId: 'SCHILD' }]
+    const l = computeKinshipLabels('F', sims, edges, [partner('F', 'HUS', 'MARRIED')])
+    expect(l.get('SCHILD')).toBe('Stepdaughter')
+  })
+
+  it("labels a step-sibling (stepparent's child by another, sharing no parent with F)", () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'MUM', gender: 'FEMALE', isDeceased: false },
+      { id: 'STEPDAD', gender: 'MALE', isDeceased: false },
+      { id: 'OTHERWOMAN', gender: 'FEMALE', isDeceased: false },
+      { id: 'STEPBRO', gender: 'MALE', isDeceased: false },
+    ]
+    const edges: LineageFamilyEdge[] = [
+      { parentId: 'MUM', childId: 'F' },
+      { parentId: 'STEPDAD', childId: 'STEPBRO' },
+      { parentId: 'OTHERWOMAN', childId: 'STEPBRO' },
+    ]
+    const l = computeKinshipLabels('F', sims, edges, [partner('MUM', 'STEPDAD', 'MARRIED')])
+    expect(l.get('STEPBRO')).toBe('Step-brother')
+  })
+
+  it('drops the step label once the connecting marriage is divorced (endedAt set)', () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'MUM', gender: 'FEMALE', isDeceased: false },
+      { id: 'EXSTEP', gender: 'MALE', isDeceased: false },
+    ]
+    const edges: LineageFamilyEdge[] = [{ parentId: 'MUM', childId: 'F' }]
+    const l = computeKinshipLabels('F', sims, edges, [
+      partner('MUM', 'EXSTEP', 'MARRIED', new Date('2026-01-01')),
+    ])
+    expect(l.has('EXSTEP')).toBe(false)
+  })
+
+  it('keeps the step label through widowhood (deceased stepparent, no divorce)', () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'MUM', gender: 'FEMALE', isDeceased: false },
+      { id: 'STEPDAD', gender: 'MALE', isDeceased: true }, // widowed marriage, no endedAt
+    ]
+    const edges: LineageFamilyEdge[] = [{ parentId: 'MUM', childId: 'F' }]
+    const l = computeKinshipLabels('F', sims, edges, [partner('MUM', 'STEPDAD', 'MARRIED')])
+    expect(l.get('STEPDAD')).toBe('Stepfather')
+  })
+
+  it('does NOT derive a step relation through a non-marriage bond (DATING)', () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'MUM', gender: 'FEMALE', isDeceased: false },
+      { id: 'BOYF', gender: 'MALE', isDeceased: false },
+    ]
+    const edges: LineageFamilyEdge[] = [{ parentId: 'MUM', childId: 'F' }]
+    const l = computeKinshipLabels('F', sims, edges, [partner('MUM', 'BOYF', 'DATING')])
+    expect(l.has('BOYF')).toBe(false)
+  })
+
+  it("lets a blood relation win over a step relation (mother's husband who is also F's uncle)", () => {
+    // UNCLE is DAD's brother (F's blood uncle) AND married to MUM (F's mother).
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'DAD', gender: 'MALE', isDeceased: false },
+      { id: 'MUM', gender: 'FEMALE', isDeceased: false },
+      { id: 'GF', gender: 'MALE', isDeceased: false },
+      { id: 'GM', gender: 'FEMALE', isDeceased: false },
+      { id: 'UNCLE', gender: 'MALE', isDeceased: false },
+    ]
+    const edges: LineageFamilyEdge[] = [
+      { parentId: 'GF', childId: 'DAD' }, { parentId: 'GM', childId: 'DAD' },
+      { parentId: 'GF', childId: 'UNCLE' }, { parentId: 'GM', childId: 'UNCLE' },
+      { parentId: 'DAD', childId: 'F' }, { parentId: 'MUM', childId: 'F' },
+    ]
+    const l = computeKinshipLabels('F', sims, edges, [partner('MUM', 'UNCLE', 'MARRIED')])
+    expect(l.get('UNCLE')).toBe('Uncle')
+  })
+
+  it('uses neutral terms for a NON_BINARY stepparent', () => {
+    const sims: KinshipSim[] = [
+      { id: 'F', gender: 'FEMALE', isDeceased: false },
+      { id: 'MUM', gender: 'FEMALE', isDeceased: false },
+      { id: 'NBSTEP', gender: 'NON_BINARY', isDeceased: false },
+    ]
+    const edges: LineageFamilyEdge[] = [{ parentId: 'MUM', childId: 'F' }]
+    const l = computeKinshipLabels('F', sims, edges, [partner('MUM', 'NBSTEP', 'MARRIED')])
+    expect(l.get('NBSTEP')).toBe('Stepparent')
+  })
+})

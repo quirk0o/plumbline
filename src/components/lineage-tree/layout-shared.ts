@@ -52,7 +52,14 @@ export type CrestAnchors = typeof CREST_ANCHORS
 /** Vertical pitch between generation rows (top edge to top edge). Generous
  *  enough that descent/co-parent connectors clear the crest text band with
  *  comfortable breathing room before the next generation. */
-export const ROW_PITCH = 190
+export const ROW_PITCH = 205
+
+/** How far below the crest text band the horizontal connector (the parent→child
+ *  jog and the hanging-union diamond) sits — a small fixed gap so connectors hug
+ *  the crests, leaving the rest of the inter-row pitch as open space above the
+ *  next generation. Used for both the descent jog and the hanging-union offset
+ *  so every connector lines up at the same height. */
+export const CONNECTOR_DROP = 30
 /** Gap between two partners' adjacent medallion edges (the marriage bond). */
 export const MARRIAGE_BOND_GAP = 20
 /** Horizontal gap between unrelated sims / couple clusters within a row. */
@@ -79,7 +86,7 @@ export const COUPLE_WIDTH = NODE_WIDTH * 2 + MARRIAGE_BOND_GAP
  * offset clears the crest's text band (which ends at NODE_HEIGHT) with a
  * comfortable margin so the horizontal connector doesn't crowd the name/stage.
  */
-export const HANGING_UNION_BASE_OFFSET = NODE_HEIGHT + 44
+export const HANGING_UNION_BASE_OFFSET = NODE_HEIGHT + CONNECTOR_DROP
 export const HANGING_UNION_LANE_PITCH = 12
 export const HANGING_UNION_MAX_LANES = 4
 

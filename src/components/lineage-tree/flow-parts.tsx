@@ -7,6 +7,7 @@ import type {
   MarriageEdgeData,
   UnionNodeData,
 } from './to-flow-graph'
+import { CONNECTOR_DROP } from './layout-shared'
 import styles from './lineage-flow.module.css'
 
 /**
@@ -116,7 +117,10 @@ export function descentPathWithGap(
   if (gapTop === undefined || gapBottom === undefined) {
     return descentPath(sourceX, sourceY, targetX, targetY)
   }
-  const midY = (gapBottom + targetY) / 2
+  // Jog a fixed gap below the text band (not the midpoint), so the connector
+  // hugs the crests and the long vertical drop fills the space above the next
+  // generation. Clamp so the jog never passes the target.
+  const midY = Math.min(gapBottom + CONNECTOR_DROP, (gapBottom + targetY) / 2)
   const stub = `M ${sourceX} ${sourceY} L ${sourceX} ${gapTop}`
   const below = roundedCorners([
     { x: sourceX, y: gapBottom },

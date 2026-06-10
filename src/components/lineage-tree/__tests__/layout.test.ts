@@ -17,12 +17,16 @@ const edge = (a: string, b: string, romanticStatus: RomanticStatus = 'MARRIED'):
 const sim = (id: string, generationNumber: number | null): LayoutSim => ({ id, generationNumber })
 
 function expectNoRowOverlap(layout: ReturnType<typeof computeLineageLayout>) {
+  // Tightest legitimate medallion spacing is a couple's own two members
+  // (NODE_WIDTH + MARRIAGE_BOND_GAP — the cards overlap their empty margins but
+  // the medallions stay clear). Everything else is at least that far apart.
+  const minSpacing = NODE_WIDTH + MARRIAGE_BOND_GAP
   const byRow = new Map<number, number[]>()
   for (const n of layout.nodes) byRow.set(n.y, [...(byRow.get(n.y) ?? []), n.x])
   for (const xs of byRow.values()) {
     const sorted = [...xs].sort((a, b) => a - b)
     for (let i = 1; i < sorted.length; i++) {
-      expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(NODE_WIDTH)
+      expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(minSpacing)
     }
   }
 }

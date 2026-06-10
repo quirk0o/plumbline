@@ -60,8 +60,11 @@ export const ROW_PITCH = 205
  *  next generation. Used for both the descent jog and the hanging-union offset
  *  so every connector lines up at the same height. */
 export const CONNECTOR_DROP = 30
-/** Gap between two partners' adjacent medallion edges (the marriage bond). */
-export const MARRIAGE_BOND_GAP = 20
+/** Horizontal offset between two partners' medallion CARDS (each NODE_WIDTH
+ *  wide with the medallion centered). Negative overlaps the cards' empty side
+ *  margins to pull the partners' medallions closer — a tighter "couple" look —
+ *  without the small circles touching. */
+export const MARRIAGE_BOND_GAP = -20
 /** Horizontal gap between unrelated sims / couple clusters within a row. */
 export const CLUSTER_GAP = 40
 /**

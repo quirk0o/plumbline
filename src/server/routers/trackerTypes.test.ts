@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest'
 import { unauthCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, getAnyBuiltInTrackerType } from '@/test/helpers'
-import { test } from '@/test/fixtures'
+import { test } from '@/test/test'
 import { db } from '@/server/db'
 
 describe('trackerTypes.list', () => {

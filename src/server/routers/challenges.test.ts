@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestTrackerType } from '@/test/helpers'
-import { test as base } from '@/test/fixtures'
+import { test as base } from '@/test/test'
 import { db } from '@/server/db'
 
 const testWithChallenge = base.extend<{ challengeId: string }>({

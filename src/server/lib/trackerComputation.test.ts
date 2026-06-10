@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest'
 import { db } from '@/server/db'
 import { createTestChallenge, createTestChallengePhase, createTestChallengeRun, getAnySkill, getAnyAspiration, getTrackerTypeByName, getGameTraits, getPersonalityTraits, getSkills } from '@/test/helpers'
-import { test as base } from '@/test/fixtures'
+import { test as base } from '@/test/test'
 import { evaluateSpec, recomputeLegacyTrackers } from './trackerComputation'
 import type { Sim } from '@prisma/client'
 

@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest'
 import { PackType } from '@prisma/client'
 import { unauthCaller } from '@/test/caller'
 import { getAnyPack, getBaseGamePack } from '@/test/helpers'
-import { test } from '@/test/fixtures'
+import { test } from '@/test/test'
 import { db } from '@/server/db'
 
 describe('packs.getAll', () => {

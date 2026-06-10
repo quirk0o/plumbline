@@ -8,7 +8,7 @@ import {
   createTestHousehold,
   createTestChallengeRun,
 } from '@/test/helpers'
-import { test as base } from '@/test/fixtures'
+import { test as base } from '@/test/test'
 import {
   assertLegacyOwned,
   assertLegacyOwnedBySlug,

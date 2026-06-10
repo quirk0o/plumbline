@@ -1,4 +1,3 @@
-// src/test/fixtures.ts
 import { test as base } from 'vitest'
 import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy } from '@/test/helpers'

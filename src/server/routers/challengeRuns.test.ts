@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest'
 import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestTrackerType, createTestSim, getAnySkill, getTrackerTypeByName, getAnyBuiltInTrackerType } from '@/test/helpers'
-import { test as base } from '@/test/fixtures'
+import { test as base } from '@/test/test'
 import { db } from '@/server/db'
 import { recomputeLegacyTrackers } from '@/server/lib/trackerComputation'
 

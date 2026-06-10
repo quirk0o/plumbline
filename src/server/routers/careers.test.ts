@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest'
 import { unauthCaller } from '@/test/caller'
-import { test } from '@/test/fixtures'
+import { test } from '@/test/test'
 import { db } from '@/server/db'
 
 describe('careers.getAll', () => {

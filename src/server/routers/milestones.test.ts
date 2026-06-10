@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest'
 import { TRPCError } from '@trpc/server'
 import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy, createTestSim } from '@/test/helpers'
-import { test } from '@/test/fixtures'
+import { test } from '@/test/test'
 import { db } from '@/server/db'
 
 describe('milestones.reorder', () => {

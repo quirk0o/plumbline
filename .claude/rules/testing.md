@@ -278,8 +278,12 @@ Runs before every test file. Loads `.env`/`.env.test` via dotenv (for DB credent
 
 ### tRPC Test Helpers (`src/test/`)
 
-- `caller.ts` — `authedCaller(userId)` and `unauthCaller()` — create tRPC callers with real DB context
-- `helpers.ts` — `createTestUser()`, `cleanupUser()`, `getAnyPack()` — DB setup/teardown utilities
+- `test.ts` — the Vitest `test` extended with database fixtures. **Integration tests import `test` from here** (`import { test } from '@/test/test'`) instead of using `it`/`test` from `vitest`. Fixtures are lazy — a test only creates what it destructures — and are torn down automatically after the test:
+  - `userId` — a fresh test user
+  - `trpcCaller` — a tRPC caller authenticated as that user (named `trpcCaller`, not `caller`, which collides with `Function.prototype.caller`)
+  - `legacyId` — a legacy owned by that user (deleting the user cascades to it, so no extra teardown)
+- `caller.ts` — `authedCaller(userId)` and `unauthCaller()` — create tRPC callers with real DB context (used directly for unauthenticated, second-user, and custom-db cases)
+- `helpers.ts` — `createTestUser()`, `cleanupUser()`, `createTestLegacy()`, `getAnyPack()`, … — DB factories for data the fixtures don't cover
 
 ### Playwright Config (`playwright.config.ts`)
 
@@ -319,21 +323,73 @@ This is the query-level application of [Test Behavior, Not Implementation Detail
 
 ### New tRPC procedure → add to `src/server/routers/*.test.ts`
 
+Import `test` from `@/test/test` and destructure the fixtures each test needs — no `beforeEach`/`afterEach` user/legacy boilerplate. Keep `describe`/`expect` from `vitest`.
+
 ```ts
-import { authedCaller, unauthCaller } from '@/test/caller'
-import { createTestUser, cleanupUser } from '@/test/helpers'
+import { describe, expect } from 'vitest'
+import { test } from '@/test/test'
 import { db } from '@/server/db'
 
 describe('myRouter.myProcedure', () => {
-  let userId: string
-  beforeEach(async () => { ({ id: userId } = await createTestUser()) })
-  afterEach(async () => { await cleanupUser(userId) })
-
-  it('does the right thing', async () => {
-    const caller = authedCaller(userId)
-    const result = await caller.myRouter.myProcedure({ input: 'value' })
+  // `trpcCaller` is authed as a fresh user; add `legacyId` if you need a legacy.
+  test('does the right thing', async ({ trpcCaller }) => {
+    const result = await trpcCaller.myRouter.myProcedure({ input: 'value' })
     expect(result).toEqual({ expected: true })
   })
+
+  test('persists for the owning legacy', async ({ trpcCaller, legacyId }) => {
+    await trpcCaller.myRouter.myProcedure({ legacyId, input: 'value' })
+    expect(await db.thing.count({ where: { legacyId } })).toBe(1)
+  })
+})
+```
+
+For a **custom/failing db** (rollback tests) or a **second user** (ownership checks), destructure `userId` and use the `@/test/caller` / `@/test/helpers` factories directly:
+
+```ts
+import { authedCaller, unauthCaller } from '@/test/caller'
+import { createTestUser, cleanupUser } from '@/test/helpers'
+
+test('rejects an unauthenticated caller', async () => {
+  await expect(unauthCaller().myRouter.myProcedure({ input: 'value' }))
+    .rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+})
+
+test("rejects another user's resource", async ({ userId }) => {
+  const other = await createTestUser()
+  try {
+    const theirThing = await createThingOwnedBy(other.id)
+    await expect(authedCaller(userId).myRouter.myProcedure({ id: theirThing.id }))
+      .rejects.toMatchObject({ code: 'NOT_FOUND' })
+  } finally {
+    await cleanupUser(other.id)
+  }
+})
+```
+
+**Create test-specific data inline — don't make it a fixture.** The base context (`userId` / `trpcCaller` / `legacyId`) holds only what nearly *every* integration test needs. Fixtures take no arguments, so they can't be tailored per test: a Sim, household, trait, or relationship almost always needs values specific to the case under test, so build it in the test body with the `@/test/helpers` factories — never as a shared fixture.
+
+```ts
+test('promotes the named heir', async ({ trpcCaller, legacyId }) => {
+  const heir = await createTestSim(legacyId, { firstName: 'Cassandra', isHeir: true })
+  const result = await trpcCaller.sims.update({ id: heir.id, /* … */ })
+  expect(result.isHeir).toBe(true)
+})
+```
+
+Only extend the base `test` when a suite genuinely needs the **same, fixed** extra setup in *every* one of its tests (e.g. a second user for ownership checks) — and keep that fixture local to the file so the global context stays small. Name the continuation `provide` (not `use`, which trips the react-hooks rule):
+
+```ts
+import { test as base } from '@/test/test'
+
+// Every test in this suite needs an unrelated second user — identical setup,
+// no per-test data — so a local fixture is justified.
+const test = base.extend<{ otherUserId: string }>({
+  otherUserId: async ({}, provide) => {
+    const other = await createTestUser()
+    await provide(other.id)
+    await cleanupUser(other.id)
+  },
 })
 ```
 

@@ -7,7 +7,7 @@ import {
   createTestSim,
   createTestHousehold,
 } from '@/test/helpers'
-import { test } from '@/test/fixtures'
+import { test } from '@/test/test'
 import { db } from '@/server/db'
 
 describe('households router', () => {

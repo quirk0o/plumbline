@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, expect } from 'vitest'
 import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestTrackerType, createTestSim, getAnySkill, getTrackerTypeByName, getAnyBuiltInTrackerType } from '@/test/helpers'
-import { withTestLegacy } from '@/test/fixtures'
+import { test as base } from '@/test/fixtures'
 import { db } from '@/server/db'
 import { recomputeLegacyTrackers } from '@/server/lib/trackerComputation'
 
@@ -17,20 +17,19 @@ async function buildChallengeWithPhaseAndTracker(userId: string, trackerTypeId: 
   return { challenge, phase, tracker }
 }
 
+const test = base.extend<{ trackerTypeId: string }>({
+  trackerTypeId: async ({ userId }, provide) => {
+    const tt = await createTestTrackerType({ ownerId: userId })
+    await provide(tt.id)
+  },
+})
+
 describe('challengeRuns.link', () => {
-  const ctx = withTestLegacy()
-  let trackerTypeId: string
+  test('creates a ChallengeRun with copied phases and trackers', async ({ trpcCaller, userId, legacyId, trackerTypeId }) => {
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, trackerTypeId)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
 
-  beforeEach(async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId })
-    trackerTypeId = tt.id
-  })
-
-  it('creates a ChallengeRun with copied phases and trackers', async () => {
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, trackerTypeId)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
-
-    expect(run.legacyId).toBe(ctx.legacyId)
+    expect(run.legacyId).toBe(legacyId)
     expect(run.sourceChallengeId).toBe(challenge.id)
 
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
@@ -44,21 +43,21 @@ describe('challengeRuns.link', () => {
     expect(progress).toHaveLength(1)
   })
 
-  it('marks progress as manual when trackerType has no computationSpec', async () => {
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, trackerTypeId)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+  test('marks progress as manual when trackerType has no computationSpec', async ({ trpcCaller, userId, legacyId, trackerTypeId }) => {
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, trackerTypeId)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
     const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progress?.isManual).toBe(true)
   })
 
-  it('throws NOT_FOUND when the legacy does not belong to caller', async () => {
+  test('throws NOT_FOUND when the legacy does not belong to caller', async ({ trpcCaller, legacyId }) => {
     const other = await createTestUser()
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
     try {
       await expect(
-        authedCaller(other.id).challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+        authedCaller(other.id).challengeRuns.link({ legacyId, challengeId: challenge.id })
       ).rejects.toMatchObject({ code: 'NOT_FOUND' })
     } finally {
       await cleanupUser(other.id)
@@ -67,13 +66,11 @@ describe('challengeRuns.link', () => {
 })
 
 describe('challengeRuns.getById', () => {
-  const ctx = withTestLegacy()
-
-  it('returns run with nested phases, trackers, and progress', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
-    const result = await ctx.caller.challengeRuns.getById({ id: run.id })
+  test('returns run with nested phases, trackers, and progress', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const result = await trpcCaller.challengeRuns.getById({ id: run.id })
     expect(result.phases).toHaveLength(1)
     expect(result.phases[0].trackers).toHaveLength(1)
     expect(result.phases[0].trackers[0].progress).toMatchObject({ value: false, completedAt: null, isManual: true })
@@ -81,12 +78,10 @@ describe('challengeRuns.getById', () => {
 })
 
 describe('challengeRuns.getById — completion derivation', () => {
-  const ctx = withTestLegacy()
-
-  it('sets isComplete true on phase and run when all trackers have completedAt', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'BOOLEAN' })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+  test('sets isComplete true on phase and run when all trackers have completedAt', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
 
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
@@ -96,24 +91,24 @@ describe('challengeRuns.getById — completion derivation', () => {
       data: { completedAt: new Date() },
     })
 
-    const result = await ctx.caller.challengeRuns.getById({ id: run.id })
+    const result = await trpcCaller.challengeRuns.getById({ id: run.id })
     expect(result.phases[0].isComplete).toBe(true)
     expect(result.isComplete).toBe(true)
   })
 
-  it('sets isComplete false on phase and run when any tracker lacks completedAt', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'BOOLEAN' })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
+  test('sets isComplete false on phase and run when any tracker lacks completedAt', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
     // Also add a second tracker so one stays incomplete
     const phases = await db.challengePhase.findMany({ where: { challengeId: challenge.id } })
-    const tt2 = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'BOOLEAN' })
-    await ctx.caller.challenges.addTracker({
+    const tt2 = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phases[0].id,
       trackerTypeId: tt2.id,
       name: 'Second Tracker',
       config: {},
     })
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
 
     // Complete only the first of the two trackers in the run
     const runPhases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
@@ -124,34 +119,32 @@ describe('challengeRuns.getById — completion derivation', () => {
     })
     // Leave runTrackers[1].completedAt as null
 
-    const result = await ctx.caller.challengeRuns.getById({ id: run.id })
+    const result = await trpcCaller.challengeRuns.getById({ id: run.id })
     expect(result.phases[0].isComplete).toBe(false)
     expect(result.isComplete).toBe(false)
   })
 
-  it('sets isComplete false for a phase with no trackers', async () => {
+  test('sets isComplete false for a phase with no trackers', async ({ trpcCaller, legacyId }) => {
     // Create a challenge with a phase that has no trackers
-    const challenge = await ctx.caller.challenges.create({ name: `Empty Phase ${Date.now()}` })
-    await ctx.caller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1, title: 'Empty Gen' })
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const challenge = await trpcCaller.challenges.create({ name: `Empty Phase ${Date.now()}` })
+    await trpcCaller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1, title: 'Empty Gen' })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
 
-    const result = await ctx.caller.challengeRuns.getById({ id: run.id })
+    const result = await trpcCaller.challengeRuns.getById({ id: run.id })
     expect(result.phases[0].isComplete).toBe(false)
     expect(result.isComplete).toBe(false)
   })
 })
 
 describe('challengeRuns.updateProgress', () => {
-  const ctx = withTestLegacy()
-
-  it('updates value on a manual tracker and stamps completedAt for BOOLEAN true', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'BOOLEAN' })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+  test('updates value on a manual tracker and stamps completedAt for BOOLEAN true', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
-    await ctx.caller.challengeRuns.updateProgress({
+    await trpcCaller.challengeRuns.updateProgress({
       challengeRunTrackerId: trackers[0].id,
       value: true,
     })
@@ -162,52 +155,48 @@ describe('challengeRuns.updateProgress', () => {
 })
 
 describe('challengeRuns.link — transactional rollback', () => {
-  const ctx = withTestLegacy()
-
-  it('leaves no partial ChallengeRun when the challenge does not exist', async () => {
-    const runsBefore = await db.challengeRun.findMany({ where: { legacyId: ctx.legacyId } })
+  test('leaves no partial ChallengeRun when the challenge does not exist', async ({ trpcCaller, legacyId }) => {
+    const runsBefore = await db.challengeRun.findMany({ where: { legacyId } })
     await expect(
-      ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: 'nonexistent-id' })
+      trpcCaller.challengeRuns.link({ legacyId, challengeId: 'nonexistent-id' })
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
-    const runsAfter = await db.challengeRun.findMany({ where: { legacyId: ctx.legacyId } })
+    const runsAfter = await db.challengeRun.findMany({ where: { legacyId } })
     expect(runsAfter).toHaveLength(runsBefore.length)
   })
 })
 
 describe('challengeRuns.updateProgress — additional scenarios', () => {
-  const ctx = withTestLegacy()
-
-  it('throws BAD_REQUEST for a non-manual tracker', async () => {
+  test('throws BAD_REQUEST for a non-manual tracker', async ({ trpcCaller, userId, legacyId }) => {
     const builtIn = await getAnyBuiltInTrackerType({ requireComputationSpec: true })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, builtIn.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, builtIn.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
     await expect(
-      ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+      trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 
-  it('does not overwrite completedAt once set', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'BOOLEAN' })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+  test('does not overwrite completedAt once set', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
-    await ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+    await trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
     const first = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
 
-    await ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+    await trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
     const second = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(second?.completedAt).toEqual(first?.completedAt)
   })
 
-  it('throws FORBIDDEN when updating progress for another user legacy', async () => {
+  test('throws FORBIDDEN when updating progress for another user legacy', async ({ trpcCaller, userId, legacyId }) => {
     const other = await createTestUser()
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'BOOLEAN' })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
     try {
@@ -219,118 +208,116 @@ describe('challengeRuns.updateProgress — additional scenarios', () => {
     }
   })
 
-  it('does not stamp completedAt when NUMERICAL value is below goalValue', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'NUMERICAL' })
+  test('does not stamp completedAt when NUMERICAL value is below goalValue', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'NUMERICAL' })
     // Create a challenge with a tracker that has a goalConfig
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
-    await ctx.caller.challenges.addTracker({
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: tt.id,
       name: 'Count',
       config: {},
       goalConfig: { goalValue: 5 },
     })
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
-    await ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 3 })
+    await trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 3 })
     const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progress?.completedAt).toBeNull()
 
-    await ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 5 })
+    await trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 5 })
     const done = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(done?.completedAt).not.toBeNull()
   })
 
-  it('stores earnedPoints for THRESHOLD tracker and completes when all thresholds crossed', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'THRESHOLD' })
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+  test('stores earnedPoints for THRESHOLD tracker and completes when all thresholds crossed', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'THRESHOLD' })
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
     // thresholds: [5, 10, 15] — 3 milestones
-    await ctx.caller.challenges.addTracker({
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: tt.id,
       name: 'Threshold Tracker',
       config: {},
       goalConfig: { thresholds: [5, 10, 15] },
     })
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
     // rawValue 7 crosses threshold 5 only → earnedPoints = 1, not complete
-    await ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 7 })
+    await trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 7 })
     const partial = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(partial?.value).toBe(1)
     expect(partial?.completedAt).toBeNull()
 
     // rawValue 15 crosses all 3 thresholds → earnedPoints = 3, complete
-    await ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 15 })
+    await trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 15 })
     const done = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(done?.value).toBe(3)
     expect(done?.completedAt).not.toBeNull()
   })
 
-  it('throws BAD_REQUEST for THRESHOLD tracker with no valid goalConfig', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'THRESHOLD' })
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+  test('throws BAD_REQUEST for THRESHOLD tracker with no valid goalConfig', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'THRESHOLD' })
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
     // goalConfig has no thresholds or progression — invalid
-    await ctx.caller.challenges.addTracker({
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: tt.id,
       name: 'Bad Threshold',
       config: {},
       goalConfig: { goalValue: 10 },
     })
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
     await expect(
-      ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 10 })
+      trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: 10 })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 
-  it('throws BAD_REQUEST when THRESHOLD tracker receives a boolean value', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'THRESHOLD' })
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
-    await ctx.caller.challenges.addTracker({
+  test('throws BAD_REQUEST when THRESHOLD tracker receives a boolean value', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'THRESHOLD' })
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1 })
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: tt.id,
       name: 'Boolean into Threshold',
       config: {},
       goalConfig: { thresholds: [5, 10] },
     })
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
     await expect(
-      ctx.caller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
+      trpcCaller.challengeRuns.updateProgress({ challengeRunTrackerId: trackers[0].id, value: true })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 })
 
 describe('challengeRuns.listByLegacy', () => {
-  const ctx = withTestLegacy()
-
-  it('returns runs for the legacy', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
-    const result = await ctx.caller.challengeRuns.listByLegacy({ legacyId: ctx.legacyId })
+  test('returns runs for the legacy', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
+    const result = await trpcCaller.challengeRuns.listByLegacy({ legacyId })
     expect(result.length).toBeGreaterThan(0)
   })
 
-  it('throws NOT_FOUND for another user legacy', async () => {
+  test('throws NOT_FOUND for another user legacy', async ({ legacyId }) => {
     const other = await createTestUser()
     try {
       await expect(
-        authedCaller(other.id).challengeRuns.listByLegacy({ legacyId: ctx.legacyId })
+        authedCaller(other.id).challengeRuns.listByLegacy({ legacyId })
       ).rejects.toMatchObject({ code: 'NOT_FOUND' })
     } finally {
       await cleanupUser(other.id)
@@ -343,9 +330,7 @@ describe('challengeRuns.listByLegacy', () => {
 // ---------------------------------------------------------------------------
 
 describe('full flow — link creates correct initial state for auto-computed tracker', () => {
-  const ctx = withTestLegacy()
-
-  it('initializes TrackerProgress.value to 0 and isManual to false for a NUMERICAL auto-computed tracker', async () => {
+  test('initializes TrackerProgress.value to 0 and isManual to false for a NUMERICAL auto-computed tracker', async ({ trpcCaller, userId, legacyId }) => {
     // Build a tracker type whose computationSpec counts sims in the phase generation.
     // A fresh legacy has no sims, so the initial count is 0.
     const autoTt = await db.trackerType.create({
@@ -355,7 +340,7 @@ describe('full flow — link creates correct initial state for auto-computed tra
         configSchema: {},
         isBuiltIn: false,
         isPublic: false,
-        ownerId: ctx.userId,
+        ownerId: userId,
         computationSpec: {
           simFilter: { generationNumber: '$phase.generationNumber' },
           conditions: [{ source: 'skills', dataFilter: {} }],
@@ -365,20 +350,20 @@ describe('full flow — link creates correct initial state for auto-computed tra
       },
     })
 
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({
       challengeId: challenge.id,
       generationNumber: 1,
       title: 'Gen 1',
     })
-    await ctx.caller.challenges.addTracker({
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: autoTt.id,
       name: 'Sim Skill Count',
       config: {},
     })
 
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
 
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
@@ -391,9 +376,7 @@ describe('full flow — link creates correct initial state for auto-computed tra
 })
 
 describe('full flow — recompute updates tracker progress after sim mutation', () => {
-  const ctx = withTestLegacy()
-
-  it('updates TrackerProgress.value and stamps completedAt when the BOOLEAN condition becomes true', async () => {
+  test('updates TrackerProgress.value and stamps completedAt when the BOOLEAN condition becomes true', async ({ trpcCaller, legacyId }) => {
     // Use the seeded "Skill Maxed" built-in tracker type — its computationSpec uses
     // aggregation: { op: 'any' } over skills with maxed: true, returning a boolean.
     const skillMaxedType = await getTrackerTypeByName('Skill Maxed')
@@ -401,20 +384,20 @@ describe('full flow — recompute updates tracker progress after sim mutation', 
     // Pick any skill with maxLevel 10 so we can fully max it
     const skill = await getAnySkill({ maxLevel: 10 })
 
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({
       challengeId: challenge.id,
       generationNumber: 1,
       title: 'Gen 1',
     })
-    await ctx.caller.challenges.addTracker({
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: skillMaxedType.id,
       name: 'Max a skill',
       config: { skillId: skill.id },
     })
 
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
 
     // Before mutation: progress should be false, not complete
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
@@ -424,12 +407,12 @@ describe('full flow — recompute updates tracker progress after sim mutation', 
     expect(progressBefore?.completedAt).toBeNull()
 
     // Create a gen-1 sim and max the skill
-    const sim = await createTestSim(ctx.legacyId)
+    const sim = await createTestSim(legacyId)
     await db.sim.update({ where: { id: sim.id }, data: { generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: sim.id, skillId: skill.id, level: skill.maxLevel } })
 
     // Recompute
-    await recomputeLegacyTrackers(db, ctx.legacyId)
+    await recomputeLegacyTrackers(db, legacyId)
 
     const progressAfter = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progressAfter?.value).toBe(true)
@@ -438,9 +421,7 @@ describe('full flow — recompute updates tracker progress after sim mutation', 
 })
 
 describe('full flow — THRESHOLD tracker earns points per threshold crossed via recompute', () => {
-  const ctx = withTestLegacy()
-
-  it('increments earnedPoints as more sims acquire the skill, completing when all thresholds are crossed', async () => {
+  test('increments earnedPoints as more sims acquire the skill, completing when all thresholds are crossed', async ({ trpcCaller, userId, legacyId }) => {
     // Design: a THRESHOLD tracker type whose computationSpec counts sims in gen 1
     // that have a specific skill at any level (minLevel: 1).
     // goalConfig thresholds [1, 2, 3] means: 1 sim earned, 2 sims earned, 3 sims earned.
@@ -454,7 +435,7 @@ describe('full flow — THRESHOLD tracker earns points per threshold crossed via
         configSchema: {},
         isBuiltIn: false,
         isPublic: false,
-        ownerId: ctx.userId,
+        ownerId: userId,
         computationSpec: {
           simFilter: { generationNumber: '$phase.generationNumber' },
           conditions: [{ source: 'skills', dataFilter: { skillId: skill.id, minLevel: 1 } }],
@@ -464,14 +445,14 @@ describe('full flow — THRESHOLD tracker earns points per threshold crossed via
       },
     })
 
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({
       challengeId: challenge.id,
       generationNumber: 1,
       title: 'Gen 1',
     })
     // thresholds [1, 2, 3] — each sim that acquires the skill crosses one threshold
-    await ctx.caller.challenges.addTracker({
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: thresholdTt.id,
       name: 'Skill Holders',
@@ -479,7 +460,7 @@ describe('full flow — THRESHOLD tracker earns points per threshold crossed via
       goalConfig: { thresholds: [1, 2, 3] },
     })
 
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
 
@@ -489,30 +470,30 @@ describe('full flow — THRESHOLD tracker earns points per threshold crossed via
     expect(progressInit?.completedAt).toBeNull()
 
     // Add sim 1 with the skill → rawValue = 1 → crosses threshold 1 → earnedPoints = 1
-    const sim1 = await createTestSim(ctx.legacyId)
+    const sim1 = await createTestSim(legacyId)
     await db.sim.update({ where: { id: sim1.id }, data: { generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: sim1.id, skillId: skill.id, level: 7 } })
-    await recomputeLegacyTrackers(db, ctx.legacyId)
+    await recomputeLegacyTrackers(db, legacyId)
 
     const progress1 = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progress1?.value).toBe(1)
     expect(progress1?.completedAt).toBeNull()
 
     // Add sim 2 with the skill → rawValue = 2 → crosses threshold 2 → earnedPoints = 2
-    const sim2 = await createTestSim(ctx.legacyId)
+    const sim2 = await createTestSim(legacyId)
     await db.sim.update({ where: { id: sim2.id }, data: { generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: sim2.id, skillId: skill.id, level: 12 } })
-    await recomputeLegacyTrackers(db, ctx.legacyId)
+    await recomputeLegacyTrackers(db, legacyId)
 
     const progress2 = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progress2?.value).toBe(2)
     expect(progress2?.completedAt).toBeNull()
 
     // Add sim 3 with the skill → rawValue = 3 → crosses all 3 thresholds → earnedPoints = 3, complete
-    const sim3 = await createTestSim(ctx.legacyId)
+    const sim3 = await createTestSim(legacyId)
     await db.sim.update({ where: { id: sim3.id }, data: { generationNumber: 1 } })
     await db.simSkill.create({ data: { simId: sim3.id, skillId: skill.id, level: 15 } })
-    await recomputeLegacyTrackers(db, ctx.legacyId)
+    await recomputeLegacyTrackers(db, legacyId)
 
     const progress3 = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progress3?.value).toBe(3)
@@ -521,9 +502,7 @@ describe('full flow — THRESHOLD tracker earns points per threshold crossed via
 })
 
 describe('challengeRuns.link — isManual and initial value correctness', () => {
-  const ctx = withTestLegacy()
-
-  it('assigns correct isManual when two trackers share (trackerTypeId, name)', async () => {
+  test('assigns correct isManual when two trackers share (trackerTypeId, name)', async ({ trpcCaller, userId, legacyId }) => {
     // One tracker type with computationSpec (auto-computed) and one without (manual).
     // Both trackers share the same name so the old find-by-name logic would misassign one.
     const autoTt = await db.trackerType.create({
@@ -533,7 +512,7 @@ describe('challengeRuns.link — isManual and initial value correctness', () => 
         configSchema: {},
         isBuiltIn: false,
         isPublic: false,
-        ownerId: ctx.userId,
+        ownerId: userId,
         computationSpec: { source: 'simoleons' },
       },
     })
@@ -544,28 +523,28 @@ describe('challengeRuns.link — isManual and initial value correctness', () => 
         configSchema: {},
         isBuiltIn: false,
         isPublic: false,
-        ownerId: ctx.userId,
+        ownerId: userId,
       },
     })
 
-    const challenge = await ctx.caller.challenges.create({ name: `C ${Date.now()}` })
-    const phase = await ctx.caller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1, title: 'Gen 1' })
+    const challenge = await trpcCaller.challenges.create({ name: `C ${Date.now()}` })
+    const phase = await trpcCaller.challenges.addPhase({ challengeId: challenge.id, generationNumber: 1, title: 'Gen 1' })
 
     // Add two trackers with the same name but different trackerTypeIds
-    await ctx.caller.challenges.addTracker({
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: autoTt.id,
       name: 'Shared Name',
       config: {},
     })
-    await ctx.caller.challenges.addTracker({
+    await trpcCaller.challenges.addTracker({
       challengePhaseId: phase.id,
       trackerTypeId: manualTt.id,
       name: 'Shared Name',
       config: {},
     })
 
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
     expect(trackers).toHaveLength(2)
@@ -583,20 +562,20 @@ describe('challengeRuns.link — isManual and initial value correctness', () => 
     expect(manualProgress?.isManual).toBe(true)
   })
 
-  it('initializes TrackerProgress.value to 0 for NUMERICAL trackers', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'NUMERICAL' })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+  test('initializes TrackerProgress.value to 0 for NUMERICAL trackers', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'NUMERICAL' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
     const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })
     expect(progress?.value).toBe(0)
   })
 
-  it('initializes TrackerProgress.value to false for BOOLEAN trackers', async () => {
-    const tt = await createTestTrackerType({ ownerId: ctx.userId, valueKind: 'BOOLEAN' })
-    const { challenge } = await buildChallengeWithPhaseAndTracker(ctx.userId, tt.id)
-    const run = await ctx.caller.challengeRuns.link({ legacyId: ctx.legacyId, challengeId: challenge.id })
+  test('initializes TrackerProgress.value to false for BOOLEAN trackers', async ({ trpcCaller, userId, legacyId }) => {
+    const tt = await createTestTrackerType({ ownerId: userId, valueKind: 'BOOLEAN' })
+    const { challenge } = await buildChallengeWithPhaseAndTracker(userId, tt.id)
+    const run = await trpcCaller.challengeRuns.link({ legacyId, challengeId: challenge.id })
     const phases = await db.challengeRunPhase.findMany({ where: { challengeRunId: run.id } })
     const trackers = await db.challengeRunTracker.findMany({ where: { challengeRunPhaseId: phases[0].id } })
     const progress = await db.trackerProgress.findUnique({ where: { challengeRunTrackerId: trackers[0].id } })

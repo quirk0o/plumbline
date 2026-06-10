@@ -1,47 +1,43 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { unauthCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, getAnyBuiltInTrackerType } from '@/test/helpers'
-import { withTestUser } from '@/test/fixtures'
+import { test } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('trackerTypes.list', () => {
-  const ctx = withTestUser()
-
-  it('returns built-in tracker types', async () => {
-    const result = await ctx.caller.trackerTypes.list()
+  test('returns built-in tracker types', async ({ trpcCaller }) => {
+    const result = await trpcCaller.trackerTypes.list()
     expect(result.length).toBeGreaterThan(0)
     expect(result.some((t) => t.isBuiltIn)).toBe(true)
   })
 
-  it('includes user-created types owned by the caller', async () => {
+  test('includes user-created types owned by the caller', async ({ trpcCaller, userId }) => {
     await db.trackerType.create({
-      data: { name: `Custom-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: ctx.userId, isBuiltIn: false, isPublic: false },
+      data: { name: `Custom-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: userId, isBuiltIn: false, isPublic: false },
     })
-    const result = await ctx.caller.trackerTypes.list()
-    expect(result.some((t) => t.ownerId === ctx.userId)).toBe(true)
+    const result = await trpcCaller.trackerTypes.list()
+    expect(result.some((t) => t.ownerId === userId)).toBe(true)
   })
 
-  it('throws UNAUTHORIZED without a session', async () => {
+  test('throws UNAUTHORIZED without a session', async () => {
     await expect(unauthCaller().trackerTypes.list()).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
   })
 })
 
 describe('trackerTypes.create', () => {
-  const ctx = withTestUser()
-
-  it('creates a manual BOOLEAN tracker type owned by the caller', async () => {
-    const result = await ctx.caller.trackerTypes.create({
+  test('creates a manual BOOLEAN tracker type owned by the caller', async ({ trpcCaller, userId }) => {
+    const result = await trpcCaller.trackerTypes.create({
       name: `My Custom Goal ${Date.now()}`,
       valueKind: 'BOOLEAN',
     })
-    expect(result.ownerId).toBe(ctx.userId)
+    expect(result.ownerId).toBe(userId)
     expect(result.isBuiltIn).toBe(false)
     const record = await db.trackerType.findUnique({ where: { id: result.id } })
     expect(record).not.toBeNull()
   })
 
-  it('creates a THRESHOLD type with goalSchema', async () => {
-    const result = await ctx.caller.trackerTypes.create({
+  test('creates a THRESHOLD type with goalSchema', async ({ trpcCaller }) => {
+    const result = await trpcCaller.trackerTypes.create({
       name: `Wealth Tracker ${Date.now()}`,
       valueKind: 'THRESHOLD',
       goalSchema: { start: 100000, step: 100000, count: 10, unit: '§' },
@@ -51,43 +47,41 @@ describe('trackerTypes.create', () => {
 })
 
 describe('trackerTypes.delete', () => {
-  const ctx = withTestUser()
-
-  it('deletes a tracker type owned by the caller', async () => {
+  test('deletes a tracker type owned by the caller', async ({ trpcCaller, userId }) => {
     const tt = await db.trackerType.create({
-      data: { name: `Del-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: ctx.userId, isBuiltIn: false, isPublic: false },
+      data: { name: `Del-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: userId, isBuiltIn: false, isPublic: false },
     })
-    await ctx.caller.trackerTypes.delete({ id: tt.id })
+    await trpcCaller.trackerTypes.delete({ id: tt.id })
     expect(await db.trackerType.findUnique({ where: { id: tt.id } })).toBeNull()
   })
 
-  it('throws FORBIDDEN when deleting another user type', async () => {
+  test('throws FORBIDDEN when deleting another user type', async ({ trpcCaller }) => {
     const other = await createTestUser()
     try {
       const tt = await db.trackerType.create({
         data: { name: `Other-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: other.id, isBuiltIn: false, isPublic: false },
       })
       await expect(
-        ctx.caller.trackerTypes.delete({ id: tt.id })
+        trpcCaller.trackerTypes.delete({ id: tt.id })
       ).rejects.toMatchObject({ code: 'FORBIDDEN' })
     } finally {
       await cleanupUser(other.id)
     }
   })
 
-  it('throws FORBIDDEN when deleting a built-in type', async () => {
+  test('throws FORBIDDEN when deleting a built-in type', async ({ trpcCaller }) => {
     const builtIn = await getAnyBuiltInTrackerType()
     await expect(
-      ctx.caller.trackerTypes.delete({ id: builtIn.id })
+      trpcCaller.trackerTypes.delete({ id: builtIn.id })
     ).rejects.toMatchObject({ code: 'FORBIDDEN' })
   })
 
-  it('returns BAD_REQUEST when tracker type is referenced by a TrackerDefinition', async () => {
+  test('returns BAD_REQUEST when tracker type is referenced by a TrackerDefinition', async ({ trpcCaller, userId }) => {
     const tt = await db.trackerType.create({
-      data: { name: `InUse-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: ctx.userId, isBuiltIn: false, isPublic: false },
+      data: { name: `InUse-${Date.now()}`, valueKind: 'BOOLEAN', configSchema: {}, ownerId: userId, isBuiltIn: false, isPublic: false },
     })
     const challenge = await db.challenge.create({
-      data: { name: `Challenge-${Date.now()}`, isPublic: false, ownerId: ctx.userId },
+      data: { name: `Challenge-${Date.now()}`, isPublic: false, ownerId: userId },
     })
     const phase = await db.challengePhase.create({
       data: { challengeId: challenge.id, title: 'Phase 1', sortOrder: 0 },
@@ -96,7 +90,7 @@ describe('trackerTypes.delete', () => {
       data: { challengePhaseId: phase.id, trackerTypeId: tt.id, name: 'Ref Tracker', config: {} },
     })
     await expect(
-      ctx.caller.trackerTypes.delete({ id: tt.id })
+      trpcCaller.trackerTypes.delete({ id: tt.id })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 })

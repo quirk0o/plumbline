@@ -1,53 +1,43 @@
 // src/test/fixtures.ts
-import { beforeEach, afterEach } from 'vitest'
+import { test as base } from 'vitest'
 import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy } from '@/test/helpers'
 
-export interface TestUserContext {
+export interface TestFixtures {
+  /** A fresh test user, created before the test and deleted (cascading) after. */
   userId: string
-  caller: ReturnType<typeof authedCaller>
-}
-
-export interface TestLegacyContext extends TestUserContext {
+  /** A tRPC caller authenticated as `userId`. */
+  trpcCaller: ReturnType<typeof authedCaller>
+  /** A legacy owned by `userId`. Only created for tests that destructure it. */
   legacyId: string
 }
 
 /**
- * Registers beforeEach/afterEach on the enclosing describe block to create and
- * tear down a fresh test user per test. Returns a context object whose fields
- * are populated before each test body runs.
+ * Vitest test extended with database fixtures. Fixtures are lazy: a test only
+ * pays for what it destructures, so `test('…', ({ trpcCaller }) => …)` creates a
+ * user but no legacy, while `({ legacyId })` creates both.
  *
- * Usage:
- *   describe('packs.getAll', () => {
- *     const ctx = withTestUser()
- *     it('...', async () => { await ctx.caller.packs.getAll() })
+ * Teardown runs after each test via the `provide()` continuation; deleting the user
+ * cascades to the legacy, so no explicit legacy cleanup is needed. Tests that
+ * need a second user (ownership checks) or a custom db (rollback tests) create
+ * those directly with the `@/test/helpers` factories and `authedCaller`.
+ *
+ * Files that need extra per-suite entities extend this further, e.g.
+ *   const test = base.extend<{ sim: Sim }>({
+ *     sim: async ({ legacyId }, provide) => { await provide(await createTestSim(legacyId)) },
  *   })
  */
-export function withTestUser(): TestUserContext {
-  const ctx = {} as TestUserContext
-  beforeEach(async () => {
+export const test = base.extend<TestFixtures>({
+  userId: async ({}, provide) => {
     const user = await createTestUser()
-    ctx.userId = user.id
-    ctx.caller = authedCaller(user.id)
-  })
-  afterEach(async () => {
-    // Guard against a failed beforeEach leaving userId unset: cleanupUser(undefined)
-    // resolves to a WHERE-less deleteMany and would wipe every user in the test DB.
-    if (ctx.userId) await cleanupUser(ctx.userId)
-  })
-  return ctx
-}
-
-/**
- * Like withTestUser, but also creates a legacy owned by that user. Composes
- * withTestUser so the teardown (and its guard) lives in one place; cleanupUser
- * cascades to the legacy, so no extra teardown is needed.
- */
-export function withTestLegacy(): TestLegacyContext {
-  const ctx = withTestUser() as TestLegacyContext
-  beforeEach(async () => {
-    const legacy = await createTestLegacy(ctx.userId)
-    ctx.legacyId = legacy.id
-  })
-  return ctx
-}
+    await provide(user.id)
+    await cleanupUser(user.id)
+  },
+  trpcCaller: async ({ userId }, provide) => {
+    await provide(authedCaller(userId))
+  },
+  legacyId: async ({ userId }, provide) => {
+    const legacy = await createTestLegacy(userId)
+    await provide(legacy.id)
+  },
+})

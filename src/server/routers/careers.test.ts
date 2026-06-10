@@ -1,40 +1,38 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { unauthCaller } from '@/test/caller'
-import { withTestUser } from '@/test/fixtures'
+import { test } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('careers.getAll', () => {
-  const ctx = withTestUser()
-
-  it('returns a non-empty array of careers', async () => {
-    const result = await ctx.caller.careers.getAll()
+  test('returns a non-empty array of careers', async ({ trpcCaller }) => {
+    const result = await trpcCaller.careers.getAll()
     expect(Array.isArray(result)).toBe(true)
     expect(result.length).toBeGreaterThan(0)
   })
 
-  it('excludes careers from packs the user does not own', async () => {
+  test('excludes careers from packs the user does not own', async ({ trpcCaller }) => {
     const packLinkedCareer = await db.career.findFirst({
       where: { packId: { not: null } },
     })
     if (!packLinkedCareer) throw new Error('No pack-linked careers found. Is the DB seeded?')
 
-    const result = await ctx.caller.careers.getAll()
+    const result = await trpcCaller.careers.getAll()
     expect(result.map((c) => c.id)).not.toContain(packLinkedCareer.id)
   })
 
-  it('includes careers from packs the user owns', async () => {
+  test('includes careers from packs the user owns', async ({ trpcCaller, userId }) => {
     const packLinkedCareer = await db.career.findFirst({
       where: { packId: { not: null } },
     })
     if (!packLinkedCareer) throw new Error('No pack-linked careers found. Is the DB seeded?')
 
-    await db.userPack.create({ data: { userId: ctx.userId, packId: packLinkedCareer.packId! } })
+    await db.userPack.create({ data: { userId, packId: packLinkedCareer.packId! } })
 
-    const result = await ctx.caller.careers.getAll()
+    const result = await trpcCaller.careers.getAll()
     expect(result.map((c) => c.id)).toContain(packLinkedCareer.id)
   })
 
-  it('throws UNAUTHORIZED without a session', async () => {
+  test('throws UNAUTHORIZED without a session', async () => {
     const caller = unauthCaller()
     await expect(caller.careers.getAll()).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
   })

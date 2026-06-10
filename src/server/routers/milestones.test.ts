@@ -1,38 +1,36 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { TRPCError } from '@trpc/server'
 import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestLegacy, createTestSim } from '@/test/helpers'
-import { withTestLegacy } from '@/test/fixtures'
+import { test } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('milestones.reorder', () => {
-  const ctx = withTestLegacy()
-
-  it('sets sortOrder to the midpoint between two neighbors', async () => {
-    const m = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'M', simIds: [] })
-    const res = await ctx.caller.milestones.reorder({ id: m.id, prevSortOrder: 1000, nextSortOrder: 2000 })
+  test('sets sortOrder to the midpoint between two neighbors', async ({ trpcCaller, legacyId }) => {
+    const m = await trpcCaller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    const res = await trpcCaller.milestones.reorder({ id: m.id, prevSortOrder: 1000, nextSortOrder: 2000 })
     expect(res.sortOrder).toBe(1500)
   })
 
-  it('places above-all when only nextSortOrder is given', async () => {
-    const m = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'M', simIds: [] })
-    const res = await ctx.caller.milestones.reorder({ id: m.id, nextSortOrder: 2000 })
+  test('places above-all when only nextSortOrder is given', async ({ trpcCaller, legacyId }) => {
+    const m = await trpcCaller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    const res = await trpcCaller.milestones.reorder({ id: m.id, nextSortOrder: 2000 })
     expect(res.sortOrder).toBe(3000)
   })
 
-  it('places below-all when only prevSortOrder is given', async () => {
-    const m = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'M', simIds: [] })
-    const res = await ctx.caller.milestones.reorder({ id: m.id, prevSortOrder: 2000 })
+  test('places below-all when only prevSortOrder is given', async ({ trpcCaller, legacyId }) => {
+    const m = await trpcCaller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    const res = await trpcCaller.milestones.reorder({ id: m.id, prevSortOrder: 2000 })
     expect(res.sortOrder).toBe(1000)
   })
 
-  it('rejects when neither neighbor is provided', async () => {
-    const m = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'M', simIds: [] })
-    await expect(ctx.caller.milestones.reorder({ id: m.id })).rejects.toBeInstanceOf(TRPCError)
+  test('rejects when neither neighbor is provided', async ({ trpcCaller, legacyId }) => {
+    const m = await trpcCaller.milestones.create({ legacyId, title: 'M', simIds: [] })
+    await expect(trpcCaller.milestones.reorder({ id: m.id })).rejects.toBeInstanceOf(TRPCError)
   })
 
-  it("rejects reordering another user's milestone", async () => {
-    const created = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'Mine', simIds: [] })
+  test("rejects reordering another user's milestone", async ({ trpcCaller, legacyId }) => {
+    const created = await trpcCaller.milestones.create({ legacyId, title: 'Mine', simIds: [] })
     const otherUser = await createTestUser()
     await expect(
       authedCaller(otherUser.id).milestones.reorder({ id: created.id, nextSortOrder: 500 }),
@@ -42,20 +40,18 @@ describe('milestones.reorder', () => {
 })
 
 describe('milestones.delete', () => {
-  const ctx = withTestLegacy()
+  test('deletes the milestone and cascades its tag rows', async ({ trpcCaller, legacyId }) => {
+    const sim = await createTestSim(legacyId)
+    const created = await trpcCaller.milestones.create({ legacyId, title: 'Bye', simIds: [sim.id] })
 
-  it('deletes the milestone and cascades its tag rows', async () => {
-    const sim = await createTestSim(ctx.legacyId)
-    const created = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'Bye', simIds: [sim.id] })
-
-    const res = await ctx.caller.milestones.delete({ id: created.id })
+    const res = await trpcCaller.milestones.delete({ id: created.id })
     expect(res.id).toBe(created.id)
     expect(await db.milestone.findUnique({ where: { id: created.id } })).toBeNull()
     expect(await db.milestoneSim.count({ where: { milestoneId: created.id } })).toBe(0)
   })
 
-  it("rejects deleting another user's milestone", async () => {
-    const created = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'Mine', simIds: [] })
+  test("rejects deleting another user's milestone", async ({ trpcCaller, legacyId }) => {
+    const created = await trpcCaller.milestones.create({ legacyId, title: 'Mine', simIds: [] })
     const otherUser = await createTestUser()
     await expect(
       authedCaller(otherUser.id).milestones.delete({ id: created.id }),
@@ -65,14 +61,12 @@ describe('milestones.delete', () => {
 })
 
 describe('milestones.update', () => {
-  const ctx = withTestLegacy()
+  test('edits title/blurb and replaces the tag set without touching sortOrder', async ({ trpcCaller, legacyId }) => {
+    const simA = await createTestSim(legacyId, { firstName: 'A' })
+    const simB = await createTestSim(legacyId, { firstName: 'B' })
+    const created = await trpcCaller.milestones.create({ legacyId, title: 'Old', simIds: [simA.id] })
 
-  it('edits title/blurb and replaces the tag set without touching sortOrder', async () => {
-    const simA = await createTestSim(ctx.legacyId, { firstName: 'A' })
-    const simB = await createTestSim(ctx.legacyId, { firstName: 'B' })
-    const created = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'Old', simIds: [simA.id] })
-
-    const updated = await ctx.caller.milestones.update({
+    const updated = await trpcCaller.milestones.update({
       id: created.id, title: 'New', blurb: 'now with blurb', simIds: [simB.id],
     })
 
@@ -82,8 +76,8 @@ describe('milestones.update', () => {
     expect(updated.sortOrder).toBe(created.sortOrder)
   })
 
-  it("rejects editing another user's milestone", async () => {
-    const created = await ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'Mine', simIds: [] })
+  test("rejects editing another user's milestone", async ({ trpcCaller, legacyId }) => {
+    const created = await trpcCaller.milestones.create({ legacyId, title: 'Mine', simIds: [] })
     const otherUser = await createTestUser()
     const otherCaller = authedCaller(otherUser.id)
     await expect(
@@ -94,12 +88,10 @@ describe('milestones.update', () => {
 })
 
 describe('milestones.create', () => {
-  const ctx = withTestLegacy()
-
-  it('creates a milestone with sortOrder and tagged sims', async () => {
-    const sim = await createTestSim(ctx.legacyId, { firstName: 'Nina' })
-    const result = await ctx.caller.milestones.create({
-      legacyId: ctx.legacyId,
+  test('creates a milestone with sortOrder and tagged sims', async ({ trpcCaller, legacyId }) => {
+    const sim = await createTestSim(legacyId, { firstName: 'Nina' })
+    const result = await trpcCaller.milestones.create({
+      legacyId,
       title: 'The Lothario incident',
       blurb: 'She knew what she was doing.',
       simIds: [sim.id],
@@ -112,21 +104,21 @@ describe('milestones.create', () => {
     expect(row).not.toBeNull()
   })
 
-  it('rejects sims that do not belong to the legacy', async () => {
+  test('rejects sims that do not belong to the legacy', async ({ trpcCaller, legacyId }) => {
     const otherUser = await createTestUser()
     const otherLegacy = await createTestLegacy(otherUser.id)
     const foreignSim = await createTestSim(otherLegacy.id)
     await expect(
-      ctx.caller.milestones.create({ legacyId: ctx.legacyId, title: 'X', simIds: [foreignSim.id] }),
+      trpcCaller.milestones.create({ legacyId, title: 'X', simIds: [foreignSim.id] }),
     ).rejects.toBeInstanceOf(TRPCError)
     await cleanupUser(otherUser.id)
   })
 
-  it("rejects creating against another user's legacy", async () => {
+  test("rejects creating against another user's legacy", async ({ trpcCaller }) => {
     const otherUser = await createTestUser()
     const otherLegacy = await createTestLegacy(otherUser.id)
     await expect(
-      ctx.caller.milestones.create({ legacyId: otherLegacy.id, title: 'X', simIds: [] }),
+      trpcCaller.milestones.create({ legacyId: otherLegacy.id, title: 'X', simIds: [] }),
     ).rejects.toBeInstanceOf(TRPCError)
     await cleanupUser(otherUser.id)
   })

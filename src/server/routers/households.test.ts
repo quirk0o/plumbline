@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import {
   createTestUser,
@@ -7,16 +7,14 @@ import {
   createTestSim,
   createTestHousehold,
 } from '@/test/helpers'
-import { withTestLegacy } from '@/test/fixtures'
+import { test } from '@/test/fixtures'
 import { db } from '@/server/db'
 
 describe('households router', () => {
-  const ctx = withTestLegacy()
-
   describe('create', () => {
-    it('creates a household and returns its id', async () => {
-      const result = await ctx.caller.households.create({
-        legacyId: ctx.legacyId,
+    test('creates a household and returns its id', async ({ trpcCaller, legacyId }) => {
+      const result = await trpcCaller.households.create({
+        legacyId,
         name: 'Goth Manor',
         funds: 20000,
         description: 'The founding home.',
@@ -26,34 +24,34 @@ describe('households router', () => {
         name: 'Goth Manor',
         funds: 20000,
         description: 'The founding home.',
-        legacyId: ctx.legacyId,
+        legacyId,
       })
     })
 
-    it('becomes the active household when the legacy has none', async () => {
-      const first = await ctx.caller.households.create({ legacyId: ctx.legacyId, name: 'First', funds: 0 })
-      const second = await ctx.caller.households.create({ legacyId: ctx.legacyId, name: 'Second', funds: 0 })
-      const legacy = await db.legacy.findUnique({ where: { id: ctx.legacyId } })
+    test('becomes the active household when the legacy has none', async ({ trpcCaller, legacyId }) => {
+      const first = await trpcCaller.households.create({ legacyId, name: 'First', funds: 0 })
+      const second = await trpcCaller.households.create({ legacyId, name: 'Second', funds: 0 })
+      const legacy = await db.legacy.findUnique({ where: { id: legacyId } })
       expect(legacy!.activeHouseholdId).toBe(first.id)
       expect(legacy!.activeHouseholdId).not.toBe(second.id)
     })
 
-    it('snapshots foundedGeneration from the highest sim generation (default 1)', async () => {
-      const empty = await ctx.caller.households.create({ legacyId: ctx.legacyId, name: 'Empty Era', funds: 0 })
+    test('snapshots foundedGeneration from the highest sim generation (default 1)', async ({ trpcCaller, legacyId }) => {
+      const empty = await trpcCaller.households.create({ legacyId, name: 'Empty Era', funds: 0 })
       expect((await db.household.findUnique({ where: { id: empty.id } }))!.foundedGeneration).toBe(1)
 
-      await createTestSim(ctx.legacyId, { generationNumber: 3 })
-      const later = await ctx.caller.households.create({ legacyId: ctx.legacyId, name: 'Later Era', funds: 0 })
+      await createTestSim(legacyId, { generationNumber: 3 })
+      const later = await trpcCaller.households.create({ legacyId, name: 'Later Era', funds: 0 })
       expect((await db.household.findUnique({ where: { id: later.id } }))!.foundedGeneration).toBe(3)
     })
 
-    it('moves chosen sims in, pulling them from their old household', async () => {
-      const old = await createTestHousehold(ctx.legacyId, { name: 'Old House' })
-      const housed = await createTestSim(ctx.legacyId, { firstName: 'Dina', householdId: old.id })
-      const unhoused = await createTestSim(ctx.legacyId, { firstName: 'Nina' })
+    test('moves chosen sims in, pulling them from their old household', async ({ trpcCaller, legacyId }) => {
+      const old = await createTestHousehold(legacyId, { name: 'Old House' })
+      const housed = await createTestSim(legacyId, { firstName: 'Dina', householdId: old.id })
+      const unhoused = await createTestSim(legacyId, { firstName: 'Nina' })
 
-      const result = await ctx.caller.households.create({
-        legacyId: ctx.legacyId,
+      const result = await trpcCaller.households.create({
+        legacyId,
         name: 'New House',
         funds: 0,
         simIds: [housed.id, unhoused.id],
@@ -64,10 +62,10 @@ describe('households router', () => {
       expect(await db.sim.count({ where: { householdId: old.id } })).toBe(0)
     })
 
-    it('stores world and lot when given', async () => {
+    test('stores world and lot when given', async ({ trpcCaller, legacyId }) => {
       const world = await db.world.findUniqueOrThrow({ where: { name: 'Willow Creek' } })
-      const result = await ctx.caller.households.create({
-        legacyId: ctx.legacyId,
+      const result = await trpcCaller.households.create({
+        legacyId,
         name: 'Creek House',
         funds: 0,
         worldId: world.id,
@@ -78,57 +76,57 @@ describe('households router', () => {
       expect(record!.lot).toBe('1 Goth Hill')
     })
 
-    it('rejects an unknown worldId', async () => {
+    test('rejects an unknown worldId', async ({ trpcCaller, legacyId }) => {
       await expect(
-        ctx.caller.households.create({ legacyId: ctx.legacyId, name: 'X', funds: 0, worldId: 'nope' }),
+        trpcCaller.households.create({ legacyId, name: 'X', funds: 0, worldId: 'nope' }),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
     })
 
-    it('rejects sims from another legacy', async () => {
-      const otherLegacy = await createTestLegacy(ctx.userId, { slug: `other-${Date.now()}` })
+    test('rejects sims from another legacy', async ({ trpcCaller, legacyId, userId }) => {
+      const otherLegacy = await createTestLegacy(userId, { slug: `other-${Date.now()}` })
       const foreignSim = await createTestSim(otherLegacy.id)
       await expect(
-        ctx.caller.households.create({ legacyId: ctx.legacyId, name: 'X', funds: 0, simIds: [foreignSim.id] }),
+        trpcCaller.households.create({ legacyId, name: 'X', funds: 0, simIds: [foreignSim.id] }),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
     })
 
-    it("throws NOT_FOUND for another user's legacy", async () => {
+    test("throws NOT_FOUND for another user's legacy", async ({ legacyId }) => {
       const other = await createTestUser()
       try {
         const caller = authedCaller(other.id)
         await expect(
-          caller.households.create({ legacyId: ctx.legacyId, name: 'X', funds: 0 }),
+          caller.households.create({ legacyId, name: 'X', funds: 0 }),
         ).rejects.toMatchObject({ code: 'NOT_FOUND' })
       } finally {
         await cleanupUser(other.id)
       }
     })
 
-    it('rejects unauthenticated calls', async () => {
+    test('rejects unauthenticated calls', async ({ legacyId }) => {
       const caller = unauthCaller()
       await expect(
-        caller.households.create({ legacyId: ctx.legacyId, name: 'X', funds: 0 }),
+        caller.households.create({ legacyId, name: 'X', funds: 0 }),
       ).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
     })
   })
 
   describe('update', () => {
-    it('updates only the provided fields', async () => {
-      const h = await createTestHousehold(ctx.legacyId, { name: 'Before', funds: 100 })
-      await ctx.caller.households.update({ householdId: h.id, name: 'After', lotValue: 50000 })
+    test('updates only the provided fields', async ({ trpcCaller, legacyId }) => {
+      const h = await createTestHousehold(legacyId, { name: 'Before', funds: 100 })
+      await trpcCaller.households.update({ householdId: h.id, name: 'After', lotValue: 50000 })
       const record = await db.household.findUnique({ where: { id: h.id } })
       expect(record).toMatchObject({ name: 'After', funds: 100, lotValue: 50000 })
     })
 
-    it('rejects negative funds', async () => {
-      const h = await createTestHousehold(ctx.legacyId)
+    test('rejects negative funds', async ({ trpcCaller, legacyId }) => {
+      const h = await createTestHousehold(legacyId)
       await expect(
-        ctx.caller.households.update({ householdId: h.id, funds: -1 }),
+        trpcCaller.households.update({ householdId: h.id, funds: -1 }),
       ).rejects.toThrow()
     })
 
-    it("throws NOT_FOUND for another user's household", async () => {
-      const h = await createTestHousehold(ctx.legacyId)
+    test("throws NOT_FOUND for another user's household", async ({ legacyId }) => {
+      const h = await createTestHousehold(legacyId)
       const other = await createTestUser()
       try {
         await expect(
@@ -139,10 +137,10 @@ describe('households router', () => {
       }
     })
 
-    it('clears nullable fields when null is passed', async () => {
+    test('clears nullable fields when null is passed', async ({ trpcCaller, legacyId }) => {
       const world = await db.world.findUniqueOrThrow({ where: { name: 'Willow Creek' } })
-      const h = await createTestHousehold(ctx.legacyId, { worldId: world.id })
-      await ctx.caller.households.update({
+      const h = await createTestHousehold(legacyId, { worldId: world.id })
+      await trpcCaller.households.update({
         householdId: h.id,
         worldId: null,
         lot: null,
@@ -154,17 +152,17 @@ describe('households router', () => {
   })
 
   describe('setActive', () => {
-    it('swaps the active household pointer', async () => {
-      const a = await createTestHousehold(ctx.legacyId, { name: 'A' })
-      const b = await createTestHousehold(ctx.legacyId, { name: 'B' })
-      await ctx.caller.households.setActive({ householdId: a.id })
-      expect((await db.legacy.findUnique({ where: { id: ctx.legacyId } }))!.activeHouseholdId).toBe(a.id)
-      await ctx.caller.households.setActive({ householdId: b.id })
-      expect((await db.legacy.findUnique({ where: { id: ctx.legacyId } }))!.activeHouseholdId).toBe(b.id)
+    test('swaps the active household pointer', async ({ trpcCaller, legacyId }) => {
+      const a = await createTestHousehold(legacyId, { name: 'A' })
+      const b = await createTestHousehold(legacyId, { name: 'B' })
+      await trpcCaller.households.setActive({ householdId: a.id })
+      expect((await db.legacy.findUnique({ where: { id: legacyId } }))!.activeHouseholdId).toBe(a.id)
+      await trpcCaller.households.setActive({ householdId: b.id })
+      expect((await db.legacy.findUnique({ where: { id: legacyId } }))!.activeHouseholdId).toBe(b.id)
     })
 
-    it("throws NOT_FOUND for another user's household", async () => {
-      const h = await createTestHousehold(ctx.legacyId)
+    test("throws NOT_FOUND for another user's household", async ({ legacyId }) => {
+      const h = await createTestHousehold(legacyId)
       const other = await createTestUser()
       try {
         await expect(
@@ -177,32 +175,32 @@ describe('households router', () => {
   })
 
   describe('moveSim', () => {
-    it('moves a sim between households', async () => {
-      const from = await createTestHousehold(ctx.legacyId, { name: 'From' })
-      const to = await createTestHousehold(ctx.legacyId, { name: 'To' })
-      const sim = await createTestSim(ctx.legacyId, { householdId: from.id })
-      await ctx.caller.households.moveSim({ simId: sim.id, toHouseholdId: to.id })
+    test('moves a sim between households', async ({ trpcCaller, legacyId }) => {
+      const from = await createTestHousehold(legacyId, { name: 'From' })
+      const to = await createTestHousehold(legacyId, { name: 'To' })
+      const sim = await createTestSim(legacyId, { householdId: from.id })
+      await trpcCaller.households.moveSim({ simId: sim.id, toHouseholdId: to.id })
       expect((await db.sim.findUnique({ where: { id: sim.id } }))!.householdId).toBe(to.id)
     })
 
-    it('moves a sim out to unhoused with null', async () => {
-      const from = await createTestHousehold(ctx.legacyId)
-      const sim = await createTestSim(ctx.legacyId, { householdId: from.id })
-      await ctx.caller.households.moveSim({ simId: sim.id, toHouseholdId: null })
+    test('moves a sim out to unhoused with null', async ({ trpcCaller, legacyId }) => {
+      const from = await createTestHousehold(legacyId)
+      const sim = await createTestSim(legacyId, { householdId: from.id })
+      await trpcCaller.households.moveSim({ simId: sim.id, toHouseholdId: null })
       expect((await db.sim.findUnique({ where: { id: sim.id } }))!.householdId).toBeNull()
     })
 
-    it('rejects a target household from a different legacy', async () => {
-      const otherLegacy = await createTestLegacy(ctx.userId, { slug: `other-${Date.now()}` })
+    test('rejects a target household from a different legacy', async ({ trpcCaller, legacyId, userId }) => {
+      const otherLegacy = await createTestLegacy(userId, { slug: `other-${Date.now()}` })
       const foreignHousehold = await createTestHousehold(otherLegacy.id)
-      const sim = await createTestSim(ctx.legacyId)
+      const sim = await createTestSim(legacyId)
       await expect(
-        ctx.caller.households.moveSim({ simId: sim.id, toHouseholdId: foreignHousehold.id }),
+        trpcCaller.households.moveSim({ simId: sim.id, toHouseholdId: foreignHousehold.id }),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
     })
 
-    it("throws NOT_FOUND for another user's sim", async () => {
-      const sim = await createTestSim(ctx.legacyId)
+    test("throws NOT_FOUND for another user's sim", async ({ legacyId }) => {
+      const sim = await createTestSim(legacyId)
       const other = await createTestUser()
       try {
         await expect(
@@ -213,11 +211,11 @@ describe('households router', () => {
       }
     })
 
-    it('is a no-op when the sim already lives in the target household', async () => {
-      const home = await createTestHousehold(ctx.legacyId)
-      const sim = await createTestSim(ctx.legacyId, { householdId: home.id })
+    test('is a no-op when the sim already lives in the target household', async ({ trpcCaller, legacyId }) => {
+      const home = await createTestHousehold(legacyId)
+      const sim = await createTestSim(legacyId, { householdId: home.id })
       const before = (await db.sim.findUnique({ where: { id: sim.id } }))!.updatedAt
-      await ctx.caller.households.moveSim({ simId: sim.id, toHouseholdId: home.id })
+      await trpcCaller.households.moveSim({ simId: sim.id, toHouseholdId: home.id })
       const after = (await db.sim.findUnique({ where: { id: sim.id } }))!
       expect(after.householdId).toBe(home.id)
       expect(after.updatedAt).toEqual(before)
@@ -225,19 +223,19 @@ describe('households router', () => {
   })
 
   describe('listByLegacy', () => {
-    it('lists the legacy households as id + name', async () => {
-      await createTestHousehold(ctx.legacyId, { name: 'Alpha' })
-      await createTestHousehold(ctx.legacyId, { name: 'Beta' })
-      const result = await ctx.caller.households.listByLegacy({ legacyId: ctx.legacyId })
+    test('lists the legacy households as id + name', async ({ trpcCaller, legacyId }) => {
+      await createTestHousehold(legacyId, { name: 'Alpha' })
+      await createTestHousehold(legacyId, { name: 'Beta' })
+      const result = await trpcCaller.households.listByLegacy({ legacyId })
       expect(result.map((h) => h.name)).toEqual(['Alpha', 'Beta'])
       expect(Object.keys(result[0]).sort()).toEqual(['id', 'name'])
     })
 
-    it("throws NOT_FOUND for another user's legacy", async () => {
+    test("throws NOT_FOUND for another user's legacy", async ({ legacyId }) => {
       const other = await createTestUser()
       try {
         await expect(
-          authedCaller(other.id).households.listByLegacy({ legacyId: ctx.legacyId }),
+          authedCaller(other.id).households.listByLegacy({ legacyId }),
         ).rejects.toMatchObject({ code: 'NOT_FOUND' })
       } finally {
         await cleanupUser(other.id)

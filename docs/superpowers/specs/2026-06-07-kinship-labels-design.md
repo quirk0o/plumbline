@@ -178,6 +178,22 @@ captions short on the 140 px crest, per the agreed distance handling.
   "Wife" and one "Ex-husband"); in-law derivation runs only through the
   married active/widowed edges among them.
 
+### Known limitation — mini tree vs Atlas may differ on multi-path data
+
+Each surface computes kinship on the graph **it holds**: the Atlas has the
+whole legacy; the mini tree (`getMiniTreeData`) loads only ±2 generations
+around its sim. When two sims are related by **two equal-distance paths**
+(intermarriage, or cyclic/incestuous data), the surfaces can disagree —
+observed in QA (2026-06-10): one sim read "Half-brother" in the Atlas but
+"Grandfather" in the mini tree, because the node completing the shorter path
+sat outside the mini tree's ±2-generation window. Each label is correct
+*relative to its own visible graph* (the principle stated for the generation
+filter above), and the divergence cannot arise for a sim with a single blood
+path (the common case). **Accepted as-is.** The deeper fix — compute kinship
+on the full legacy parent/partner edge set even in the mini tree (rendering
+still only ±2 generations) so a crest's label is globally consistent — is a
+deferred follow-up, not part of this spec.
+
 ## Testing
 
 Trophy style — integration tests on the pure module plus one render-level

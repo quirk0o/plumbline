@@ -14,6 +14,7 @@ In Next.js 16, `middleware.ts` was renamed to `proxy.ts`. The request-intercepti
 
 - Use GitButler (`but`) for version-control write operations, including
   branching, committing, pushing, and history edits.
+- Always invoke the /but skill before performing any GitButler operations.
 - Assume multiple agents may be working in this repository. Do not move, amend,
   squash, discard, commit, push, or otherwise modify another agent's work unless
   the user asks.
@@ -126,7 +127,7 @@ so the optimizer can fetch from local MinIO; production uses a public R2 host.
 To migrate legacy `/uploads/...` rows from a previous local setup:
 
 ```bash
-npm run backfill:uploads -- --dry-run   # preview
-npm run backfill:uploads                # apply
-# SOURCE_UPLOAD_DIR=/path/to/other/worktree/public/uploads npm run backfill:uploads
+tsx scripts/backfill-uploads-to-s3.ts --dry-run   # preview
+tsx scripts/backfill-uploads-to-s3.ts             # apply
+# SOURCE_UPLOAD_DIR=/path/to/other/worktree/public/uploads tsx scripts/backfill-uploads-to-s3.ts
 ```

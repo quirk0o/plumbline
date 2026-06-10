@@ -1005,11 +1005,11 @@ describe('sims.addSocialRelationship / sims.updateSocialRelationship / sims.remo
   })
 
   it('does not change either partner generation when both are roots', async () => {
-    const genA = (await db.sim.findUniqueOrThrow({ where: { id: simAId }, select: { generationNumber: true } })).generationNumber
-    const genB = (await db.sim.findUniqueOrThrow({ where: { id: simBId }, select: { generationNumber: true } })).generationNumber
-    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.DATING })
-    expect((await db.sim.findUnique({ where: { id: simAId } }))?.generationNumber).toBe(genA)
-    expect((await db.sim.findUnique({ where: { id: simBId } }))?.generationNumber).toBe(genB)
+    await db.sim.update({ where: { id: simAId }, data: { generationNumber: 2 } })
+    await db.sim.update({ where: { id: simBId }, data: { generationNumber: 5 } })
+    await authedCaller(userId).sims.addSocialRelationship({ simAId, simBId, romanticStatus: RomanticStatus.MARRIED })
+    expect((await db.sim.findUnique({ where: { id: simAId } }))?.generationNumber).toBe(2) // unchanged
+    expect((await db.sim.findUnique({ where: { id: simBId } }))?.generationNumber).toBe(5) // unchanged
   })
 
   it('does not override partner generationNumber if both are derived', async () => {

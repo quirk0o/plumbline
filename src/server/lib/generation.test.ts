@@ -26,7 +26,7 @@ describe('recomputeGenerations', () => {
   })
   afterEach(async () => { await cleanupUser(userId) })
 
-  it('backfills a null root to the legacy latest and derives the chain to max+1', async () => {
+  it('keeps root generations and derives the chain to max+1', async () => {
     // grandparent (root, gen 3) -> parent (derived) -> child (derived)
     const gp = await createTestSim(legacyId, { firstName: 'GP', generationNumber: 3 })
     const partner = await createTestSim(legacyId, { firstName: 'Partner', generationNumber: 1 })

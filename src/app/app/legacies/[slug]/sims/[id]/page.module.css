@@ -99,9 +99,9 @@
 .metaChip {
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   letter-spacing: 0.04em;
-  padding: 0.3rem 0.75rem;
+  padding: 0.3rem var(--space-3); /* 0.3rem vertical: compact chip height matching combobox .chip variant; no exact token on the scale */
   border-radius: var(--radius-xl);
   color: var(--text-muted);
 }

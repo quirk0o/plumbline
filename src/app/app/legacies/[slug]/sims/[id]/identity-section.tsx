@@ -285,7 +285,7 @@ function GenerationField({
 }
 
 function GenerationReadOnly({ sim }: { sim: SimProp }) {
-  return <span className={styles.metaChipReadOnly}>Gen {roman(sim.generationNumber)}</span>
+  return <span className={styles.metaChipReadOnly} data-testid="generation-readonly">Gen {roman(sim.generationNumber)}</span>
 }
 
 function GenerationEditor({
@@ -315,7 +315,7 @@ function GenerationEditor({
   }
 
   return (
-    <span className={styles.generationField}>
+    <span className={styles.generationField} data-testid="generation-field">
       <Combobox value={String(value)} onChange={change} variant="chip" aria-label="Generation">
         {options.map((g) => (
           <Combobox.Item key={g} value={String(g)}>{`Gen ${roman(g)}`}</Combobox.Item>

@@ -50,7 +50,7 @@ export function computeLineageLayout(
   const rowYs = computeRowYs(rowGenerations)
   const { nodes, byId } = placeMedallions(clusters, xByCluster, rowYs)
   const hangingUnions = placeHangingUnions({ familyEdges: cleanFamily, couples, byId, rowOf, rowYs })
-  const bonds = toBondPaths(bondPaths, bondPairs, rowYs, byId)
+  const bonds = toBondPaths(bondPaths, bondPairs, rowYs, byId, hangingUnions)
   const viewBox = computeViewBox(nodes, rowYs, bonds)
   return { nodes, byId, rowYs, rowGenerations, couples, hangingUnions, bonds, viewBox }
 }
@@ -101,6 +101,7 @@ function toBondPaths(
   bondPairs: LineageCouple[],
   rowYs: number[],
   byId: Record<string, PositionedNode>,
+  hangingUnions: HangingUnion[],
 ): BondPath[] {
   const baseX = ROW_LABEL_GUTTER + TREE_PADDING
   const pairByKey = new Map(bondPairs.map((p) => [pairKey([p.a, p.b]), p]))
@@ -112,7 +113,9 @@ function toBondPaths(
       y: rowYs[Math.round(w.row)] + CREST_ANCHORS.cy,
     }))
     const { upper, lower } = orderPartnersByRow(byId[pair.a], byId[pair.b])
-    const routedPoints = isOnColumn(points, upper, lower) ? sideBracketPoints(upper, lower) : points
+    const routedPoints = isOnColumn(points, upper, lower)
+      ? sideBracketPoints(upper, lower, byId, hangingUnions)
+      : points
     return [{ a: pair.a, b: pair.b, romanticStatus: pair.romanticStatus, points: routedPoints }]
   })
 }
@@ -141,12 +144,19 @@ function isOnColumn(
 
 /**
  * [low] A 4-point bracket attaching to the partners' RIGHT side edges and
- * running the vertical lane just right of the column, so it never coincides with
- * any descent (descents make their vertical approach on column CENTERS).
+ * running the vertical lane right of the column, so it never coincides with any
+ * descent (descents make their vertical approach on column CENTERS). The lane is
+ * pushed past any co-parent connector that spans the bond's rows near the column
+ * (see bracketLaneX) so it never cuts through a partner's parents' elbows.
  */
-function sideBracketPoints(upper: PositionedNode, lower: PositionedNode): { x: number; y: number }[] {
+function sideBracketPoints(
+  upper: PositionedNode,
+  lower: PositionedNode,
+  byId: Record<string, PositionedNode>,
+  hangingUnions: HangingUnion[],
+): { x: number; y: number }[] {
   const rightEdge = (n: PositionedNode) => n.x + CREST_ANCHORS.right
-  const laneX = Math.max(rightEdge(upper), rightEdge(lower)) + BOND_LANE_GUTTER
+  const laneX = bracketLaneX(upper, lower, byId, hangingUnions)
   const upperY = upper.y + CREST_ANCHORS.cy
   const lowerY = lower.y + CREST_ANCHORS.cy
   return [
@@ -155,6 +165,35 @@ function sideBracketPoints(upper: PositionedNode, lower: PositionedNode): { x: n
     { x: laneX, y: lowerY },
     { x: rightEdge(lower), y: lowerY },
   ]
+}
+
+/**
+ * [low] The bracket's vertical lane x: just right of the partners' medallions,
+ * but pushed further right to clear any hanging-union co-parent whose connector
+ * elbows span the bond's rows near the column. Without this, a lane in the
+ * gutter beside the lower partner can cut through that partner's parents' elbows
+ * (a co-parent on the right runs its elbow leftward to the union over the gutter).
+ */
+function bracketLaneX(
+  upper: PositionedNode,
+  lower: PositionedNode,
+  byId: Record<string, PositionedNode>,
+  hangingUnions: HangingUnion[],
+): number {
+  let rightmost = Math.max(upper.x, lower.x) + CREST_ANCHORS.right
+  const top = Math.min(upper.y, lower.y)
+  const bottom = Math.max(upper.y, lower.y)
+  const colLeft = Math.min(upper.x, lower.x) - NODE_WIDTH
+  const colRight = Math.max(upper.x, lower.x) + NODE_WIDTH
+  for (const hu of hangingUnions) {
+    if (hu.y <= top || hu.y >= bottom) continue // not within the bond's vertical span
+    if (hu.x < colLeft || hu.x > colRight) continue // not near the bond column
+    for (const parentId of [hu.parentA, hu.parentB]) {
+      const parent = byId[parentId]
+      if (parent) rightmost = Math.max(rightmost, parent.x + CREST_ANCHORS.right)
+    }
+  }
+  return rightmost + BOND_LANE_GUTTER
 }
 
 /** [low] Drop self-edges and edges referencing unknown sims; dedupe family edges. */

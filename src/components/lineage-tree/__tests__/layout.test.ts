@@ -235,6 +235,39 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     // The right-gutter lane must not be clipped by the viewBox.
     expect(l.viewBox.width).toBeGreaterThanOrEqual(p1.x + TREE_PADDING)
   })
+
+  it('pushes the on-column bond lane past the lower partner’s co-parent connectors', () => {
+    // Same aligned-bracket structure as above, but gj's parents hh+th are
+    // non-adjacent co-parents (DATING → a hanging union). gj sits centered under
+    // that union, so the bond's lower partner is flanked by co-parents whose
+    // elbows reach inward across the gutter. The lane must clear them.
+    const l = computeLineageLayout(
+      [sim('jt', 1), sim('dh', 2), sim('hh', 3), sim('th', 3), sim('gj', 4)],
+      [
+        { parentId: 'jt', childId: 'dh' },
+        { parentId: 'dh', childId: 'hh' },
+        { parentId: 'hh', childId: 'gj' },
+        { parentId: 'th', childId: 'gj' },
+      ],
+      [
+        { simAId: 'hh', simBId: 'th', romanticStatus: 'DATING', endedAt: null },
+        { simAId: 'gj', simBId: 'jt', romanticStatus: 'PARTNER', endedAt: null },
+      ],
+    )
+    expect(l.bonds).toHaveLength(1)
+    const bond = l.bonds[0]
+    // It is the on-column bracket (4 points, two interior points share a laneX).
+    expect(bond.points).toHaveLength(4)
+    const laneX = bond.points[1].x
+    expect(bond.points[2].x).toBe(laneX)
+    // The lane clears BOTH co-parents' medallions, so it can't cut through either
+    // co-parent's elbow as it runs inward to the union.
+    const coParentRightEdge = Math.max(
+      l.byId['hh'].x + CREST_ANCHORS.right,
+      l.byId['th'].x + CREST_ANCHORS.right,
+    )
+    expect(laneX).toBeGreaterThan(coParentRightEdge)
+  })
 })
 
 describe('computeLineageLayout — components and singles', () => {

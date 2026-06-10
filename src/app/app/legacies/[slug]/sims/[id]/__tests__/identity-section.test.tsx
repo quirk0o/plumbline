@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-// The update mutation is the external boundary — mock it and assert what the
-// toggle persists, not how the component is wired internally.
+// The update mutation is the external transport boundary — mock the tRPC
+// client and assert what the chips persist, not how they're wired internally.
+// Everything we own (Combobox, ImageUpload) renders for real.
 const mutateAsync = vi.fn().mockResolvedValue({})
 vi.mock('@/trpc/client', () => ({
   trpc: { sims: { update: { useMutation: () => ({ mutateAsync }) } } },
@@ -13,26 +14,6 @@ vi.mock('@/trpc/client', () => ({
 vi.mock('next/image', () => ({
   default: (props: { alt?: string }) => <span aria-label={props.alt} />,
 }))
-
-vi.mock('@/app/components/image-upload', () => ({
-  ImageUpload: () => <div data-testid="image-upload" />,
-}))
-
-// Combobox has no jsdom-friendly rendering here and is irrelevant to the heir
-// toggle, so stub it to a plain wrapper that preserves its aria-label.
-vi.mock('@/components/ui', () => {
-  const Combobox = Object.assign(
-    ({
-      children,
-      'aria-label': ariaLabel,
-    }: {
-      children?: React.ReactNode
-      'aria-label'?: string
-    }) => <div aria-label={ariaLabel}>{children}</div>,
-    { Item: ({ children }: { children?: React.ReactNode }) => <span>{children}</span> },
-  )
-  return { Combobox }
-})
 
 import { IdentitySection } from '../identity-section'
 
@@ -51,7 +32,21 @@ const baseSim = {
   generationNumber: 1,
 }
 
-describe('IdentitySection — heir toggle', () => {
+/**
+ * Open a real Combobox by clicking its trigger (found via its accessible
+ * name — the aria-label when nothing is selected, or the current value's
+ * visible label once one is) and click the option with the given name.
+ */
+async function openAndSelect(
+  user: ReturnType<typeof userEvent.setup>,
+  triggerName: string | RegExp,
+  optionName: string | RegExp,
+) {
+  await user.click(screen.getByRole('button', { name: triggerName }))
+  await user.click(await screen.findByRole('option', { name: optionName }))
+}
+
+describe('IdentitySection — identity chips', () => {
   beforeEach(() => {
     mutateAsync.mockClear()
   })
@@ -101,15 +96,67 @@ describe('IdentitySection — heir toggle', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('persists a new gender when selected', async () => {
+    const user = userEvent.setup()
+    render(<IdentitySection sim={baseSim} hasParents={false} />)
+
+    await openAndSelect(user, 'Female', 'Male')
+
+    expect(mutateAsync).toHaveBeenCalledWith({ id: 'sim-1', gender: 'MALE' })
+  })
+
+  it('persists a new life stage when selected', async () => {
+    const user = userEvent.setup()
+    render(<IdentitySection sim={baseSim} hasParents={false} />)
+
+    await openAndSelect(user, 'Adult', 'Elder')
+
+    expect(mutateAsync).toHaveBeenCalledWith({ id: 'sim-1', lifeStage: 'ELDER' })
+  })
+
+  it('persists an occult type when selected from the default human chip', async () => {
+    const user = userEvent.setup()
+    render(<IdentitySection sim={baseSim} hasParents={false} />)
+
+    await openAndSelect(user, 'Occult type', 'Vampire')
+
+    expect(mutateAsync).toHaveBeenCalledWith({ id: 'sim-1', occultType: 'VAMPIRE' })
+  })
+
   it('shows generation read-only for a sim with parents', () => {
     render(<IdentitySection sim={{ ...baseSim, generationNumber: 3 }} hasParents />)
     expect(screen.getByText('Gen III')).toBeInTheDocument()
     // No editable Generation control for a derived sim.
-    expect(screen.queryByLabelText('Generation')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Generation|Gen / })).not.toBeInTheDocument()
   })
 
-  it('shows an editable Generation control for a root sim', () => {
+  it('shows an editable Generation control for a root sim', async () => {
+    render(<IdentitySection sim={{ ...baseSim, generationNumber: 2 }} hasParents={false} />)
+    // The trigger shows the current generation as its accessible name.
+    expect(await screen.findByRole('button', { name: 'Gen II' })).toBeInTheDocument()
+  })
+
+  it('persists a new generation via the update mutation when selected', async () => {
+    const user = userEvent.setup()
     render(<IdentitySection sim={{ ...baseSim, generationNumber: 1 }} hasParents={false} />)
-    expect(screen.getByLabelText('Generation')).toBeInTheDocument()
+
+    await openAndSelect(user, 'Gen I', 'Gen IV')
+
+    expect(mutateAsync).toHaveBeenCalledWith({ id: 'sim-1', generationNumber: 4 })
+  })
+
+  it('reverts the generation and surfaces an error when the save fails', async () => {
+    const user = userEvent.setup()
+    mutateAsync.mockRejectedValueOnce(new Error('save failed'))
+    render(<IdentitySection sim={{ ...baseSim, generationNumber: 2 }} hasParents={false} />)
+
+    await openAndSelect(user, 'Gen II', 'Gen V')
+
+    // The optimistic change rolls back once the mutation rejects, so the
+    // trigger shows the prior value again and the error surfaces.
+    expect(await screen.findByText('Failed to save')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Gen II' })).toBeInTheDocument()
+    )
   })
 })

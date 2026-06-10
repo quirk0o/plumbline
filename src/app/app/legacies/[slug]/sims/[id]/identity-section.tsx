@@ -280,12 +280,23 @@ function GenerationField({
   hasParents: boolean
   onSave: (fields: { id: string; generationNumber: number }) => Promise<unknown>
 }) {
+  if (hasParents) return <GenerationReadOnly sim={sim} />
+  return <GenerationEditor sim={sim} onSave={onSave} />
+}
+
+function GenerationReadOnly({ sim }: { sim: SimProp }) {
+  return <span className={styles.metaChipReadOnly}>Gen {roman(sim.generationNumber)}</span>
+}
+
+function GenerationEditor({
+  sim,
+  onSave,
+}: {
+  sim: SimProp
+  onSave: (fields: { id: string; generationNumber: number }) => Promise<unknown>
+}) {
   const [value, setValue] = useState(sim.generationNumber)
   const [error, setError] = useState('')
-
-  if (hasParents) {
-    return <span className={styles.metaChipReadOnly}>Gen {roman(sim.generationNumber)}</span>
-  }
 
   const ceiling = Math.max(10, value)
   const options = Array.from({ length: ceiling }, (_, i) => i + 1)
@@ -307,7 +318,7 @@ function GenerationField({
     <span className={styles.generationField}>
       <Combobox value={String(value)} onChange={change} variant="chip" aria-label="Generation">
         {options.map((g) => (
-          <Combobox.Item key={g} value={String(g)}>Gen {roman(g)}</Combobox.Item>
+          <Combobox.Item key={g} value={String(g)}>{`Gen ${roman(g)}`}</Combobox.Item>
         ))}
       </Combobox>
       {error && <span className={styles.inlineError}>{error}</span>}

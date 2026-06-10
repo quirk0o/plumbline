@@ -78,17 +78,13 @@ describe('CoParentEdge', () => {
 })
 
 describe('descentPathWithGap', () => {
-  it('omits the segment crossing the crest text band, resuming below it', () => {
-    // Source exits from y=24 (medallion center); text band is canvas coords 74..114.
+  it('starts the line below the text band (not at the source), reaching the target', () => {
+    // gapBottom = 114 is the source crest's card bottom. The line begins there —
+    // emerging from below the text — with nothing painted at/above the band.
     const d = descentPathWithGap(100, 24, 100, 300, 74, 114)
-    expect(d).toContain('M 100 24') // starts at the source
-    expect(d).toContain('L 100 74') // first sub-path stops at the band top
-    expect(d).toContain('M 100 114') // second sub-path resumes below the band
-  })
-
-  it('splits into exactly two sub-paths around the band and reaches the target', () => {
-    const d = descentPathWithGap(100, 24, 100, 300, 74, 114)
-    expect(d.match(/M /g)).toHaveLength(2) // the gap = two disconnected sub-paths
+    expect(d.startsWith('M 100 114')).toBe(true) // begins below the text band
+    expect(d.match(/M /g)).toHaveLength(1) // a single continuous line (no hidden gap)
+    expect(d).not.toContain('24') // nothing drawn up at the medallion/source
     expect(d.trimEnd().endsWith('100 300')).toBe(true) // reaches the child
   })
 

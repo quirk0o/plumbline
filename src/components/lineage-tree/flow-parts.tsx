@@ -100,11 +100,12 @@ export function descentPath(sourceX: number, sourceY: number, targetX: number, t
 }
 
 /**
- * [low] Descent path that skips a horizontal band (the source crest's text
- * band) so the line never paints across the sim's own name/stage. Two
- * sub-paths: a straight stub from the source down to the band top, then a
- * rounded elbow from the band bottom down-across-down to the target. No band →
- * identical to descentPath.
+ * [low] Descent for a crest-sourced line. To avoid painting over the source
+ * crest's name/stage, the visible line STARTS below the text band (at gapBottom)
+ * rather than at the medallion — so it reads as emerging from the bottom of the
+ * crest card, with nothing hidden behind the text. It jogs a fixed gap below the
+ * band (CONNECTOR_DROP) so the connector hugs the crests and the long vertical
+ * drop fills the space above the next generation. No band → plain descentPath.
  */
 export function descentPathWithGap(
   sourceX: number,
@@ -117,18 +118,13 @@ export function descentPathWithGap(
   if (gapTop === undefined || gapBottom === undefined) {
     return descentPath(sourceX, sourceY, targetX, targetY)
   }
-  // Jog a fixed gap below the text band (not the midpoint), so the connector
-  // hugs the crests and the long vertical drop fills the space above the next
-  // generation. Clamp so the jog never passes the target.
   const midY = Math.min(gapBottom + CONNECTOR_DROP, (gapBottom + targetY) / 2)
-  const stub = `M ${sourceX} ${sourceY} L ${sourceX} ${gapTop}`
-  const below = roundedCorners([
+  return roundedCorners([
     { x: sourceX, y: gapBottom },
     { x: sourceX, y: midY },
     { x: targetX, y: midY },
     { x: targetX, y: targetY },
   ])
-  return `${stub} ${below}`
 }
 
 export function DescentEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
@@ -159,9 +155,9 @@ export function coParentPath(
   gapTop?: number,
   gapBottom?: number,
 ): string {
-  // No band → plain elbow. With a band, skip the source crest's name/stage
-  // text: the elbow starts at the medallion bottom (above the band) and would
-  // otherwise paint straight down across it.
+  // No band → plain elbow from the source. With a band, the elbow STARTS below
+  // the crest's name/stage text (at gapBottom) — emerging from the bottom of the
+  // card — instead of starting at the medallion and painting across the text.
   if (gapTop === undefined || gapBottom === undefined) {
     return roundedCorners([
       { x: sourceX, y: sourceY },
@@ -169,13 +165,11 @@ export function coParentPath(
       { x: targetX, y: targetY },
     ])
   }
-  const stub = `M ${sourceX} ${sourceY} L ${sourceX} ${gapTop}`
-  const below = roundedCorners([
+  return roundedCorners([
     { x: sourceX, y: gapBottom },
     { x: sourceX, y: targetY },
     { x: targetX, y: targetY },
   ])
-  return `${stub} ${below}`
 }
 
 export function CoParentEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {

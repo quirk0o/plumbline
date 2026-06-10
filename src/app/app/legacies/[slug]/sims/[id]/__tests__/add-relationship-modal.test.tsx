@@ -114,6 +114,16 @@ describe('AddRelationshipModal', () => {
     )
   })
 
+  it('does not offer a "Step" relationship type (step is derived from marriage)', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await user.click(screen.getByRole('button', { name: /family/i }))
+    await openCombobox(user, /relationship type/i)
+    expect(screen.getByRole('option', { name: 'Biological', hidden: true })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Adoptive', hidden: true })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Step', hidden: true })).not.toBeInTheDocument()
+  })
+
   it('calls onClose when Cancel is clicked', async () => {
     const user = userEvent.setup()
     const { onClose } = renderModal()

@@ -157,7 +157,6 @@ export function AddRelationshipModal({
                     >
                       <Combobox.Item value={FamilyRelationshipType.BIOLOGICAL}>Biological</Combobox.Item>
                       <Combobox.Item value={FamilyRelationshipType.ADOPTIVE}>Adoptive</Combobox.Item>
-                      <Combobox.Item value={FamilyRelationshipType.STEP}>Step</Combobox.Item>
                     </Combobox>
                   </label>
                 </div>

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { Gender, FamilyRelationshipType, RomanticStatus, LifeStage } from '@prisma/client'
 import { authedCaller, unauthCaller } from '@/test/caller'
 import { deriveRomanticState } from '@/lib/romantic-status'
+import { computeKinshipLabels } from '@/components/lineage-tree/kinship'
 import {
   createTestUser,
   cleanupUser,
@@ -1546,25 +1547,37 @@ describe('sims.getTreeData', () => {
     expect(result.sims.map((s) => s.id)).toEqual(expect.arrayContaining([s1.id, s2.id]))
   })
 
-  it('returns biological and adoptive family edges but not step edges', async () => {
+  it('returns biological and adoptive family edges', async () => {
     const caller = authedCaller(userId)
     const parent = await createTestSim(legacyId, { firstName: 'Parent' })
     const bioChild = await createTestSim(legacyId, { firstName: 'BioChild' })
     const adoptedChild = await createTestSim(legacyId, { firstName: 'AdoptedChild' })
-    const stepChild = await createTestSim(legacyId, { firstName: 'StepChild' })
     await db.familyRelationship.create({
       data: { parentId: parent.id, childId: bioChild.id, type: FamilyRelationshipType.BIOLOGICAL },
     })
     await db.familyRelationship.create({
       data: { parentId: parent.id, childId: adoptedChild.id, type: FamilyRelationshipType.ADOPTIVE },
     })
-    await db.familyRelationship.create({
-      data: { parentId: parent.id, childId: stepChild.id, type: FamilyRelationshipType.STEP },
-    })
     const result = await caller.sims.getTreeData({ legacySlug })
     expect(result.familyEdges).toContainEqual({ parentId: parent.id, childId: bioChild.id })
     expect(result.familyEdges).toContainEqual({ parentId: parent.id, childId: adoptedChild.id })
-    expect(result.familyEdges).not.toContainEqual({ parentId: parent.id, childId: stepChild.id })
+  })
+
+  it('exposes the data to derive a step label from a recorded parent marriage', async () => {
+    const caller = authedCaller(userId)
+    const mum = await createTestSim(legacyId, { firstName: 'Mum', gender: Gender.FEMALE })
+    const focus = await createTestSim(legacyId, { firstName: 'Focus', gender: Gender.FEMALE })
+    const stepdad = await createTestSim(legacyId, { firstName: 'Stepdad', gender: Gender.MALE })
+    await db.familyRelationship.create({
+      data: { parentId: mum.id, childId: focus.id, type: FamilyRelationshipType.BIOLOGICAL },
+    })
+    const [aId, bId] = [mum.id, stepdad.id].sort()
+    await db.socialRelationship.create({
+      data: { simAId: aId, simBId: bId, romanticStatus: RomanticStatus.MARRIED, friendshipScore: 0, romanceScore: 0 },
+    })
+    const tree = await caller.sims.getTreeData({ legacySlug })
+    const labels = computeKinshipLabels(focus.id, tree.sims, tree.familyEdges, tree.partnerEdges)
+    expect(labels.get(stepdad.id)).toBe('Stepfather')
   })
 
   it('returns partner edges for non-NONE romantic relationships', async () => {
@@ -1752,17 +1765,6 @@ describe('sims.getMiniTreeData', () => {
     })
     const result = await caller.sims.getMiniTreeData({ simId: parent.id })
     expect(result.sims.map((s) => s.id)).toContain(child.id)
-  })
-
-  it('excludes step-parent edges', async () => {
-    const caller = authedCaller(userId)
-    const parent = await createTestSim(legacyId, { firstName: 'Parent' })
-    const child = await createTestSim(legacyId, { firstName: 'Child' })
-    await db.familyRelationship.create({
-      data: { parentId: parent.id, childId: child.id, type: FamilyRelationshipType.STEP },
-    })
-    const result = await caller.sims.getMiniTreeData({ simId: child.id })
-    expect(result.familyEdges).not.toContainEqual({ parentId: parent.id, childId: child.id })
   })
 
   it("includes the focused sim's partner in sims and partnerEdges", async () => {

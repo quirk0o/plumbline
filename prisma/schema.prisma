@@ -101,7 +101,6 @@ enum CauseOfDeath {
 enum FamilyRelationshipType {
   BIOLOGICAL
   ADOPTIVE
-  STEP
 }
 
 enum RomanticStatus {

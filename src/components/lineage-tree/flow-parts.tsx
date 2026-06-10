@@ -47,17 +47,63 @@ export function UnionNode({ data }: { data: UnionNodeData }) {
   )
 }
 
-/** Right-angle path: down from the bond, across, down to the child's top. */
+/** [low] Corner radius for the rounded connector elbows. */
+const CORNER_RADIUS = 12
+
+/**
+ * [low] An SVG path through `points` with rounded corners: each interior vertex
+ * becomes a quadratic arc of up to CORNER_RADIUS, clamped to half the shorter
+ * adjacent segment so short runs stay clean. Consecutive duplicate points are
+ * collapsed (e.g. a zero-width horizontal when source and target share a column).
+ */
+function roundedCorners(points: { x: number; y: number }[], radius = CORNER_RADIUS): string {
+  const pts = points.filter((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y)
+  if (pts.length === 0) return ''
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 1; i < pts.length - 1; i++) {
+    const prev = pts[i - 1]
+    const curr = pts[i]
+    const next = pts[i + 1]
+    const inDx = curr.x - prev.x
+    const inDy = curr.y - prev.y
+    const outDx = next.x - curr.x
+    const outDy = next.y - curr.y
+    // Colinear (no real turn) → straight through, no arc.
+    if (Math.abs(inDx * outDy - inDy * outDx) < 1e-6) {
+      d += ` L ${curr.x} ${curr.y}`
+      continue
+    }
+    const inLen = Math.hypot(inDx, inDy)
+    const outLen = Math.hypot(outDx, outDy)
+    const r = Math.min(radius, inLen / 2, outLen / 2)
+    const inX = curr.x - (inDx / inLen) * r
+    const inY = curr.y - (inDy / inLen) * r
+    const outX = curr.x + (outDx / outLen) * r
+    const outY = curr.y + (outDy / outLen) * r
+    d += ` L ${inX} ${inY} Q ${curr.x} ${curr.y} ${outX} ${outY}`
+  }
+  const last = pts[pts.length - 1]
+  if (pts.length > 1) d += ` L ${last.x} ${last.y}`
+  return d
+}
+
+/** Rounded elbow: down from the bond, across, down to the child's top. */
 export function descentPath(sourceX: number, sourceY: number, targetX: number, targetY: number): string {
   const midY = (sourceY + targetY) / 2
-  return `M ${sourceX} ${sourceY} V ${midY} H ${targetX} V ${targetY}`
+  return roundedCorners([
+    { x: sourceX, y: sourceY },
+    { x: sourceX, y: midY },
+    { x: targetX, y: midY },
+    { x: targetX, y: targetY },
+  ])
 }
 
 /**
  * [low] Descent path that skips a horizontal band (the source crest's text
  * band) so the line never paints across the sim's own name/stage. Two
- * sub-paths: source down to the band top, then band bottom down-across-down to
- * the target. No band → identical to descentPath.
+ * sub-paths: a straight stub from the source down to the band top, then a
+ * rounded elbow from the band bottom down-across-down to the target. No band →
+ * identical to descentPath.
  */
 export function descentPathWithGap(
   sourceX: number,
@@ -71,7 +117,14 @@ export function descentPathWithGap(
     return descentPath(sourceX, sourceY, targetX, targetY)
   }
   const midY = (gapBottom + targetY) / 2
-  return `M ${sourceX} ${sourceY} V ${gapTop} M ${sourceX} ${gapBottom} V ${midY} H ${targetX} V ${targetY}`
+  const stub = `M ${sourceX} ${sourceY} L ${sourceX} ${gapTop}`
+  const below = roundedCorners([
+    { x: sourceX, y: gapBottom },
+    { x: sourceX, y: midY },
+    { x: targetX, y: midY },
+    { x: targetX, y: targetY },
+  ])
+  return `${stub} ${below}`
 }
 
 export function DescentEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
@@ -106,9 +159,19 @@ export function coParentPath(
   // text: the elbow starts at the medallion bottom (above the band) and would
   // otherwise paint straight down across it.
   if (gapTop === undefined || gapBottom === undefined) {
-    return `M ${sourceX} ${sourceY} V ${targetY} H ${targetX}`
+    return roundedCorners([
+      { x: sourceX, y: sourceY },
+      { x: sourceX, y: targetY },
+      { x: targetX, y: targetY },
+    ])
   }
-  return `M ${sourceX} ${sourceY} V ${gapTop} M ${sourceX} ${gapBottom} V ${targetY} H ${targetX}`
+  const stub = `M ${sourceX} ${sourceY} L ${sourceX} ${gapTop}`
+  const below = roundedCorners([
+    { x: sourceX, y: gapBottom },
+    { x: sourceX, y: targetY },
+    { x: targetX, y: targetY },
+  ])
+  return `${stub} ${below}`
 }
 
 export function CoParentEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
@@ -147,11 +210,9 @@ export function MarriageEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeP
   )
 }
 
-/** Polyline from canvas-space waypoints — "M x0 y0 L x1 y1 L …". */
+/** Rounded polyline through canvas-space waypoints (the routed bond lane). */
 export function bondPath(points: { x: number; y: number }[]): string {
-  if (points.length === 0) return ''
-  const [first, ...rest] = points
-  return `M ${first.x} ${first.y}` + rest.map((p) => ` L ${p.x} ${p.y}`).join('')
+  return roundedCorners(points)
 }
 
 /**

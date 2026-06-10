@@ -18,8 +18,11 @@ function renderUnion(data: { diamond: boolean }) {
 }
 
 describe('coParentPath', () => {
-  it('drops from the parent, then runs across to the union', () => {
-    expect(coParentPath(70, 70, 175, 118)).toBe('M 70 70 V 118 H 175')
+  it('drops from the parent and rounds across to the union', () => {
+    const d = coParentPath(70, 70, 175, 118)
+    expect(d.startsWith('M 70 70')).toBe(true) // leaves the parent
+    expect(d.trimEnd().endsWith('175 118')).toBe(true) // lands on the union
+    expect(d).toContain('Q') // the corner is rounded, not a hard right angle
   })
 })
 
@@ -65,26 +68,28 @@ describe('UnionNode', () => {
 })
 
 describe('CoParentEdge', () => {
-  it('renders the elbow path', () => {
+  it('renders a rounded elbow from source to target', () => {
     const { container } = render(<svg><CoParentEdge {...edgeProps()} /></svg>)
-    expect(container.querySelector('path')).toHaveAttribute('d', 'M 0 0 V 50 H 100')
+    const d = container.querySelector('path')?.getAttribute('d') ?? ''
+    expect(d.startsWith('M 0 0')).toBe(true)
+    expect(d.trimEnd().endsWith('100 50')).toBe(true)
+    expect(d).toContain('Q')
   })
 })
 
 describe('descentPathWithGap', () => {
   it('omits the segment crossing the crest text band, resuming below it', () => {
     // Source exits from y=24 (medallion center); text band is canvas coords 74..114.
-    // Expected: two sub-paths — drop 24→74 (to band top), then resume from 114
-    // down to midY=(114+300)/2=207, across, down to target.
     const d = descentPathWithGap(100, 24, 100, 300, 74, 114)
-    expect(d).toContain('M 100 24 V 74')       // first segment stops at band top
-    expect(d).toContain('M 100 114')             // second segment starts below band
+    expect(d).toContain('M 100 24') // starts at the source
+    expect(d).toContain('L 100 74') // first sub-path stops at the band top
+    expect(d).toContain('M 100 114') // second sub-path resumes below the band
   })
 
-  it('produces the correct full path for a gap scenario', () => {
-    // midY = (114 + 300) / 2 = 207
-    expect(descentPathWithGap(100, 24, 100, 300, 74, 114))
-      .toBe('M 100 24 V 74 M 100 114 V 207 H 100 V 300')
+  it('splits into exactly two sub-paths around the band and reaches the target', () => {
+    const d = descentPathWithGap(100, 24, 100, 300, 74, 114)
+    expect(d.match(/M /g)).toHaveLength(2) // the gap = two disconnected sub-paths
+    expect(d.trimEnd().endsWith('100 300')).toBe(true) // reaches the child
   })
 
   it('falls back to the plain descent path when no gap band is given', () => {

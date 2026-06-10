@@ -418,15 +418,23 @@ describe('bondPath', () => {
 })
 
 describe('descentPath', () => {
-  it('draws vertical → horizontal → vertical through the midpoint (old ParentChildLine shape)', () => {
-    expect(descentPath(100, 50, 240, 170)).toBe('M 100 50 V 110 H 240 V 170')
+  it('routes down-across-down through the midpoint with rounded corners', () => {
+    const d = descentPath(100, 50, 240, 170)
+    expect(d.startsWith('M 100 50')).toBe(true) // starts at the source
+    expect(d.trimEnd().endsWith('240 170')).toBe(true) // ends at the target
+    expect(d).toContain('Q') // corners are rounded
   })
 
-  it('keeps a single straight drop when source and target share an x (lone parent)', () => {
-    expect(descentPath(100, 50, 100, 170)).toBe('M 100 50 V 110 H 100 V 170')
+  it('keeps a single straight drop (no corners) when source and target share an x', () => {
+    const d = descentPath(100, 50, 100, 170)
+    expect(d.trimEnd()).toBe('M 100 50 L 100 110 L 100 170') // colinear → no arc
+    expect(d).not.toContain('Q')
   })
 
   it('routes through the midpoint even when the target sits above the source (inverted)', () => {
-    expect(descentPath(100, 170, 240, 50)).toBe('M 100 170 V 110 H 240 V 50')
+    const d = descentPath(100, 170, 240, 50)
+    expect(d.startsWith('M 100 170')).toBe(true)
+    expect(d.trimEnd().endsWith('240 50')).toBe(true)
+    expect(d).toContain('Q')
   })
 })

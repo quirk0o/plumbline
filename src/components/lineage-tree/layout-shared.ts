@@ -73,9 +73,11 @@ export const COUPLE_WIDTH = NODE_WIDTH * 2 + MARRIAGE_BOND_GAP
 
 /**
  * Hanging unions (descent junctions for non-adjacent co-parents) sit below
- * the parents' row, stacked into lanes so horizontal runs never overlap.
+ * the parents' row, stacked into lanes so horizontal runs never overlap. The
+ * offset clears the crest's text band (which ends at NODE_HEIGHT) with a
+ * comfortable margin so the horizontal connector doesn't crowd the name/stage.
  */
-export const HANGING_UNION_BASE_OFFSET = NODE_HEIGHT + 4
+export const HANGING_UNION_BASE_OFFSET = NODE_HEIGHT + 24
 export const HANGING_UNION_LANE_PITCH = 12
 export const HANGING_UNION_MAX_LANES = 4
 

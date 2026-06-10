@@ -75,7 +75,7 @@ await userEvent.click(screen.getByRole('button', { name: 'City Living' }))
 expect(await screen.findByText('Pack added')).toBeInTheDocument()
 ```
 
-> Mocking **external** boundaries (tRPC hooks, the Next.js router, NextAuth, the S3 client) is correct and expected — those are not implementation details of the unit under test. The rule is about spying on the code's _own_ internals.
+> Mocking **external** boundaries (tRPC hooks, the Next.js router, NextAuth, the S3 client) is correct and expected — those are not implementation details of the unit under test. Mocking **internal** code (our own components, functions, hooks, or procedures) is not — see [Mock Only External Boundaries](#mock-only-external-boundaries--never-internal-code).
 
 **❌ Testing a private helper directly instead of through its public surface**
 
@@ -105,6 +105,76 @@ expect(screen.getByRole('heading', { name: 'Your Legacy' })).toBeInTheDocument()
 ```
 
 For tRPC integration tests, assert on the **procedure's return value and the resulting database state** (the observable contract), not on which internal query builders or service functions ran along the way.
+
+---
+
+## Mock Only External Boundaries — Never Internal Code
+
+**Mocking internal dependencies is not allowed.** A test may only mock at the system's true external boundaries — third-party code and I/O the unit under test does not own. Everything we wrote ourselves must run for real.
+
+Mocking an internal module replaces the real thing with a fake, so the test no longer exercises the code it claims to cover: refactors that change the collaborator can't break the test (false negatives), and real bugs in the collaborator pass straight through (false positives). It also freezes the mocked module's shape into an internal contract that the test now silently depends on. Render the real child; call the real function.
+
+### Allowed to mock (external boundaries)
+
+These are not ours and not implementation details of the unit under test:
+
+- Third-party packages, mocked **at the package** — `next/navigation`, `next/image`, `next/link`, `next-auth`, `@aws-sdk/client-s3` (use [`aws-sdk-client-mock`](https://github.com/m-radzikowski/aws-sdk-client-mock)), `@xyflow/react`
+- Browser/host APIs jsdom lacks — `ResizeObserver`, `matchMedia`, `IntersectionObserver`, `fetch`
+
+The **one** internal exception: our tRPC client hooks (`@/trpc/client`). It is the in-browser transport seam, and there is no underlying external library to mock cleanly in its place — stubbing the network/`httpBatchLink` instead would be far more brittle. Mocking it lets component tests run in jsdom without a server. This exception does not generalize to any other `@/...` module.
+
+### Never mock (internal code)
+
+If we wrote it, the test runs the real one:
+
+- Our React components — including child components rendered by the component under test
+- Our functions, helpers, and utilities (`@/lib/...`, `@/server/lib/...`)
+- Our hooks (other than the tRPC transport exception above)
+- Our tRPC routers, procedures, and domain logic — integration tests call these through `createCallerFactory` against a real DB; they are never stubbed
+- **Our thin wrappers over an external library** — `@/lib/auth` (wraps `next-auth`) and `@/lib/storage` (wraps `@aws-sdk/client-s3`). Mocking the wrapper hides the wrapper's own logic and freezes its shape. Leave the wrapper real and mock the **external library underneath** instead.
+
+### Wrappers over external libraries — mock the library, not the wrapper
+
+When the unit under test reaches an external boundary through a wrapper we own, the seam to mock is the third-party library inside the wrapper — never the wrapper itself.
+
+```ts
+// ❌ BAD — replaces our own wrapper, so its real logic never runs
+vi.mock('@/lib/storage', () => ({ getObject: vi.fn() }))
+vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
+
+// ✅ GOOD — wrapper runs for real; the external library is the mock
+import { mockClient } from 'aws-sdk-client-mock'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+const s3 = mockClient(S3Client)
+s3.on(GetObjectCommand).resolves({ /* ... */ })
+
+vi.mock('next-auth', /* ... */)   // drives what our cached `auth()` returns
+```
+
+### The import-path heuristic
+
+The argument to `vi.mock(...)` usually tells you which side of the line you're on:
+
+```ts
+// ✅ Allowed — third-party / transport boundary
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('@/trpc/client', () => ({ /* ... */ }))
+
+// ❌ Not allowed — our own modules
+vi.mock('../sim-card', () => ({ SimCard: () => null }))   // a real child component
+vi.mock('@/lib/kinship', () => ({ /* ... */ }))           // our own logic
+vi.mock('@/server/routers/sims')                          // our own procedures
+```
+
+A relative path (`../`, `./`) or an internal alias (`@/components`, `@/lib`, `@/server`) is a strong signal you are about to mock something you own — stop and use the real module instead.
+
+### When a real internal collaborator is "too hard" to use
+
+Difficulty mocking-away an internal dependency is a design signal, not a license to mock it:
+
+- The child needs heavy setup → render it for real with the props it needs; if that's painful, the component boundary may be wrong.
+- The function touches the DB → that's an **integration** test (real Prisma, real Postgres — see [Integration Tests](#integration-tests-node-db-required)), not a unit test with a stubbed helper.
+- You only want to assert the collaborator "was called" → that's an [implementation detail](#test-behavior-not-implementation-details); assert the observable outcome the collaborator produces instead.
 
 ---
 

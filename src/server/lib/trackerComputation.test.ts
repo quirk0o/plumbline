@@ -1,21 +1,12 @@
 import { describe, expect } from 'vitest'
 import { db } from '@/server/db'
-import { createTestChallenge, createTestChallengePhase, createTestChallengeRun, getAnySkill, getAnyAspiration, getTrackerTypeByName, getGameTraits, getPersonalityTraits, getSkills } from '@/test/helpers'
-import { test as base } from '@/test/test'
+import { createTestChallenge, createTestChallengePhase, createTestChallengeRun, createTestSim, getAnySkill, getAnyAspiration, getTrackerTypeByName, getGameTraits, getPersonalityTraits, getSkills } from '@/test/helpers'
+import { test } from '@/test/test'
 import { evaluateSpec, recomputeLegacyTrackers } from './trackerComputation'
-import type { Sim } from '@prisma/client'
-
-const test = base.extend<{ sim: Sim }>({
-  sim: async ({ legacyId }, provide) => {
-    const sim = await db.sim.create({
-      data: { legacyId, firstName: 'Test', lastName: 'Sim', gender: 'FEMALE', lifeStage: 'YOUNG_ADULT', generationNumber: 1 },
-    })
-    await provide(sim)
-  },
-})
 
 describe('evaluateSpec — skill maxed (single condition)', () => {
-  test('returns false when sim has not maxed the skill', async ({ legacyId, sim }) => {
+  test('returns false when sim has not maxed the skill', async ({ legacyId }) => {
+    const sim = await createTestSim(legacyId, { generationNumber: 1 })
     const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId: sim.id, skillId: skill.id, level: 1 } })
     const result = await evaluateSpec(db, legacyId, {
@@ -27,7 +18,8 @@ describe('evaluateSpec — skill maxed (single condition)', () => {
     expect(result).toBe(false)
   })
 
-  test('returns true when sim has maxed the skill', async ({ legacyId, sim }) => {
+  test('returns true when sim has maxed the skill', async ({ legacyId }) => {
+    const sim = await createTestSim(legacyId, { generationNumber: 1 })
     const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId: sim.id, skillId: skill.id, level: skill.maxLevel } })
     const result = await evaluateSpec(db, legacyId, {
@@ -41,7 +33,8 @@ describe('evaluateSpec — skill maxed (single condition)', () => {
 })
 
 describe('evaluateSpec — aspiration completed (single condition)', () => {
-  test('returns false when aspiration not completed', async ({ legacyId, sim }) => {
+  test('returns false when aspiration not completed', async ({ legacyId }) => {
+    const sim = await createTestSim(legacyId, { generationNumber: 1 })
     const aspiration = await getAnyAspiration()
     await db.simAspiration.create({ data: { simId: sim.id, aspirationId: aspiration.id } })
     const result = await evaluateSpec(db, legacyId, {
@@ -53,7 +46,8 @@ describe('evaluateSpec — aspiration completed (single condition)', () => {
     expect(result).toBe(false)
   })
 
-  test('returns true when aspiration is completed', async ({ legacyId, sim }) => {
+  test('returns true when aspiration is completed', async ({ legacyId }) => {
+    const sim = await createTestSim(legacyId, { generationNumber: 1 })
     const aspiration = await getAnyAspiration()
     await db.simAspiration.create({ data: { simId: sim.id, aspirationId: aspiration.id, completedAt: new Date() } })
     const result = await evaluateSpec(db, legacyId, {
@@ -170,7 +164,8 @@ describe('evaluateSpec — $phase.generationNumber = null returns no match', () 
 })
 
 describe('evaluateSpec — $config.* token resolution', () => {
-  test('resolves $config.skillId token in dataFilter', async ({ legacyId, sim }) => {
+  test('resolves $config.skillId token in dataFilter', async ({ legacyId }) => {
+    const sim = await createTestSim(legacyId, { generationNumber: 1 })
     const skill = await getAnySkill()
     await db.simSkill.create({ data: { simId: sim.id, skillId: skill.id, level: skill.maxLevel } })
     const result = await evaluateSpec(db, legacyId, {
@@ -299,7 +294,8 @@ describe('evaluateSpec — unknown simFilter keys throw', () => {
 })
 
 describe('evaluateSpec — traits condition respects dataFilter', () => {
-  test('returns false when sim has a different trait than required', async ({ legacyId, sim }) => {
+  test('returns false when sim has a different trait than required', async ({ legacyId }) => {
+    const sim = await createTestSim(legacyId, { generationNumber: 1 })
     const traits = await getGameTraits(2)
     await db.simTrait.create({ data: { simId: sim.id, traitId: traits[0].id } })
     const result = await evaluateSpec(db, legacyId, {
@@ -311,7 +307,8 @@ describe('evaluateSpec — traits condition respects dataFilter', () => {
     expect(result).toBe(false)
   })
 
-  test('returns true when sim has the required trait', async ({ legacyId, sim }) => {
+  test('returns true when sim has the required trait', async ({ legacyId }) => {
+    const sim = await createTestSim(legacyId, { generationNumber: 1 })
     const [trait] = await getGameTraits(1)
     await db.simTrait.create({ data: { simId: sim.id, traitId: trait.id } })
     const result = await evaluateSpec(db, legacyId, {

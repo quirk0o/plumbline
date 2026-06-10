@@ -141,6 +141,7 @@ const COUSIN_ORDINALS = ['First', 'Second', 'Third']
 function cousinTerm(lo: number, diff: number): string {
   // lo=2 (parents are siblings) → "First"; lo=3 → "Second"; lo=4 → "Third".
   const ord = COUSIN_ORDINALS[lo - 2]
+  if (!ord) return 'Distant cousin' // out of the supported 2–4 range: degrade gracefully
   if (diff === 0) return `${ord} cousin`
   return `${ord} cousin ${diff === 1 ? 'once' : 'twice'} removed`
 }

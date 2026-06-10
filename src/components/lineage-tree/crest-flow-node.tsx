@@ -42,7 +42,7 @@ export function CrestFlowNode({ data }: { data: CrestNodeData }) {
       </span>
       <span className={styles.divider} aria-hidden="true" />
       <span className={styles.name}>{fullName}</span>
-      <span className={styles.stage} aria-hidden="true" title={caption.toUpperCase()}>
+      <span className={styles.stage} aria-hidden="true">
         {caption.toUpperCase()}
       </span>
     </>

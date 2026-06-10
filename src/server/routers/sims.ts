@@ -445,14 +445,15 @@ export const simsRouter = router({
           })
         }
 
-        return tx.sim.update({ where: { id }, data: fields })
+        const updated = await tx.sim.update({ where: { id }, data: fields })
+        if (input.generationNumber !== undefined) {
+          await recomputeGenerations(tx, updated.legacyId)
+        }
+        return updated
       })
 
       const recomputeFields = ['generationNumber', 'lifeStage', 'isHeir', 'causeOfDeath', 'occultType'] as const
       const needsRecompute = recomputeFields.some((f) => input[f] !== undefined)
-      if (input.generationNumber !== undefined) {
-        await ctx.db.$transaction((tx) => recomputeGenerations(tx, result.legacyId))
-      }
       if (needsRecompute) void recomputeLegacyTrackers(ctx.db, result.legacyId)
       return result
     }),
@@ -558,16 +559,15 @@ export const simsRouter = router({
       if (parent.legacyId !== child.legacyId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
       }
-      await ctx.db.$transaction(async (tx) => {
-        await tx.familyRelationship.create({
+      const created = await ctx.db.$transaction(async (tx) => {
+        const rel = await tx.familyRelationship.create({
           data: { parentId: input.parentId, childId: input.childId, type: input.type },
         })
         await recomputeGenerations(tx, child.legacyId)
+        return rel
       })
       void recomputeLegacyTrackers(ctx.db, child.legacyId)
-      return ctx.db.familyRelationship.findUniqueOrThrow({
-        where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
-      })
+      return created
     }),
 
   removeFamilyRelationship: protectedProcedure
@@ -605,19 +605,6 @@ export const simsRouter = router({
       const [simA, simB] = await assertSimsOwned(ctx.db, [input.simAId, input.simBId], userId)
       const [normalA, normalB] = [input.simAId, input.simBId].sort()
 
-      // Partner adoption: when exactly one sim is a root (no parents) and the
-      // other is derived (has parents), the root adopts the derived sim's
-      // generation. Overridable later via the detail page.
-      const [aParents, bParents] = await Promise.all([
-        ctx.db.familyRelationship.count({ where: { childId: simA.id } }),
-        ctx.db.familyRelationship.count({ where: { childId: simB.id } }),
-      ])
-      const aIsRoot = aParents === 0
-      const bIsRoot = bParents === 0
-      let adopt: { id: string; generationNumber: number } | null = null
-      if (aIsRoot && !bIsRoot) adopt = { id: simA.id, generationNumber: simB.generationNumber }
-      else if (bIsRoot && !aIsRoot) adopt = { id: simB.id, generationNumber: simA.generationNumber }
-
       const created = await ctx.db.$transaction(async (tx) => {
         const created = await tx.socialRelationship.create({
           data: {
@@ -629,14 +616,26 @@ export const simsRouter = router({
             romanceScore: 0,
           },
         })
+        // Partner adoption: when exactly one sim is a root (no parents) and the
+        // other is derived (has parents), the root adopts the derived sim's
+        // generation. Counting inside the transaction closes the TOCTOU window
+        // against a concurrent family-edge change. Overridable later via the
+        // detail page.
+        const [aParents, bParents] = await Promise.all([
+          tx.familyRelationship.count({ where: { childId: simA.id } }),
+          tx.familyRelationship.count({ where: { childId: simB.id } }),
+        ])
+        let adopt: { id: string; generationNumber: number } | null = null
+        if (aParents === 0 && bParents > 0) adopt = { id: simA.id, generationNumber: simB.generationNumber }
+        else if (bParents === 0 && aParents > 0) adopt = { id: simB.id, generationNumber: simA.generationNumber }
         if (adopt) {
           await tx.sim.update({ where: { id: adopt.id }, data: { generationNumber: adopt.generationNumber } })
           await recomputeGenerations(tx, simA.legacyId)
         }
-        return created
+        return { created, adopted: adopt !== null }
       })
-      if (adopt) void recomputeLegacyTrackers(ctx.db, simA.legacyId)
-      return created
+      if (created.adopted) void recomputeLegacyTrackers(ctx.db, simA.legacyId)
+      return created.created
     }),
 
   updateSocialRelationship: protectedProcedure

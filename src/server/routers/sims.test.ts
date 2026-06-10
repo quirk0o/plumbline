@@ -486,6 +486,22 @@ describe('sims.update', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].careerId).toBe(career.id)
   })
+
+  it('clears a displaced heir on cascade instead of violating the one-heir-per-generation constraint', async () => {
+    const root = await createTestSim(legacyId, { firstName: 'Root', generationNumber: 1 })
+    const child = await createTestSim(legacyId, { firstName: 'Child', generationNumber: 2 })
+    await db.familyRelationship.create({ data: { parentId: root.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL } })
+    await db.sim.update({ where: { id: child.id }, data: { isHeir: true } })
+    const incumbent = await createTestSim(legacyId, { firstName: 'Incumbent', generationNumber: 3 })
+    await db.sim.update({ where: { id: incumbent.id }, data: { isHeir: true } })
+
+    // Editing root 1 -> 2 cascades child 2 -> 3, colliding with the incumbent heir at gen 3.
+    await authedCaller(userId).sims.update({ id: root.id, generationNumber: 2 })
+
+    expect((await db.sim.findUnique({ where: { id: child.id } }))?.generationNumber).toBe(3)
+    expect((await db.sim.findUnique({ where: { id: child.id } }))?.isHeir).toBe(false)        // displaced
+    expect((await db.sim.findUnique({ where: { id: incumbent.id } }))?.isHeir).toBe(true)      // incumbent kept
+  })
 })
 
 describe('sims.addTrait / sims.removeTrait', () => {

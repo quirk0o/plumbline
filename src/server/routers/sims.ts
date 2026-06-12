@@ -446,6 +446,27 @@ export const simsRouter = router({
           })
         }
 
+        // A root sim moving into a generation already held by another heir would
+        // trip the one-heir-per-generation index. When the caller isn't
+        // explicitly (re)designating heir status, drop the moved sim's heir flag
+        // — it has left its cohort. (Derived sims can't reach here: the guard
+        // above rejects generation edits on sims with parents.)
+        if (input.generationNumber !== undefined && input.isHeir !== true) {
+          const moving = await tx.sim.findUniqueOrThrow({ where: { id }, select: { isHeir: true } })
+          if (moving.isHeir) {
+            const conflictingHeir = await tx.sim.findFirst({
+              where: {
+                legacyId: sim.legacyId,
+                generationNumber: input.generationNumber,
+                isHeir: true,
+                NOT: { id },
+              },
+              select: { id: true },
+            })
+            if (conflictingHeir) fields.isHeir = false
+          }
+        }
+
         const updated = await tx.sim.update({ where: { id }, data: fields })
         if (input.generationNumber !== undefined) {
           await recomputeGenerations(tx, updated.legacyId)

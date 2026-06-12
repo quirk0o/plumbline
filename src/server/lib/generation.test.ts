@@ -80,4 +80,38 @@ describe('recomputeGenerations', () => {
     const c = await db.sim.findUnique({ where: { id: child.id } })
     expect(c?.generationNumber).toBe(5) // max(2,4)+1
   })
+
+  it('shifts a chain of heirs up a generation without tripping the one-heir-per-generation index', async () => {
+    // founder (root, not heir) -> child (heir) -> grandchild (heir), each one
+    // generation apart. Bumping the founder cascades both heirs up by one. The
+    // partial unique index is checked per write, so moving the child into the
+    // grandchild's current generation before the grandchild vacates would
+    // transiently collide — recompute must avoid that.
+    const founder = await createTestSim(legacyId, { firstName: 'Founder', generationNumber: 1 })
+    const child = await createTestSim(legacyId, { firstName: 'Child', generationNumber: 2 })
+    const grandchild = await createTestSim(legacyId, { firstName: 'Grandchild', generationNumber: 3 })
+    await db.familyRelationship.createMany({
+      data: [
+        { parentId: founder.id, childId: child.id, type: FamilyRelationshipType.BIOLOGICAL },
+        { parentId: child.id, childId: grandchild.id, type: FamilyRelationshipType.BIOLOGICAL },
+      ],
+    })
+    await db.sim.update({ where: { id: child.id }, data: { isHeir: true } })
+    await db.sim.update({ where: { id: grandchild.id }, data: { isHeir: true } })
+
+    // Simulate the founder's generation being bumped 1 -> 2 (as the update
+    // mutation writes before calling recompute), then recompute the cascade.
+    await db.sim.update({ where: { id: founder.id }, data: { generationNumber: 2 } })
+    await db.$transaction((tx) => recomputeGenerations(tx, legacyId))
+
+    const [c, g] = await Promise.all([
+      db.sim.findUnique({ where: { id: child.id } }),
+      db.sim.findUnique({ where: { id: grandchild.id } }),
+    ])
+    expect(c?.generationNumber).toBe(3)
+    expect(g?.generationNumber).toBe(4)
+    // Neither heir collided in the final state, so both keep their heir status.
+    expect(c?.isHeir).toBe(true)
+    expect(g?.isHeir).toBe(true)
+  })
 })

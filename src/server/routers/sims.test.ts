@@ -424,6 +424,22 @@ describe('sims.update', () => {
     expect((await db.sim.findUnique({ where: { id: child.id } }))?.isHeir).toBe(false)        // displaced
     expect((await db.sim.findUnique({ where: { id: incumbent.id } }))?.isHeir).toBe(true)      // incumbent kept
   })
+
+  test('moving an heir root into an occupied heir generation clears its heir flag instead of failing', async ({ trpcCaller, legacyId }) => {
+    const root = await createTestSim(legacyId, { firstName: 'HeirRoot', generationNumber: 1 })
+    await db.sim.update({ where: { id: root.id }, data: { isHeir: true } })
+    const incumbent = await createTestSim(legacyId, { firstName: 'Incumbent', generationNumber: 3 })
+    await db.sim.update({ where: { id: incumbent.id }, data: { isHeir: true } })
+
+    // The root is an heir; moving it to gen 3 (already held by the incumbent heir)
+    // must not violate the one-heir-per-generation index.
+    await trpcCaller.sims.update({ id: root.id, generationNumber: 3 })
+
+    const movedRoot = await db.sim.findUnique({ where: { id: root.id } })
+    expect(movedRoot?.generationNumber).toBe(3)
+    expect(movedRoot?.isHeir).toBe(false)                                                    // displaced
+    expect((await db.sim.findUnique({ where: { id: incumbent.id } }))?.isHeir).toBe(true)      // incumbent kept
+  })
 })
 
 describe('sims.addTrait / sims.removeTrait', () => {

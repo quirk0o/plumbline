@@ -41,14 +41,7 @@ export async function recomputeGenerations(tx: Db, legacyId: string): Promise<vo
 
   relaxDerivedToFixpoint(gen, sims, parentsOf)
 
-  const heirsByGen = new Map<number, number>()
-  for (const s of sims) {
-    if (!s.isHeir) continue
-    const g = gen.get(s.id)
-    if (g != null) heirsByGen.set(g, (heirsByGen.get(g) ?? 0) + 1)
-  }
-
-  await persistChangedGenerations(tx, sims, gen, heirsByGen)
+  await persistChangedGenerations(tx, sims, gen)
 }
 
 function buildParentMap(edges: { parentId: string; childId: string }[]): Map<string, string[]> {
@@ -113,21 +106,42 @@ async function persistChangedGenerations(
   tx: Db,
   sims: { id: string; generationNumber: number | null; isHeir: boolean }[],
   gen: Map<string, number | null>,
-  heirsByGen: Map<number, number>,
 ): Promise<void> {
+  // A sim whose derivation is blocked (all parents null — only possible in
+  // pre-backfill data) keeps its existing value rather than being cleared.
+  const changed = sims.filter((s) => {
+    const next = gen.get(s.id)
+    return next != null && next !== s.generationNumber
+  })
+
+  // The partial `one heir per (legacy, generation)` index is enforced per write,
+  // not at commit, so two heirs shifting through the same generation would trip
+  // it transiently even when the final state is valid. Move every changed sim
+  // with its heir flag cleared first, then restore heir status afterward only
+  // where the new generation has no other heir.
+  const incumbentHeirGens = new Set<number>()
   for (const s of sims) {
     const next = gen.get(s.id)
-    // A sim whose derivation is blocked (all parents null — only possible in
-    // pre-backfill data) keeps its existing value rather than being cleared.
-    if (next == null || next === s.generationNumber) continue
-    // A moved heir whose target generation already holds another heir would
-    // violate the one-heir-per-generation index; it has been displaced from its
-    // cohort by an ancestor's change, so drop its heir flag. Incumbent heirs
-    // (generation unchanged) are never in this loop, so they keep theirs.
-    const displacedHeir = s.isHeir && (heirsByGen.get(next) ?? 0) >= 2
+    if (s.isHeir && next != null && next === s.generationNumber) incumbentHeirGens.add(next)
+  }
+
+  for (const s of changed) {
+    const next = gen.get(s.id)!
     await tx.sim.update({
       where: { id: s.id },
-      data: displacedHeir ? { generationNumber: next, isHeir: false } : { generationNumber: next },
+      data: s.isHeir ? { generationNumber: next, isHeir: false } : { generationNumber: next },
     })
+  }
+
+  // Restore one heir per generation. A moved heir whose new generation is taken
+  // (by an incumbent heir or another moved heir already restored) stays
+  // non-heir — it has been displaced from its cohort by an ancestor's change.
+  const claimed = new Set<number>(incumbentHeirGens)
+  for (const s of changed) {
+    if (!s.isHeir) continue
+    const next = gen.get(s.id)!
+    if (claimed.has(next)) continue
+    claimed.add(next)
+    await tx.sim.update({ where: { id: s.id }, data: { isHeir: true } })
   }
 }

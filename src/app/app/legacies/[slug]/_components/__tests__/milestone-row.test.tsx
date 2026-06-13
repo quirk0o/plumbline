@@ -23,14 +23,6 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-// Mock Plumbob so we can assert its presence by a testid without
-// needing to render the real CSS-triangle component in jsdom.
-vi.mock('@/components/plumbob', () => ({
-  Plumbob: ({ size }: { size?: number }) => (
-    <span data-testid="plumbob" data-size={size} aria-hidden="true" />
-  ),
-}))
-
 const simDina: ChronicleSim = {
   id: 'dina',
   firstName: 'Dina',
@@ -74,7 +66,7 @@ const derivedMilestone: Milestone = {
 describe('MilestoneRow', () => {
   it('renders a Plumbob marker for a derived (userAuthored: false) row', () => {
     render(<MilestoneRow milestone={derivedMilestone} simsById={simsById} slug="caliente" />)
-    expect(screen.getByTestId('plumbob')).toBeInTheDocument()
+    expect(screen.getByTestId('milestone-derived-marker')).toBeInTheDocument()
   })
 
   it('does not render the authored marker for a derived row', () => {

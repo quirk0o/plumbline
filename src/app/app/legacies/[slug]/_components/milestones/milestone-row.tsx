@@ -48,7 +48,9 @@ export function MilestoneRowContent({ milestone, simsById, slug }: MilestoneRowP
             aria-hidden="true"
           />
         ) : (
-          <Plumbob size={10} />
+          <span data-testid="milestone-derived-marker" aria-hidden="true">
+            <Plumbob size={10} />
+          </span>
         )}
       </div>
 

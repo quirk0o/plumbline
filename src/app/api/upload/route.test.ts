@@ -2,13 +2,24 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mockClient } from 'aws-sdk-client-mock'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
-vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
+const { mockAuth } = vi.hoisted(() => ({
+  mockAuth: vi.fn<() => Promise<{ user: { id: string } } | null>>(),
+}))
 
-import { auth } from '@/lib/auth'
+vi.mock('next-auth', () => ({
+  default: () => ({
+    auth: mockAuth,
+    handlers: { GET: vi.fn(), POST: vi.fn() },
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}))
+
+vi.mock('@auth/prisma-adapter', () => ({ PrismaAdapter: () => ({}) }))
+
 import { POST } from './route'
 
 const s3Mock = mockClient(S3Client)
-const mockedAuth = vi.mocked(auth)
 
 // A 1x1 PNG (valid magic bytes for file-type sniffing).
 const PNG_BYTES = Buffer.from(
@@ -24,12 +35,12 @@ function makeRequest(file: File) {
 
 beforeEach(() => {
   s3Mock.reset()
-  mockedAuth.mockReset()
+  mockAuth.mockReset()
 })
 
 describe('POST /api/upload', () => {
   it('stores a valid image and returns a /media URL', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     s3Mock.on(PutObjectCommand).resolves({})
     const file = new File([PNG_BYTES], 'My Pic.png', { type: 'image/png' })
 
@@ -46,7 +57,7 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 502 when storage fails', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     s3Mock.on(PutObjectCommand).rejects(new Error('S3 down'))
     const file = new File([PNG_BYTES], 'pic.png', { type: 'image/png' })
     const res = await POST(makeRequest(file))
@@ -54,7 +65,7 @@ describe('POST /api/upload', () => {
   })
 
   it('rejects an oversize file with 413 and does not store', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     // 6MB of zeros, declared as png; size check must trip before sniffing
     const big = new File([new Uint8Array(6 * 1024 * 1024)], 'big.png', { type: 'image/png' })
     const res = await POST(makeRequest(big))
@@ -63,7 +74,7 @@ describe('POST /api/upload', () => {
   })
 
   it('rejects a request with no file with 400 and does not store', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     const req = new Request('http://localhost/api/upload', { method: 'POST', body: new FormData() })
     const res = await POST(req)
     expect(res.status).toBe(400)
@@ -71,7 +82,7 @@ describe('POST /api/upload', () => {
   })
 
   it('rejects unauthenticated requests with 401 and does not store', async () => {
-    mockedAuth.mockResolvedValue(null as never)
+    mockAuth.mockResolvedValue(null)
     const file = new File([PNG_BYTES], 'pic.png', { type: 'image/png' })
     const res = await POST(makeRequest(file))
     expect(res.status).toBe(401)
@@ -79,7 +90,7 @@ describe('POST /api/upload', () => {
   })
 
   it('rejects a disallowed MIME type with 400 and does not store', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     const file = new File(['<svg></svg>'], 'x.svg', { type: 'image/svg+xml' })
     const res = await POST(makeRequest(file))
     expect(res.status).toBe(400)
@@ -87,7 +98,7 @@ describe('POST /api/upload', () => {
   })
 
   it('rejects a non-image whose bytes do not match an allowed image with 400', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'user-1' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     const file = new File([Buffer.from('not really a png')], 'fake.png', { type: 'image/png' })
     const res = await POST(makeRequest(file))
     expect(res.status).toBe(400)

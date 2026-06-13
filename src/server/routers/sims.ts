@@ -5,7 +5,7 @@ import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from './validate-traits'
 import { recomputeLegacyTrackers } from '../lib/trackerComputation'
 import { imageUrlSchema } from '../lib/image-url-schema'
-import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/ownership'
+import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
 import { deriveGeneration, recomputeGenerations } from '../lib/generation'
 import { isLifeStageInRange } from '@/lib/life-stage'
 
@@ -354,7 +354,7 @@ export const simsRouter = router({
       if (missingPartnerIds.length > 0) {
         // Ownership *filter*, not a guard: partner sims outside the user's
         // legacies are intentionally omitted from the mini tree. This is the
-        // one sanctioned inline ownership condition outside src/server/lib/ownership.ts.
+        // one sanctioned inline ownership condition outside src/server/lib/auth/ownership.ts.
         const partnerSims = await ctx.db.sim.findMany({
           where: { id: { in: missingPartnerIds }, legacy: { userId } },
           select: miniTreeSimSelect,

@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure } from '../trpc'
 import type { PrismaClient } from '@prisma/client'
-import { assertLegacyOwned, assertMilestoneOwned } from '../lib/ownership'
+import { assertLegacyOwned, assertMilestoneOwned } from '../lib/auth/ownership'
 
 const milestoneInclude = { sims: { select: { simId: true } } } as const
 

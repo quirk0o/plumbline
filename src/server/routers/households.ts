@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import type { PrismaClient } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
-import { assertLegacyOwned, assertSimOwned, assertHouseholdOwned } from '../lib/ownership'
+import { assertLegacyOwned, assertSimOwned, assertHouseholdOwned } from '../lib/auth/ownership'
 
 /** Throw unless the world exists. The select filters by owned packs as a UX
  *  concern; the server only requires that the world is real. */

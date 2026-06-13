@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { Prisma } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { resolveThresholds, countThresholdsCrossed } from '../lib/trackerComputation'
-import { assertLegacyOwned, assertChallengeRunOwned } from '../lib/ownership'
+import { assertLegacyOwned, assertChallengeRunOwned } from '../lib/auth/ownership'
 
 export const challengeRunsRouter = router({
   link: protectedProcedure

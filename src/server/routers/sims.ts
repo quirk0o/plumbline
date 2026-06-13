@@ -6,7 +6,8 @@ import { assertNoTraitConflicts } from '../lib/traits/validate-traits'
 import { recomputeLegacyTrackers } from '../lib/challenges/trackerComputation'
 import { imageUrlSchema } from '../lib/media/image-url-schema'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
-import { deriveGeneration, recomputeGenerations } from '../lib/legacies/generation'
+import { recomputeGenerations } from '../lib/legacies/generation'
+import { createSim, createSimInput } from '../lib/sims/createSim'
 import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {
@@ -18,125 +19,10 @@ export type MiniTreeSimData = Prisma.SimGetPayload<{ select: typeof miniTreeSimS
 
 export const simsRouter = router({
   create: protectedProcedure
-    .input(
-      z.object({
-        legacyId: z.string(),
-        firstName: z.string().min(1).max(50),
-        lastName: z.string().min(1).max(50),
-        gender: z.nativeEnum(Gender),
-        lifeStage: z.nativeEnum(LifeStage).default('YOUNG_ADULT'),
-        pronounSubject: z.string().max(20).optional(),
-        pronounObject: z.string().max(20).optional(),
-        pronounPossessive: z.string().max(20).optional(),
-        imageUrl: imageUrlSchema,
-        personalityTraitIds: z.array(z.string()).max(6).optional(),
-        aspirationId: z.string().optional(),
-        careerId: z.string().optional(),
-        occultType: z.nativeEnum(OccultType).optional(),
-        generationNumber: z.number().int().min(1).optional(),
-        parentIds: z.array(z.string()).optional(),
-        householdId: z.string().optional(),
-      })
-    )
+    .input(createSimInput)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const legacy = await assertLegacyOwned(ctx.db, input.legacyId, userId)
-
-      const traitIds = input.personalityTraitIds ?? []
-      await assertNoTraitConflicts(ctx.db, traitIds)
-
-      if (input.householdId) {
-        const household = await ctx.db.household.findFirst({
-          where: { id: input.householdId, legacyId: input.legacyId },
-          select: { id: true },
-        })
-        if (!household) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Household must belong to this legacy' })
-        }
-      }
-
-      const { legacyId: _legacyId, personalityTraitIds, aspirationId, careerId, parentIds: _parentIds, generationNumber: _gen, householdId, ...simFields } = input
-
-      let generationNumber = input.generationNumber ?? null
-      let parents: { id: string; generationNumber: number | null }[] = []
-      if (input.parentIds?.length) {
-        parents = await ctx.db.sim.findMany({
-          where: { id: { in: input.parentIds }, legacyId: input.legacyId },
-          select: { id: true, generationNumber: true },
-        })
-        if (parents.length !== input.parentIds.length) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'One or more parentIds do not belong to this legacy' })
-        }
-        // A sim with parents is derived; derivation always wins.
-        const parentGens = parents.map((p) => p.generationNumber).filter((g): g is number => g !== null)
-        generationNumber = parentGens.length > 0 ? deriveGeneration(parentGens) : null
-      }
-
-      // A legacy with no founder adopts its first parentless sim as the founder.
-      const willBeFounder = !legacy.founderSimId && parents.length === 0
-
-      if (generationNumber === null) {
-        // Parentless sims (founders, partners, separate subtree roots) are roots:
-        // default to the legacy's current latest generation, or 1 when empty.
-        const agg = await ctx.db.sim.aggregate({
-          where: { legacyId: input.legacyId },
-          _max: { generationNumber: true },
-        })
-        generationNumber = agg._max.generationNumber ?? 1
-      }
-
-      return ctx.db.$transaction(async (tx) => {
-        const newSim = await tx.sim.create({
-          data: {
-            legacyId: input.legacyId,
-            firstName: simFields.firstName,
-            lastName: simFields.lastName,
-            gender: simFields.gender,
-            lifeStage: simFields.lifeStage,
-            pronounSubject: simFields.pronounSubject ?? null,
-            pronounObject: simFields.pronounObject ?? null,
-            pronounPossessive: simFields.pronounPossessive ?? null,
-            imageUrl: simFields.imageUrl ?? null,
-            occultType: simFields.occultType ?? null,
-            generationNumber,
-            householdId: householdId ?? null,
-            ...(personalityTraitIds?.length
-              ? { personalityTraits: { create: personalityTraitIds.map((id) => ({ personalityTraitId: id })) } }
-              : {}),
-            ...(aspirationId ? { aspirations: { create: { aspirationId } } } : {}),
-            ...(careerId
-              ? { careers: { create: { careerId, employmentType: EmploymentType.EMPLOYED, startedAt: new Date() } } }
-              : {}),
-          },
-        })
-
-        if (parents.length > 0) {
-          await tx.familyRelationship.createMany({
-            data: parents.map((parent) => ({
-              parentId: parent.id,
-              childId: newSim.id,
-              type: FamilyRelationshipType.BIOLOGICAL,
-            })),
-            skipDuplicates: true,
-          })
-        }
-
-        if (willBeFounder) {
-          // willBeFounder came from a pre-transaction read, so only claim the
-          // founder slot if it is still empty; failing here rolls back the
-          // whole create instead of silently overwriting a concurrently
-          // designated founder.
-          const claimed = await tx.legacy.updateMany({
-            where: { id: legacy.id, founderSimId: null },
-            data: { founderSimId: newSim.id },
-          })
-          if (claimed.count === 0) {
-            throw new TRPCError({ code: 'CONFLICT', message: 'Legacy already has a founder' })
-          }
-        }
-
-        return newSim
-      })
+      const legacy = await assertLegacyOwned(ctx.db, input.legacyId, ctx.session.user.id)
+      return createSim(ctx.db, legacy, input)
     }),
 
   getById: protectedProcedure

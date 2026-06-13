@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ButtonLink, Card, EmptyState, FeatherIcon } from '@/components/ui'
-import type { ChallengeTab } from '@/server/lib/challengeBrowse'
+import type { ChallengeTab } from '@/server/lib/challenges/challengeBrowse'
 import { OwnershipBadge } from './ownership-badge'
 import styles from './challenge-grid.module.css'
 

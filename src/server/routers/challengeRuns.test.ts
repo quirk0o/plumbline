@@ -3,7 +3,7 @@ import { authedCaller } from '@/test/caller'
 import { createTestUser, cleanupUser, createTestTrackerType, createTestSim, getAnySkill, getTrackerTypeByName, getAnyBuiltInTrackerType } from '@/test/helpers'
 import { test as base } from '@/test/test'
 import { db } from '@/server/db'
-import { recomputeLegacyTrackers } from '@/server/lib/trackerComputation'
+import { recomputeLegacyTrackers } from '@/server/lib/challenges/trackerComputation'
 
 async function buildChallengeWithPhaseAndTracker(userId: string, trackerTypeId: string) {
   const challenge = await authedCaller(userId).challenges.create({ name: `Test Challenge ${Date.now()}` })

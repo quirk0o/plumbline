@@ -7,7 +7,7 @@ import {
   normalizeQuery,
   normalizeTab,
   type ChallengeTab,
-} from '@/server/lib/challengeBrowse'
+} from '@/server/lib/challenges/challengeBrowse'
 import { ChallengeGrid } from './_components/challenge-grid'
 import { ChallengeSearch } from './_components/challenge-search'
 import styles from './page.module.css'

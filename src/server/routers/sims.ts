@@ -1,13 +1,13 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { Prisma, Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
+import { Prisma, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from '../lib/traits/validate-traits'
 import { recomputeLegacyTrackers } from '../lib/challenges/trackerComputation'
-import { imageUrlSchema } from '../lib/media/image-url-schema'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
 import { recomputeGenerations } from '../lib/legacies/generation'
 import { createSim, createSimInput } from '../lib/sims/createSim'
+import { updateSim, updateSimInput } from '../lib/sims/updateSim'
 import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {
@@ -257,113 +257,10 @@ export const simsRouter = router({
     }),
 
   update: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        firstName: z.string().min(1).max(50).optional(),
-        lastName: z.string().min(1).max(50).optional(),
-        gender: z.nativeEnum(Gender).optional(),
-        lifeStage: z.nativeEnum(LifeStage).optional(),
-        pronounSubject: z.string().max(20).nullable().optional(),
-        pronounObject: z.string().max(20).nullable().optional(),
-        pronounPossessive: z.string().max(20).nullable().optional(),
-        imageUrl: imageUrlSchema.nullable().optional(),
-        occultType: z.nativeEnum(OccultType).nullable().optional(),
-        causeOfDeath: z.nativeEnum(CauseOfDeath).nullable().optional(),
-        aspirationId: z.string().nullable().optional(),
-        careerId: z.string().nullable().optional(),
-        generationNumber: z.number().int().min(1).optional(),
-        isHeir: z.boolean().optional(),
-      }),
-    )
+    .input(updateSimInput)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const sim = await assertSimOwned(ctx.db, input.id, userId)
-
-      if (input.generationNumber !== undefined) {
-        const parentCount = await ctx.db.familyRelationship.count({ where: { childId: input.id } })
-        if (parentCount > 0) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Generation is derived from parents and cannot be set directly',
-          })
-        }
-      }
-
-      const { id, aspirationId, careerId, ...fields } = input
-
-      const result = await ctx.db.$transaction(async (tx) => {
-        if (aspirationId !== undefined) {
-          await tx.simAspiration.deleteMany({ where: { simId: id, completedAt: null } })
-          if (aspirationId) await tx.simAspiration.create({ data: { simId: id, aspirationId } })
-        }
-
-        if (careerId !== undefined) {
-          await tx.simCareer.deleteMany({ where: { simId: id, endedAt: null } })
-          if (careerId) {
-            await tx.simCareer.create({
-              data: { simId: id, careerId, employmentType: EmploymentType.EMPLOYED, startedAt: new Date() },
-            })
-          }
-        }
-
-        if (input.isHeir === true) {
-          // Clear heirs in the generation the sim ends up in: an explicit
-          // generationNumber in this update wins; otherwise re-read the current
-          // value inside the transaction so a concurrent generation change
-          // cannot make us clear a stale cohort.
-          const targetGeneration =
-            input.generationNumber !== undefined
-              ? input.generationNumber
-              : (
-                  await tx.sim.findUniqueOrThrow({
-                    where: { id },
-                    select: { generationNumber: true },
-                  })
-                ).generationNumber
-          await tx.sim.updateMany({
-            where: {
-              legacyId: sim.legacyId,
-              generationNumber: targetGeneration,
-              isHeir: true,
-              NOT: { id: input.id },
-            },
-            data: { isHeir: false },
-          })
-        }
-
-        // A root sim moving into a generation already held by another heir would
-        // trip the one-heir-per-generation index. When the caller isn't
-        // explicitly (re)designating heir status, drop the moved sim's heir flag
-        // — it has left its cohort. (Derived sims can't reach here: the guard
-        // above rejects generation edits on sims with parents.)
-        if (input.generationNumber !== undefined && input.isHeir !== true) {
-          const moving = await tx.sim.findUniqueOrThrow({ where: { id }, select: { isHeir: true } })
-          if (moving.isHeir) {
-            const conflictingHeir = await tx.sim.findFirst({
-              where: {
-                legacyId: sim.legacyId,
-                generationNumber: input.generationNumber,
-                isHeir: true,
-                NOT: { id },
-              },
-              select: { id: true },
-            })
-            if (conflictingHeir) fields.isHeir = false
-          }
-        }
-
-        const updated = await tx.sim.update({ where: { id }, data: fields })
-        if (input.generationNumber !== undefined) {
-          await recomputeGenerations(tx, updated.legacyId)
-        }
-        return updated
-      })
-
-      const recomputeFields = ['generationNumber', 'lifeStage', 'isHeir', 'causeOfDeath', 'occultType'] as const
-      const needsRecompute = recomputeFields.some((f) => input[f] !== undefined)
-      if (needsRecompute) void recomputeLegacyTrackers(ctx.db, result.legacyId)
-      return result
+      const sim = await assertSimOwned(ctx.db, input.id, ctx.session.user.id)
+      return updateSim(ctx.db, sim, input)
     }),
 
   addTrait: protectedProcedure

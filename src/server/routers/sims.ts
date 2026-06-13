@@ -2,13 +2,13 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { Prisma, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
-import { assertNoTraitConflicts } from '../lib/traits/validate-traits'
 import { recomputeLegacyTrackers } from '../lib/challenges/trackerComputation'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
 import { recomputeGenerations } from '../lib/legacies/generation'
 import { createSim, createSimInput } from '../lib/sims/createSim'
 import { updateSim, updateSimInput } from '../lib/sims/updateSim'
-import { isLifeStageInRange } from '@/lib/life-stage'
+import { addSimTrait } from '../lib/sims/traits'
+import { upsertSimSkill, setSimSkillLevel } from '../lib/sims/skills'
 
 const miniTreeSimSelect = {
   id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
@@ -266,28 +266,8 @@ export const simsRouter = router({
   addTrait: protectedProcedure
     .input(z.object({ simId: z.string(), traitId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const [sim, trait, currentTraits] = await Promise.all([
-        assertSimOwned(ctx.db, input.simId, userId),
-        ctx.db.personalityTrait.findUnique({
-          where: { id: input.traitId },
-          select: { minLifeStage: true, maxLifeStage: true },
-        }),
-        ctx.db.simPersonalityTrait.findMany({
-          where: { simId: input.simId },
-          select: { personalityTraitId: true },
-        }),
-      ])
-      if (!trait) throw new TRPCError({ code: 'NOT_FOUND', message: 'Trait not found' })
-      if (!isLifeStageInRange(sim.lifeStage, trait.minLifeStage, trait.maxLifeStage))
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Trait not available for this life stage' })
-      if (currentTraits.length >= 6)
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Maximum 6 traits allowed' })
-      const currentIds = currentTraits.map((t) => t.personalityTraitId)
-      await assertNoTraitConflicts(ctx.db, [...currentIds, input.traitId])
-      return ctx.db.simPersonalityTrait.create({
-        data: { simId: input.simId, personalityTraitId: input.traitId },
-      })
+      const sim = await assertSimOwned(ctx.db, input.simId, ctx.session.user.id)
+      return addSimTrait(ctx.db, sim, input.traitId)
     }),
 
   removeTrait: protectedProcedure
@@ -305,36 +285,15 @@ export const simsRouter = router({
   addSkill: protectedProcedure
     .input(z.object({ simId: z.string(), skillId: z.string(), level: z.number().int().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const sim = await assertSimOwned(ctx.db, input.simId, userId)
-      const skill = await ctx.db.skill.findUnique({ where: { id: input.skillId } })
-      if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
-      if (input.level > skill.maxLevel)
-        throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
-      const result = await ctx.db.simSkill.upsert({
-        where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
-        create: { simId: input.simId, skillId: input.skillId, level: input.level },
-        update: { level: input.level },
-      })
-      await recomputeLegacyTrackers(ctx.db, sim.legacyId)
-      return result
+      const sim = await assertSimOwned(ctx.db, input.simId, ctx.session.user.id)
+      return upsertSimSkill(ctx.db, sim, input.skillId, input.level)
     }),
 
   setSkillLevel: protectedProcedure
     .input(z.object({ simId: z.string(), skillId: z.string(), level: z.number().int().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const sim = await assertSimOwned(ctx.db, input.simId, userId)
-      const skill = await ctx.db.skill.findUnique({ where: { id: input.skillId } })
-      if (!skill) throw new TRPCError({ code: 'NOT_FOUND', message: 'Skill not found' })
-      if (input.level > skill.maxLevel)
-        throw new TRPCError({ code: 'BAD_REQUEST', message: `Level cannot exceed ${skill.maxLevel}` })
-      const result = await ctx.db.simSkill.update({
-        where: { simId_skillId: { simId: input.simId, skillId: input.skillId } },
-        data: { level: input.level },
-      })
-      await recomputeLegacyTrackers(ctx.db, sim.legacyId)
-      return result
+      const sim = await assertSimOwned(ctx.db, input.simId, ctx.session.user.id)
+      return setSimSkillLevel(ctx.db, sim, input.skillId, input.level)
     }),
 
   removeSkill: protectedProcedure

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { ThemeProvider } from '@/components/theme-provider'
 import { AppShell } from '../components/app-shell'
 
 // AppShell renders AppNav, a client component that reads the pathname and can
@@ -13,19 +14,14 @@ vi.mock('next/navigation', () => ({
 vi.mock('next-auth/react', () => ({
   signOut: vi.fn(),
 }))
-// ThemeToggle inside AppNav calls useTheme(), which throws without a provider.
-// Stub the module the same way the other component tests do.
-vi.mock('@/components/theme-provider', () => ({
-  ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
-  ThemeToggle: () => null,
-  useTheme: () => ({ theme: 'light', toggle: () => {} }),
-}))
 
 function renderShell() {
   return render(
-    <AppShell name="Ada" email="ada@example.com" image={null}>
-      <div>Page content</div>
-    </AppShell>,
+    <ThemeProvider>
+      <AppShell name="Ada" email="ada@example.com" image={null}>
+        <div>Page content</div>
+      </AppShell>
+    </ThemeProvider>,
   )
 }
 

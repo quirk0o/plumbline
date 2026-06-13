@@ -4,11 +4,12 @@ import { Prisma, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { recomputeLegacyTrackers } from '../lib/challenges/trackerComputation'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
-import { recomputeGenerations } from '../lib/legacies/generation'
 import { createSim, createSimInput } from '../lib/sims/createSim'
 import { updateSim, updateSimInput } from '../lib/sims/updateSim'
 import { addSimTrait } from '../lib/sims/traits'
 import { upsertSimSkill, setSimSkillLevel } from '../lib/sims/skills'
+import { addFamilyRelationship, removeFamilyRelationship } from '../lib/sims/family'
+import { addSocialRelationship } from '../lib/sims/social'
 
 const miniTreeSimSelect = {
   id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
@@ -318,35 +319,15 @@ export const simsRouter = router({
       if (input.parentId === input.childId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot be their own parent' })
       }
-      const userId = ctx.session.user.id
-      const [parent, child] = await assertSimsOwned(ctx.db, [input.parentId, input.childId], userId)
-      if (parent.legacyId !== child.legacyId) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
-      }
-      const created = await ctx.db.$transaction(async (tx) => {
-        const rel = await tx.familyRelationship.create({
-          data: { parentId: input.parentId, childId: input.childId, type: input.type },
-        })
-        await recomputeGenerations(tx, child.legacyId)
-        return rel
-      })
-      void recomputeLegacyTrackers(ctx.db, child.legacyId)
-      return created
+      const [parent, child] = await assertSimsOwned(ctx.db, [input.parentId, input.childId], ctx.session.user.id)
+      return addFamilyRelationship(ctx.db, parent, child, input.type)
     }),
 
   removeFamilyRelationship: protectedProcedure
     .input(z.object({ parentId: z.string(), childId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const [, child] = await assertSimsOwned(ctx.db, [input.parentId, input.childId], userId)
-      await ctx.db.$transaction(async (tx) => {
-        await tx.familyRelationship.delete({
-          where: { parentId_childId: { parentId: input.parentId, childId: input.childId } },
-        })
-        await recomputeGenerations(tx, child.legacyId)
-      })
-      void recomputeLegacyTrackers(ctx.db, child.legacyId)
-      return { parentId: input.parentId, childId: input.childId }
+      const [, child] = await assertSimsOwned(ctx.db, [input.parentId, input.childId], ctx.session.user.id)
+      return removeFamilyRelationship(ctx.db, input.parentId, child)
     }),
 
   addSocialRelationship: protectedProcedure
@@ -365,41 +346,11 @@ export const simsRouter = router({
       if (input.simAId === input.simBId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sim cannot have a relationship with themselves' })
       }
-      const userId = ctx.session.user.id
-      const [simA, simB] = await assertSimsOwned(ctx.db, [input.simAId, input.simBId], userId)
-      const [normalA, normalB] = [input.simAId, input.simBId].sort()
-
-      const created = await ctx.db.$transaction(async (tx) => {
-        const created = await tx.socialRelationship.create({
-          data: {
-            simAId: normalA,
-            simBId: normalB,
-            romanticStatus: input.romanticStatus,
-            endedAt: input.endedAt ?? null,
-            friendshipScore: 0,
-            romanceScore: 0,
-          },
-        })
-        // Partner adoption: when exactly one sim is a root (no parents) and the
-        // other is derived (has parents), the root adopts the derived sim's
-        // generation. Counting inside the transaction closes the TOCTOU window
-        // against a concurrent family-edge change. Overridable later via the
-        // detail page.
-        const [aParents, bParents] = await Promise.all([
-          tx.familyRelationship.count({ where: { childId: simA.id } }),
-          tx.familyRelationship.count({ where: { childId: simB.id } }),
-        ])
-        let adopt: { id: string; generationNumber: number } | null = null
-        if (aParents === 0 && bParents > 0) adopt = { id: simA.id, generationNumber: simB.generationNumber }
-        else if (bParents === 0 && aParents > 0) adopt = { id: simB.id, generationNumber: simA.generationNumber }
-        if (adopt) {
-          await tx.sim.update({ where: { id: adopt.id }, data: { generationNumber: adopt.generationNumber } })
-          await recomputeGenerations(tx, simA.legacyId)
-        }
-        return { created, adopted: adopt !== null }
+      const [simA, simB] = await assertSimsOwned(ctx.db, [input.simAId, input.simBId], ctx.session.user.id)
+      return addSocialRelationship(ctx.db, simA, simB, {
+        romanticStatus: input.romanticStatus,
+        endedAt: input.endedAt ?? null,
       })
-      if (created.adopted) void recomputeLegacyTrackers(ctx.db, simA.legacyId)
-      return created.created
     }),
 
   updateSocialRelationship: protectedProcedure

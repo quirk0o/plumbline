@@ -23,11 +23,14 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-// The "Name an heir" slot is a client dialog (tRPC + router); stub it here for
-// presence/absence checks. Candidate filtering and label text are verified in
-// name-heir-dialog.test.tsx where the real dialog renders.
-vi.mock('../succession/name-heir-dialog', () => ({
-  NameHeirDialog: () => <div data-testid="name-heir-dialog" />,
+const { mockRefresh } = vi.hoisted(() => ({ mockRefresh: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mockRefresh }) }))
+vi.mock('@/trpc/client', () => ({
+  trpc: {
+    sims: {
+      update: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
+    },
+  },
 }))
 
 const founder: SuccessionStep = {
@@ -108,11 +111,11 @@ describe('Succession', () => {
 
   it('shows the "Name an heir" slot when a founder has no heir yet', () => {
     render(<Succession steps={[founder]} slug="caliente" />)
-    expect(screen.getByTestId('name-heir-dialog')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /name an heir/i })).toBeInTheDocument()
   })
 
   it('hides the "Name an heir" slot once an heir is designated', () => {
     render(<Succession steps={[founder, heir]} slug="caliente" />)
-    expect(screen.queryByTestId('name-heir-dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: /name an heir/i })).not.toBeInTheDocument()
   })
 })

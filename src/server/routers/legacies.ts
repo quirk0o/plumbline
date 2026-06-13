@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { Gender, LifeStage, OccultType, EmploymentType, Prisma } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { uniqueSlug } from '@/lib/slugify'
-import { assertNoTraitConflicts } from './validate-traits'
+import { assertNoTraitConflicts } from '../lib/traits/validate-traits'
 import { imageUrlSchema } from '../lib/image-url-schema'
 
 const founderInput = z.object({

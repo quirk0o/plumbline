@@ -21,8 +21,6 @@ vi.mock('@/trpc/client', () => ({
   },
 }))
 
-vi.mock('../image-upload', () => ({ ImageUpload: () => null }))
-
 describe('CreateSimModal', () => {
   beforeEach(() => {
     // Reset call history AND queued Once-values so tests don't bleed into each other.

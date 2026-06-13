@@ -29,8 +29,6 @@ vi.mock('@/trpc/client', () => ({
   },
 }))
 
-vi.mock('@/app/components/image-upload', () => ({ ImageUpload: () => null }))
-
 describe('LegacyWizard', () => {
   beforeEach(() => {
     mockMutateAsync.mockReset()

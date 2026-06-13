@@ -5,8 +5,6 @@ import userEvent from '@testing-library/user-event'
 import { Gender, LifeStage } from '@prisma/client'
 import { SimForm } from '../sim-form'
 
-vi.mock('../image-upload', () => ({ ImageUpload: () => null }))
-
 const traits = [{ id: 'trait-1', name: 'Outgoing', category: 'SOCIAL', minLifeStage: null, maxLifeStage: null, conflictsWith: [] }]
 const aspirations = [{ id: 'asp-1', name: 'Popularity', category: 'SOCIAL', minLifeStage: null, maxLifeStage: null }]
 const careers = [{ id: 'car-1', name: 'Journalist', type: 'STANDARD' }]

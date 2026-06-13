@@ -1,26 +1,30 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-
-vi.mock('@/lib/storage', () => ({
-  getObject: vi.fn(),
-}))
-
-import { getObject } from '@/lib/storage'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { mockClient } from 'aws-sdk-client-mock'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { GET } from './route'
 
-const mockedGetObject = vi.mocked(getObject)
+const s3Mock = mockClient(S3Client)
+
+// A 1x1 PNG (valid magic bytes — same buffer shape used in upload/route.test.ts).
+const PNG_BYTES = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
+  'base64',
+)
 
 function ctx(key: string[]) {
   return { params: Promise.resolve({ key }) }
 }
 
 beforeEach(() => {
-  mockedGetObject.mockReset()
+  s3Mock.reset()
 })
 
 describe('GET /media/[...key]', () => {
   it('streams the object bytes with its content type for an existing object', async () => {
-    const bytes = Buffer.from('png-bytes')
-    mockedGetObject.mockResolvedValue({ body: bytes, contentType: 'image/png' })
+    s3Mock.on(GetObjectCommand).resolves({
+      Body: { transformToByteArray: async () => new Uint8Array(PNG_BYTES) } as never,
+      ContentType: 'image/png',
+    })
 
     const res = await GET(
       new Request('http://localhost/media/uploads/user-1/a.png'),
@@ -29,8 +33,10 @@ describe('GET /media/[...key]', () => {
 
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toBe('image/png')
-    expect(Buffer.from(await res.arrayBuffer())).toEqual(Buffer.from('png-bytes'))
-    expect(mockedGetObject).toHaveBeenCalledWith('uploads/user-1/a.png')
+    expect(Buffer.from(await res.arrayBuffer())).toEqual(PNG_BYTES)
+    const calls = s3Mock.commandCalls(GetObjectCommand)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].args[0].input.Key).toBe('uploads/user-1/a.png')
   })
 
   it('returns 400 for a key containing .. without calling storage', async () => {
@@ -40,7 +46,7 @@ describe('GET /media/[...key]', () => {
     )
 
     expect(res.status).toBe(400)
-    expect(mockedGetObject).not.toHaveBeenCalled()
+    expect(s3Mock.commandCalls(GetObjectCommand)).toHaveLength(0)
   })
 
   it('returns 400 for a key containing an empty segment without calling storage', async () => {
@@ -50,12 +56,14 @@ describe('GET /media/[...key]', () => {
     )
 
     expect(res.status).toBe(400)
-    expect(mockedGetObject).not.toHaveBeenCalled()
+    expect(s3Mock.commandCalls(GetObjectCommand)).toHaveLength(0)
   })
 
   it('serves a file whose name contains .. as a substring (not a traversal segment)', async () => {
-    const bytes = Buffer.from('ok')
-    mockedGetObject.mockResolvedValue({ body: bytes, contentType: 'image/png' })
+    s3Mock.on(GetObjectCommand).resolves({
+      Body: { transformToByteArray: async () => new Uint8Array(Buffer.from('ok')) } as never,
+      ContentType: 'image/png',
+    })
 
     const res = await GET(
       new Request('http://localhost/media/uploads/user-1/re..lease.png'),
@@ -63,11 +71,15 @@ describe('GET /media/[...key]', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(mockedGetObject).toHaveBeenCalledWith('uploads/user-1/re..lease.png')
+    const calls = s3Mock.commandCalls(GetObjectCommand)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].args[0].input.Key).toBe('uploads/user-1/re..lease.png')
   })
 
   it('returns 404 when the object does not exist', async () => {
-    mockedGetObject.mockResolvedValue(null)
+    s3Mock
+      .on(GetObjectCommand)
+      .rejects(Object.assign(new Error('nope'), { name: 'NoSuchKey' }))
 
     const res = await GET(
       new Request('http://localhost/media/uploads/user-1/missing.png'),
@@ -78,7 +90,11 @@ describe('GET /media/[...key]', () => {
   })
 
   it('returns 502 when storage throws a non-404 error', async () => {
-    mockedGetObject.mockRejectedValue(new Error('S3 down'))
+    s3Mock
+      .on(GetObjectCommand)
+      .rejects(
+        Object.assign(new Error('boom'), { $metadata: { httpStatusCode: 500 } }),
+      )
 
     const res = await GET(
       new Request('http://localhost/media/uploads/user-1/boom.png'),

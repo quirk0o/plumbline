@@ -1,25 +1,20 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { AddRelationshipModal } from '../add-relationship-modal'
 
-vi.mock('@/app/components/create-sim-modal', () => ({
-  CreateSimModal: ({
-    onCreated,
-    onClose,
-  }: {
-    onCreated: (sim: { id: string; firstName: string; lastName: string; imageUrl: null }) => void
-    onClose: () => void
-  }) => (
-    <div role="dialog" aria-label="Create new sim mock">
-      <button onClick={() => onCreated({ id: 'sim-new', firstName: 'Nina', lastName: 'Caliente', imageUrl: null })}>
-        Confirm create
-      </button>
-      <button onClick={onClose}>Cancel create</button>
-    </div>
-  ),
+const { mockCreate } = vi.hoisted(() => ({ mockCreate: vi.fn() }))
+
+vi.mock('@/trpc/client', () => ({
+  trpc: {
+    traits: { getAll: { useQuery: () => ({ data: [], isLoading: false }) } },
+    aspirations: { getAll: { useQuery: () => ({ data: [], isLoading: false }) } },
+    careers: { getAll: { useQuery: () => ({ data: [], isLoading: false }) } },
+    households: { listByLegacy: { useQuery: () => ({ data: [], isLoading: false }) } },
+    sims: { create: { useMutation: () => ({ mutateAsync: mockCreate, isPending: false }) } },
+  },
 }))
 
 const partnerAvailable = [
@@ -48,6 +43,12 @@ async function openCombobox(user: ReturnType<typeof userEvent.setup>, label: Reg
   await user.click(screen.getByRole('button', { name: label }))
 }
 
+async function openCreateSimModal(user: ReturnType<typeof userEvent.setup>) {
+  await openCombobox(user, /select sim/i)
+  await user.click(screen.getByText(/create new sim/i))
+  return screen.getByRole('dialog', { name: 'Create new sim' })
+}
+
 describe('AddRelationshipModal', () => {
   it('renders as a dialog with the title "Add relationship"', () => {
     renderModal()
@@ -72,19 +73,32 @@ describe('AddRelationshipModal', () => {
   it('opens CreateSimModal when "Create new sim…" is selected', async () => {
     const user = userEvent.setup()
     renderModal()
-    await openCombobox(user, /select sim/i)
-    await user.click(screen.getByText(/create new sim/i))
-    expect(screen.getByRole('dialog', { name: /create new sim mock/i })).toBeInTheDocument()
+    const createDialog = await openCreateSimModal(user)
+    expect(createDialog).toBeInTheDocument()
   })
 
-  it('pre-selects the new sim in the combobox after creation', async () => {
+  it('pre-selects the newly created sim in the combobox after creation', async () => {
     const user = userEvent.setup()
+    mockCreate.mockResolvedValue({ id: 'sim-new', firstName: 'Nina', lastName: 'Caliente', imageUrl: null })
     renderModal()
-    await openCombobox(user, /select sim/i)
-    await user.click(screen.getByText(/create new sim/i))
-    await user.click(screen.getByRole('button', { name: 'Confirm create' }))
+    const createDialog = await openCreateSimModal(user)
+
+    await user.type(within(createDialog).getByLabelText(/first name/i), 'Nina')
+    await user.type(within(createDialog).getByLabelText(/last name/i), 'Caliente')
+    await user.click(within(createDialog).getByRole('button', { name: 'Create sim' }))
+
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Nina Caliente' })).toBeInTheDocument()
+    })
+  })
+
+  it('closes CreateSimModal when its Back affordance is clicked', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    const createDialog = await openCreateSimModal(user)
+    await user.click(within(createDialog).getByRole('button', { name: /back/i }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Create new sim' })).not.toBeInTheDocument()
     })
   })
 

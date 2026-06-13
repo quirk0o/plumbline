@@ -6,11 +6,6 @@ import { Gender, LifeStage } from '@prisma/client'
 import { SimForm } from '../sim-form'
 
 vi.mock('../image-upload', () => ({ ImageUpload: () => null }))
-vi.mock('../trait-picker', () => ({
-  TraitPicker: ({ onChange }: { onChange: (ids: string[]) => void }) => (
-    <button type="button" onClick={() => onChange(['trait-1'])}>Pick trait</button>
-  ),
-}))
 
 const traits = [{ id: 'trait-1', name: 'Outgoing', category: 'SOCIAL', minLifeStage: null, maxLifeStage: null, conflictsWith: [] }]
 const aspirations = [{ id: 'asp-1', name: 'Popularity', category: 'SOCIAL', minLifeStage: null, maxLifeStage: null }]
@@ -93,7 +88,7 @@ describe('SimForm', () => {
     await selectComboboxOption(user, /gender/i, 'Male')
     await selectComboboxOption(user, /aspiration/i, 'Popularity')
     await selectComboboxOption(user, /career/i, 'Journalist')
-    await user.click(screen.getByRole('button', { name: 'Pick trait' }))
+    await user.click(screen.getByRole('button', { name: 'Outgoing' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())

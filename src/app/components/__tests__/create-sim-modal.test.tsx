@@ -22,11 +22,6 @@ vi.mock('@/trpc/client', () => ({
 }))
 
 vi.mock('../image-upload', () => ({ ImageUpload: () => null }))
-vi.mock('../trait-picker', () => ({
-  TraitPicker: ({ onChange }: { onChange: (ids: string[]) => void }) => (
-    <button type="button" onClick={() => onChange([])}>Traits</button>
-  ),
-}))
 
 describe('CreateSimModal', () => {
   beforeEach(() => {

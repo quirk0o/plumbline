@@ -1,8 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/server/db'
 import { AddSimClient } from './add-sim-client'
 import { fetchTraitsWithConflicts, fetchAspirations, fetchCareers } from '@/lib/reference-data'
+import { getOwnedLegacyBySlug } from '@/server/lib/legacies/getOwnedLegacy'
+import { listHouseholdOptions } from '@/server/lib/households/listHouseholdOptions'
 import styles from './page.module.css'
 
 interface Props {
@@ -15,18 +16,14 @@ export default async function AddSimPage({ params }: Props) {
   if (!session?.user?.id) redirect('/auth/signin')
   const userId = session.user.id
 
-  const legacy = await db.legacy.findFirst({ where: { slug, userId } })
+  const legacy = await getOwnedLegacyBySlug(slug, userId)
   if (!legacy) notFound()
 
   const [traits, aspirations, careers, households] = await Promise.all([
     fetchTraitsWithConflicts(userId),
     fetchAspirations(userId),
     fetchCareers(userId),
-    db.household.findMany({
-      where: { legacyId: legacy.id },
-      select: { id: true, name: true },
-      orderBy: { createdAt: 'asc' },
-    }),
+    listHouseholdOptions(legacy.id),
   ])
 
   return (

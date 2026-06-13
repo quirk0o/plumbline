@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/server/db'
 import { fetchTraitsWithConflicts, fetchAspirations, fetchCareers, fetchSkills } from '@/lib/reference-data'
+import { getSimDetail, listLegacySimsBySlug } from '@/server/lib/sims/pageData'
 import { SimDetailClient } from './sim-detail-client'
 
 interface Props {
@@ -16,38 +16,8 @@ export default async function SimDetailPage({ params }: Props) {
   const userId = session.user.id
 
   const [sim, legacySims, traits, aspirations, careers, skills] = await Promise.all([
-    db.sim.findFirst({
-      where: { id, legacy: { slug, userId } },
-      include: {
-        personalityTraits: { include: { personalityTrait: true } },
-        aspirations: { include: { aspiration: true } },
-        careers: { include: { career: true } },
-        skills: { include: { skill: true } },
-        parentsOf: {
-          include: { child: { select: { id: true, firstName: true, lastName: true, imageUrl: true } } },
-        },
-        childOf: {
-          include: { parent: { select: { id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true } } },
-        },
-        socialRelationshipsA: {
-          select: {
-            simAId: true, simBId: true, romanticStatus: true, endedAt: true,
-            simB: { select: { id: true, firstName: true, lastName: true, imageUrl: true, causeOfDeath: true } },
-          },
-        },
-        socialRelationshipsB: {
-          select: {
-            simAId: true, simBId: true, romanticStatus: true, endedAt: true,
-            simA: { select: { id: true, firstName: true, lastName: true, imageUrl: true, causeOfDeath: true } },
-          },
-        },
-      },
-    }),
-    db.sim.findMany({
-      where: { legacy: { slug, userId } },
-      select: { id: true, firstName: true, lastName: true, imageUrl: true },
-      orderBy: { firstName: 'asc' },
-    }),
+    getSimDetail(slug, id, userId),
+    listLegacySimsBySlug(slug, userId),
     fetchTraitsWithConflicts(userId),
     fetchAspirations(userId),
     fetchCareers(userId),

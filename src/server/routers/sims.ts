@@ -6,7 +6,7 @@ import { assertNoTraitConflicts } from './validate-traits'
 import { recomputeLegacyTrackers } from '../lib/trackerComputation'
 import { imageUrlSchema } from '../lib/image-url-schema'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
-import { deriveGeneration, recomputeGenerations } from '../lib/generation'
+import { deriveGeneration, recomputeGenerations } from '../lib/legacies/generation'
 import { isLifeStageInRange } from '@/lib/life-stage'
 
 const miniTreeSimSelect = {

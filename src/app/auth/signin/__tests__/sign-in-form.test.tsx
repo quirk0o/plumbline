@@ -13,7 +13,6 @@ vi.mock('next-auth/react', () => ({ signIn: mockSignIn }))
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: mockGet }),
 }))
-vi.mock('@/components/plumbob', () => ({ Plumbob: () => null }))
 
 describe('SignInForm', () => {
   beforeEach(() => {

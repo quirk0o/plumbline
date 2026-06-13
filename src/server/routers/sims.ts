@@ -4,7 +4,7 @@ import { Prisma, Gender, LifeStage, OccultType, EmploymentType, CauseOfDeath, Fa
 import { router, protectedProcedure } from '../trpc'
 import { assertNoTraitConflicts } from '../lib/traits/validate-traits'
 import { recomputeLegacyTrackers } from '../lib/challenges/trackerComputation'
-import { imageUrlSchema } from '../lib/image-url-schema'
+import { imageUrlSchema } from '../lib/media/image-url-schema'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
 import { deriveGeneration, recomputeGenerations } from '../lib/legacies/generation'
 import { isLifeStageInRange } from '@/lib/life-stage'

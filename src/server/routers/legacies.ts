@@ -4,7 +4,7 @@ import { Gender, LifeStage, OccultType, EmploymentType, Prisma } from '@prisma/c
 import { router, protectedProcedure } from '../trpc'
 import { uniqueSlug } from '@/lib/slugify'
 import { assertNoTraitConflicts } from '../lib/traits/validate-traits'
-import { imageUrlSchema } from '../lib/image-url-schema'
+import { imageUrlSchema } from '../lib/media/image-url-schema'
 
 const founderInput = z.object({
   firstName: z.string().min(1).max(50),

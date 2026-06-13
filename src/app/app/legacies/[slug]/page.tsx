@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
-import { fetchWorldOptions } from '@/server/lib/world-options'
+import { fetchWorldOptions } from '@/server/lib/households/world-options'
 import {
   computeStats,
   deriveMilestones,

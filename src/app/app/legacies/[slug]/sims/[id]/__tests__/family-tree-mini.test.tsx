@@ -9,31 +9,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
-vi.mock('@xyflow/react', () => ({
-  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
-
-// Stand-in for the real canvas: renders the group label (so we can assert the
-// accessible name LineageFlow derives from legacyName) and a button wired to
-// onSelectSim, mirroring a node click.
-vi.mock('@/components/lineage-tree/lineage-flow', () => ({
-  LineageFlow: ({
-    legacyName,
-    sims,
-    onSelectSim,
-  }: {
-    legacyName?: string
-    sims: { id: string }[]
-    onSelectSim?: (id: string) => void
-  }) => (
-    <div role="group" aria-label={`${legacyName ?? 'Family'} tree — ${sims.length} sims`}>
-      <button type="button" data-testid="lineage-flow" onClick={() => onSelectSim?.('s2')}>
-        tree
-      </button>
-    </div>
-  ),
-}))
-
 const { mockUseQuery } = vi.hoisted(() => ({ mockUseQuery: vi.fn() }))
 
 vi.mock('@/trpc/client', () => ({
@@ -49,14 +24,38 @@ vi.mock('@/trpc/client', () => ({
 // Import AFTER mocks are set up
 import { FamilyTreeMini } from '../family-tree-mini'
 
+// FamilyTreeMini wraps its own <ReactFlowProvider> — no need to add one here.
+// All required LineageFlowSim fields are present (isDeceased, gender, etc.).
 const WITH_FAMILY = {
   data: {
     sims: [
-      { id: 's1', firstName: 'Mortimer', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: false, href: '/app/legacies/goth/sims/s1' },
-      { id: 's2', firstName: 'Bella', lastName: 'Goth', imageUrl: null, generationNumber: 1, lifeStage: 'ADULT', isHeir: true, href: '/app/legacies/goth/sims/s2' },
+      {
+        id: 's1',
+        firstName: 'Mortimer',
+        lastName: 'Goth',
+        imageUrl: null,
+        generationNumber: 1,
+        lifeStage: 'ADULT' as const,
+        isHeir: false,
+        isDeceased: false,
+        gender: 'MALE' as const,
+        href: '/app/legacies/goth/sims/s1',
+      },
+      {
+        id: 's2',
+        firstName: 'Bella',
+        lastName: 'Goth',
+        imageUrl: null,
+        generationNumber: 1,
+        lifeStage: 'ADULT' as const,
+        isHeir: true,
+        isDeceased: false,
+        gender: 'FEMALE' as const,
+        href: '/app/legacies/goth/sims/s2',
+      },
     ],
     familyEdges: [],
-    partnerEdges: [{ simAId: 's1', simBId: 's2', romanticStatus: 'MARRIED' as const }],
+    partnerEdges: [{ simAId: 's1', simBId: 's2', romanticStatus: 'MARRIED' as const, endedAt: null }],
   },
   isLoading: false,
   isError: false,
@@ -70,14 +69,16 @@ describe('FamilyTreeMini', () => {
 
   it('labels the tree group with the focused sim family name', () => {
     render(<FamilyTreeMini simId="s1" />)
-    expect(screen.getByRole('group', { name: /Goth tree — 2 sims/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Goth tree — 2 sims' })).toBeInTheDocument()
   })
 
   it('navigates to a sim href when its node is selected', async () => {
     const user = userEvent.setup()
     render(<FamilyTreeMini simId="s1" />)
-    await user.click(screen.getByTestId('lineage-flow'))
-    expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth/sims/s2')
+    // Click Mortimer Goth's node (id s1 → href /app/legacies/goth/sims/s1).
+    // Mortimer is the focused sim so his label stays "Adult" (no kinship override).
+    await user.click(screen.getByRole('button', { name: 'Mortimer Goth, Adult' }))
+    expect(mockPush).toHaveBeenCalledWith('/app/legacies/goth/sims/s1')
   })
 
   it('shows a loading state', () => {
@@ -104,6 +105,6 @@ describe('FamilyTreeMini', () => {
     })
     render(<FamilyTreeMini simId="s1" />)
     expect(screen.getByText(/no recorded family yet/i)).toBeInTheDocument()
-    expect(screen.queryByTestId('lineage-flow')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Mortimer Goth/ })).not.toBeInTheDocument()
   })
 })

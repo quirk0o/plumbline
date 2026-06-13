@@ -2,7 +2,6 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { Prisma, FamilyRelationshipType, RomanticStatus } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
-import { recomputeLegacyTrackers } from '../lib/challenges/trackerComputation'
 import { assertLegacyOwned, assertLegacyOwnedBySlug, assertSimOwned, assertSimsOwned } from '../lib/auth/ownership'
 import { createSim, createSimInput } from '../lib/sims/createSim'
 import { updateSim, updateSimInput } from '../lib/sims/updateSim'
@@ -10,6 +9,7 @@ import { addSimTrait } from '../lib/sims/traits'
 import { upsertSimSkill, setSimSkillLevel } from '../lib/sims/skills'
 import { addFamilyRelationship, removeFamilyRelationship } from '../lib/sims/family'
 import { addSocialRelationship } from '../lib/sims/social'
+import { completeAspiration, endCareer } from '../lib/sims/lifecycle'
 
 const miniTreeSimSelect = {
   id: true, firstName: true, lastName: true, imageUrl: true, generationNumber: true,
@@ -392,37 +392,14 @@ export const simsRouter = router({
   completeAspiration: protectedProcedure
     .input(z.object({ simId: z.string(), aspirationId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const sim = await assertSimOwned(ctx.db, input.simId, userId)
-
-      const record = await ctx.db.simAspiration.findUnique({
-        where: { simId_aspirationId: { simId: input.simId, aspirationId: input.aspirationId } },
-      })
-      if (!record) throw new TRPCError({ code: 'NOT_FOUND', message: 'Aspiration not found on this sim' })
-      if (record.completedAt) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aspiration already completed' })
-
-      await ctx.db.simAspiration.update({
-        where: { simId_aspirationId: { simId: input.simId, aspirationId: input.aspirationId } },
-        data: { completedAt: new Date() },
-      })
-      void recomputeLegacyTrackers(ctx.db, sim.legacyId)
+      const sim = await assertSimOwned(ctx.db, input.simId, ctx.session.user.id)
+      return completeAspiration(ctx.db, sim, input.aspirationId)
     }),
 
   endCareer: protectedProcedure
     .input(z.object({ simId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const sim = await assertSimOwned(ctx.db, input.simId, userId)
-
-      const activeCareer = await ctx.db.simCareer.findFirst({
-        where: { simId: input.simId, endedAt: null },
-      })
-      if (!activeCareer) throw new TRPCError({ code: 'NOT_FOUND', message: 'No active career to end' })
-
-      await ctx.db.simCareer.update({
-        where: { id: activeCareer.id },
-        data: { endedAt: new Date() },
-      })
-      void recomputeLegacyTrackers(ctx.db, sim.legacyId)
+      const sim = await assertSimOwned(ctx.db, input.simId, ctx.session.user.id)
+      return endCareer(ctx.db, sim)
     }),
 })

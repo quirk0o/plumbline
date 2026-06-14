@@ -3,7 +3,13 @@ import { TRPCError } from '@trpc/server'
 import { Prisma } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 import { resolveThresholds, countThresholdsCrossed } from '../lib/challenges/trackerComputation'
-import { assertLegacyOwned, assertChallengeRunOwned } from '../lib/auth/ownership'
+import {
+  assertLegacyOwned,
+  assertChallengeRunOwned,
+  assertRunPhaseOwned,
+  assertRunTrackerOwned,
+  assertProgressOwned,
+} from '../lib/auth/ownership'
 
 export const challengeRunsRouter = router({
   link: protectedProcedure
@@ -128,13 +134,7 @@ export const challengeRunsRouter = router({
       generationNumber: z.number().int().min(1).nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const phase = await ctx.db.challengeRunPhase.findUnique({
-        where: { id: input.id },
-        include: { run: { include: { legacy: true } } },
-      })
-      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (phase.run.legacy.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertRunPhaseOwned(ctx.db, input.id, ctx.session.user.id)
       const { id, ...fields } = input
       return ctx.db.challengeRunPhase.update({ where: { id }, data: fields })
     }),
@@ -148,13 +148,7 @@ export const challengeRunsRouter = router({
       goalConfig: z.record(z.string(), z.unknown()).nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const tracker = await ctx.db.challengeRunTracker.findUnique({
-        where: { id: input.id },
-        include: { phase: { include: { run: { include: { legacy: true } } } } },
-      })
-      if (!tracker) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (tracker.phase.run.legacy.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertRunTrackerOwned(ctx.db, input.id, ctx.session.user.id)
       const { id, config, goalConfig, ...rest } = input
       return ctx.db.challengeRunTracker.update({
         where: { id },
@@ -172,20 +166,7 @@ export const challengeRunsRouter = router({
       value: z.union([z.boolean(), z.number()]),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const progress = await ctx.db.trackerProgress.findUnique({
-        where: { challengeRunTrackerId: input.challengeRunTrackerId },
-        include: {
-          tracker: {
-            include: {
-              trackerType: true,
-              phase: { include: { run: { include: { legacy: true } } } },
-            },
-          },
-        },
-      })
-      if (!progress) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (progress.tracker.phase.run.legacy.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      const progress = await assertProgressOwned(ctx.db, input.challengeRunTrackerId, ctx.session.user.id)
       if (!progress.isManual) throw new TRPCError({ code: 'BAD_REQUEST', message: 'This tracker is auto-computed' })
 
       const { valueKind } = progress.tracker.trackerType

@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure } from '../trpc'
+import {
+  assertChallengeOwned,
+  assertChallengePhaseOwned,
+  assertChallengeTrackerOwned,
+} from '../lib/auth/ownership'
 
 const jsonObjectSchema = z.record(z.string(), z.unknown())
 
@@ -56,10 +61,7 @@ export const challengesRouter = router({
       isPublic: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const challenge = await ctx.db.challenge.findUnique({ where: { id: input.id } })
-      if (!challenge) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengeOwned(ctx.db, input.id, ctx.session.user.id)
       return ctx.db.challenge.update({
         where: { id: input.id },
         data: {
@@ -73,10 +75,7 @@ export const challengesRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const challenge = await ctx.db.challenge.findUnique({ where: { id: input.id } })
-      if (!challenge) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengeOwned(ctx.db, input.id, ctx.session.user.id)
       return ctx.db.challenge.delete({ where: { id: input.id } })
     }),
 
@@ -89,10 +88,7 @@ export const challengesRouter = router({
       sortOrder: z.number().int().default(0),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const challenge = await ctx.db.challenge.findUnique({ where: { id: input.challengeId } })
-      if (!challenge) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengeOwned(ctx.db, input.challengeId, ctx.session.user.id)
       return ctx.db.challengePhase.create({
         data: {
           challengeId: input.challengeId,
@@ -113,13 +109,7 @@ export const challengesRouter = router({
       sortOrder: z.number().int().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const phase = await ctx.db.challengePhase.findUnique({
-        where: { id: input.id },
-        include: { challenge: true },
-      })
-      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengePhaseOwned(ctx.db, input.id, ctx.session.user.id)
       return ctx.db.challengePhase.update({
         where: { id: input.id },
         data: {
@@ -134,13 +124,7 @@ export const challengesRouter = router({
   removePhase: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const phase = await ctx.db.challengePhase.findUnique({
-        where: { id: input.id },
-        include: { challenge: true },
-      })
-      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengePhaseOwned(ctx.db, input.id, ctx.session.user.id)
       return ctx.db.challengePhase.delete({ where: { id: input.id } })
     }),
 
@@ -156,12 +140,7 @@ export const challengesRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
-      const phase = await ctx.db.challengePhase.findUnique({
-        where: { id: input.challengePhaseId },
-        include: { challenge: true },
-      })
-      if (!phase) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengePhaseOwned(ctx.db, input.challengePhaseId, userId)
       const trackerType = await ctx.db.trackerType.findFirst({
         where: {
           id: input.trackerTypeId,
@@ -194,13 +173,7 @@ export const challengesRouter = router({
       sortOrder: z.number().int().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const tracker = await ctx.db.trackerDefinition.findUnique({
-        where: { id: input.id },
-        include: { phase: { include: { challenge: true } } },
-      })
-      if (!tracker) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (tracker.phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengeTrackerOwned(ctx.db, input.id, ctx.session.user.id)
       return ctx.db.trackerDefinition.update({
         where: { id: input.id },
         data: {
@@ -222,13 +195,7 @@ export const challengesRouter = router({
   removeTracker: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-      const tracker = await ctx.db.trackerDefinition.findUnique({
-        where: { id: input.id },
-        include: { phase: { include: { challenge: true } } },
-      })
-      if (!tracker) throw new TRPCError({ code: 'NOT_FOUND' })
-      if (tracker.phase.challenge.ownerId !== userId) throw new TRPCError({ code: 'FORBIDDEN' })
+      await assertChallengeTrackerOwned(ctx.db, input.id, ctx.session.user.id)
       return ctx.db.trackerDefinition.delete({ where: { id: input.id } })
     }),
 })

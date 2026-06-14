@@ -17,7 +17,7 @@ test('user records relationships for a sim', async ({ page }) => {
     // dialog-close is not a commit signal — register the wait before clicking Add.
     // Note: tRPC batches procedures, so r.ok() reflects the HTTP envelope, not the
     // per-procedure result — the reload-verify step is the authoritative commit assertion.
-    const saved = page.waitForResponse((r) => r.url().includes('sims.addSocialRelationship') && r.ok())
+    const saved = page.waitForResponse((r) => r.url().includes('sims.social.add') && r.ok())
     await dialog.getByRole('button', { name: 'Add' }).click()
     await expect(dialog).not.toBeVisible()
     await saved
@@ -29,7 +29,7 @@ test('user records relationships for a sim', async ({ page }) => {
     await dialog.getByRole('button', { name: 'Family' }).click()
     await page.getByRole('button', { name: 'Select sim' }).click()
     await page.getByRole('option', { name: /Mortimer Goth/ }).click()
-    const saved = page.waitForResponse((r) => r.url().includes('sims.addFamilyRelationship') && r.ok())
+    const saved = page.waitForResponse((r) => r.url().includes('sims.family.add') && r.ok())
     await dialog.getByRole('button', { name: 'Add' }).click()
     await expect(dialog).not.toBeVisible()
     await saved

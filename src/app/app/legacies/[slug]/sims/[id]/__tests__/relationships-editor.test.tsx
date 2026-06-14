@@ -15,11 +15,15 @@ const { addSocialMock, updateSocialMock, removeSocialMock, addFamilyMock, remove
 vi.mock('@/trpc/client', () => ({
   trpc: {
     sims: {
-      addFamilyRelationship: { useMutation: () => ({ mutate: addFamilyMock }) },
-      removeFamilyRelationship: { useMutation: () => ({ mutate: removeFamilyMock }) },
-      addSocialRelationship: { useMutation: () => ({ mutate: addSocialMock }) },
-      updateSocialRelationship: { useMutation: () => ({ mutate: updateSocialMock }) },
-      removeSocialRelationship: { useMutation: () => ({ mutate: removeSocialMock }) },
+      family: {
+        add: { useMutation: () => ({ mutate: addFamilyMock }) },
+        remove: { useMutation: () => ({ mutate: removeFamilyMock }) },
+      },
+      social: {
+        add: { useMutation: () => ({ mutate: addSocialMock }) },
+        update: { useMutation: () => ({ mutate: updateSocialMock }) },
+        remove: { useMutation: () => ({ mutate: removeSocialMock }) },
+      },
     },
   },
 }))

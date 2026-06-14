@@ -66,11 +66,11 @@ export function RelationshipsEditor({
   legacySims: SimMini[]
 }) {
   const legacyId = sim.legacyId
-  const addFamily = trpc.sims.addFamilyRelationship.useMutation()
-  const removeFamily = trpc.sims.removeFamilyRelationship.useMutation()
-  const addSocial = trpc.sims.addSocialRelationship.useMutation()
-  const updateSocial = trpc.sims.updateSocialRelationship.useMutation()
-  const removeSocial = trpc.sims.removeSocialRelationship.useMutation()
+  const addFamily = trpc.sims.family.add.useMutation()
+  const removeFamily = trpc.sims.family.remove.useMutation()
+  const addSocial = trpc.sims.social.add.useMutation()
+  const updateSocial = trpc.sims.social.update.useMutation()
+  const removeSocial = trpc.sims.social.remove.useMutation()
 
   const [members, setMembers] = useState<FamilyMember[]>([
     ...sim.parentsOf.map((r) => ({

@@ -24,6 +24,7 @@ const enforceAuth = t.middleware(({ ctx, next }) => {
 })
 
 export const router = t.router
+export const mergeRouters = t.mergeRouters
 export const publicProcedure = t.procedure
 export const protectedProcedure = t.procedure.use(enforceAuth)
 export const createCallerFactory = t.createCallerFactory

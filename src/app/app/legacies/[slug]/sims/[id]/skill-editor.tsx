@@ -44,9 +44,9 @@ export function SkillEditor({
   allSkills: { id: string; name: string; maxLevel: number }[]
 }) {
   const [localSkills, setLocalSkills] = useState(sim.skills)
-  const addSkill = trpc.sims.addSkill.useMutation()
-  const setLevel = trpc.sims.setSkillLevel.useMutation()
-  const removeSkill = trpc.sims.removeSkill.useMutation()
+  const addSkill = trpc.sims.skills.add.useMutation()
+  const setLevel = trpc.sims.skills.setLevel.useMutation()
+  const removeSkill = trpc.sims.skills.remove.useMutation()
 
   const trackedIds = new Set(localSkills.map((s) => s.skill.id))
   const available = allSkills.filter((s) => !trackedIds.has(s.id))

@@ -17,8 +17,8 @@ export function TraitEditor({ sim, traits, lifeStage }: { sim: SimProp; traits: 
     sim.personalityTraits.map((t) => t.personalityTrait.id),
   )
   const [picking, setPicking] = useState(false)
-  const addTrait = trpc.sims.addTrait.useMutation()
-  const removeTrait = trpc.sims.removeTrait.useMutation()
+  const addTrait = trpc.sims.traits.add.useMutation()
+  const removeTrait = trpc.sims.traits.remove.useMutation()
 
   function handleAdd(traitId: string) {
     setLocalTraitIds((prev) => [...prev, traitId])

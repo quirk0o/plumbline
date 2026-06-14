@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/server/db'
-import { fetchWorldOptions } from '@/server/lib/households/world-options'
+import { getLegacyChronicleData } from '@/server/lib/legacies/getLegacyChronicleData'
 import {
   computeStats,
   deriveMilestones,
@@ -12,7 +11,7 @@ import {
   toChronicleSim,
   toUserMilestones,
 } from './lib/derive'
-import type { FetchedLegacy, HouseholdSim, HouseholdView, WorldOption } from './lib/types'
+import type { FetchedLegacy, HouseholdSim, HouseholdView } from './lib/types'
 import { SectionNav } from './_components/section-nav/section-nav'
 import { ChronicleSections } from './_components/chronicle-sections/chronicle-sections'
 import { ViewTree } from './_components/view-tree/view-tree'
@@ -35,97 +34,12 @@ export default async function LegacyDetailPage({ params }: Props) {
   const session = await auth()
   if (!session?.user?.id) redirect('/auth/signin')
 
-  const legacy = await db.legacy.findFirst({
-    where: { slug, userId: session.user.id },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      founderSimId: true,
-      activeHouseholdId: true,
-      households: {
-        select: {
-          id: true,
-          name: true,
-          worldId: true,
-          lot: true,
-          description: true,
-          funds: true,
-          lotValue: true,
-          foundedGeneration: true,
-          world: { select: { name: true } },
-        },
-        orderBy: { createdAt: 'asc' },
-      },
-      sims: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          imageUrl: true,
-          generationNumber: true,
-          isHeir: true,
-          lifeStage: true,
-          createdAt: true,
-          updatedAt: true,
-          causeOfDeath: true,
-          householdId: true,
-          aspirations: {
-            select: {
-              id: true,
-              completedAt: true,
-              createdAt: true,
-              aspiration: { select: { name: true } },
-            },
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-      },
-    },
-  })
+  const data = await getLegacyChronicleData(slug, session.user.id)
+  if (!data) notFound()
 
-  if (!legacy) notFound()
+  const { legacy, socialRelationships, familyRelationships, userMilestones, worlds } = data
 
-  // Social relationships for sims in this legacy — only MARRIED rows are used
-  // by milestone derivation, but we fetch all and let derive.ts filter so the
-  // fetched shape stays a faithful FetchedSocialRelationship[].
-  const socialRelationships = await db.socialRelationship.findMany({
-    where: { OR: [ { simA: { legacyId: legacy.id } }, { simB: { legacyId: legacy.id } } ] },
-    select: {
-      id: true,
-      simAId: true,
-      simBId: true,
-      romanticStatus: true,
-      endedAt: true,
-      createdAt: true,
-    },
-  })
-
-  // Parent→child links for sims in this legacy — used to decide whether a sim
-  // was born into the legacy (has an in-legacy parent) vs. married/moved in.
-  const familyRelationships = await db.familyRelationship.findMany({
-    where: { child: { legacyId: legacy.id } },
-    select: { parentId: true, childId: true },
-  })
-
-  // Persisted, user-authored milestones for this legacy.
-  const userMilestones = await db.milestone.findMany({
-    where: { legacyId: legacy.id },
-    select: {
-      id: true,
-      title: true,
-      blurb: true,
-      sortOrder: true,
-      sims: { select: { simId: true } },
-    },
-  })
-
-  // Worlds for the household selects — base-game worlds (no pack) plus worlds
-  // whose pack the user owns. A household's current world is merged back in
-  // client-side (preserve-current rule).
-  const worlds: WorldOption[] = await fetchWorldOptions(db, session.user.id)
-
-  // Build a well-typed FetchedLegacy. The select above already matches the
+  // Build a well-typed FetchedLegacy. The select in getLegacyChronicleData matches the
   // FetchedSim/FetchedHousehold shapes; this assignment makes the contract
   // explicit and would fail to compile if either side drifted.
   const fetched: FetchedLegacy = {

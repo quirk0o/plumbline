@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/server/db'
-import { PackType } from '@prisma/client'
+import { countOwnedPacks } from '@/server/lib/packs/packReads'
+import { listUserLegacies } from '@/server/lib/legacies/listUserLegacies'
 import styles from './page.module.css'
 
 export default async function DashboardPage() {
@@ -11,16 +11,8 @@ export default async function DashboardPage() {
   if (!userId) redirect('/auth/signin')
 
   const [ownedCount, legacies] = await Promise.all([
-    db.userPack.count({
-      where: { userId, pack: { type: { not: PackType.BASE_GAME } } },
-    }),
-    db.legacy.findMany({
-      where: { userId },
-      include: {
-        founderSim: { select: { firstName: true, lastName: true, imageUrl: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
+    countOwnedPacks(userId),
+    listUserLegacies(userId),
   ])
 
   const firstName = session.user.name?.split(' ')[0] ?? null

@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/server/db'
 import { getChallengeForView } from '@/server/lib/challenges/challengeBrowse'
+import { listLegacyOptions } from '@/server/lib/legacies/listUserLegacies'
 import { OwnershipBadge } from '../_components/ownership-badge'
 import { PhaseList } from './_components/phase-list'
 import { StartRunDialog } from './_components/start-run-dialog'
@@ -22,11 +22,7 @@ export default async function ChallengeDetailPage({ params }: Props) {
   const challenge = await getChallengeForView(userId, id)
   if (!challenge) notFound()
 
-  const legacies = await db.legacy.findMany({
-    where: { userId },
-    select: { id: true, name: true, slug: true },
-    orderBy: { name: 'asc' },
-  })
+  const legacies = await listLegacyOptions(userId)
 
   const phaseCount = challenge.phases.length
 

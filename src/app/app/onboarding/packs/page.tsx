@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/server/db'
 import { PackGrid } from '@/app/components/pack-grid'
-import { fetchPacksForUser } from '@/lib/packs'
+import { getPacksForUser } from '@/server/lib/packs/packReads'
 import { ButtonLink } from '@/components/ui'
 import styles from './page.module.css'
 
@@ -11,7 +10,7 @@ export default async function OnboardingPacksPage() {
   const userId = session?.user?.id
   if (!userId) redirect('/auth/signin')
 
-  const grouped = await fetchPacksForUser(userId, db)
+  const grouped = await getPacksForUser(userId)
 
   return (
     <div className={styles.page}>

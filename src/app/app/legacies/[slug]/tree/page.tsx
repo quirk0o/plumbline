@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/server/db'
+import { getOwnedLegacyBySlug } from '@/server/lib/legacies/getOwnedLegacy'
 import { TreeAtlas } from '../_components/tree-atlas/tree-atlas'
 
 interface Props {
@@ -12,10 +12,7 @@ export default async function LegacyTreePage({ params }: Props) {
   const session = await auth()
   if (!session?.user?.id) redirect('/auth/signin')
 
-  const legacy = await db.legacy.findFirst({
-    where: { slug, userId: session.user.id },
-    select: { name: true, founderSimId: true },
-  })
+  const legacy = await getOwnedLegacyBySlug(slug, session.user.id)
   if (!legacy) notFound()
 
   return (

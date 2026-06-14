@@ -2,7 +2,8 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { Prisma } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
-import { resolveThresholds, countThresholdsCrossed } from '../lib/challenges/trackerComputation'
+import { linkChallenge } from '../lib/challenges/linkChallenge'
+import { computeProgressUpdate, summarizeRun } from '../lib/challenges/runProgress'
 import {
   assertLegacyOwned,
   assertChallengeRunOwned,
@@ -21,64 +22,7 @@ export const challengeRunsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
       await assertLegacyOwned(ctx.db, input.legacyId, userId)
-
-      const challenge = await ctx.db.challenge.findFirst({
-        where: { id: input.challengeId, OR: [{ isPublic: true }, { ownerId: userId }] },
-        include: {
-          phases: {
-            include: { trackers: { include: { trackerType: true } } },
-            orderBy: { sortOrder: 'asc' },
-          },
-        },
-      })
-      if (!challenge) throw new TRPCError({ code: 'NOT_FOUND', message: 'Challenge not found' })
-
-      const run = await ctx.db.$transaction(async (tx) => {
-        const newRun = await tx.challengeRun.create({
-          data: {
-            legacyId: input.legacyId,
-            sourceChallengeId: input.challengeId,
-            name: input.name ?? challenge.name,
-          },
-        })
-
-        for (const phase of challenge.phases) {
-          const runPhase = await tx.challengeRunPhase.create({
-            data: {
-              challengeRunId: newRun.id,
-              generationNumber: phase.generationNumber,
-              title: phase.title,
-              description: phase.description,
-              sortOrder: phase.sortOrder,
-            },
-          })
-
-          for (const tracker of phase.trackers) {
-            const runTracker = await tx.challengeRunTracker.create({
-              data: {
-                challengeRunPhaseId: runPhase.id,
-                trackerTypeId: tracker.trackerTypeId,
-                name: tracker.name,
-                description: tracker.description,
-                config: tracker.config as Prisma.InputJsonValue,
-                goalConfig: tracker.goalConfig as Prisma.InputJsonValue | undefined,
-                sortOrder: tracker.sortOrder,
-              },
-            })
-            await tx.trackerProgress.create({
-              data: {
-                challengeRunTrackerId: runTracker.id,
-                isManual: tracker.trackerType.computationSpec === null,
-                value: tracker.trackerType.valueKind === 'BOOLEAN' ? false : 0,
-              },
-            })
-          }
-        }
-
-        return newRun
-      })
-
-      return run
+      return linkChallenge(ctx.db, input.legacyId, input.challengeId, userId, input.name)
     }),
 
   listByLegacy: protectedProcedure
@@ -112,18 +56,7 @@ export const challengeRunsRouter = router({
         },
       })
       if (!run) throw new TRPCError({ code: 'NOT_FOUND' })
-
-      const phases = run.phases.map((phase) => ({
-        ...phase,
-        isComplete:
-          phase.trackers.length > 0 && phase.trackers.every((t) => t.progress?.completedAt != null),
-      }))
-
-      return {
-        ...run,
-        phases,
-        isComplete: phases.length > 0 && phases.every((p) => p.isComplete),
-      }
+      return summarizeRun(run)
     }),
 
   updatePhase: protectedProcedure
@@ -169,40 +102,17 @@ export const challengeRunsRouter = router({
       const progress = await assertProgressOwned(ctx.db, input.challengeRunTrackerId, ctx.session.user.id)
       if (!progress.isManual) throw new TRPCError({ code: 'BAD_REQUEST', message: 'This tracker is auto-computed' })
 
-      const { valueKind } = progress.tracker.trackerType
-      const now = new Date()
-
-      let value: boolean | number = input.value as boolean | number
-      let isComplete = false
-
-      if (valueKind === 'BOOLEAN') {
-        value = input.value
-        isComplete = input.value === true
-      } else if (valueKind === 'THRESHOLD') {
-        if (typeof input.value !== 'number') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'THRESHOLD tracker requires a numeric value' })
-        }
-        const thresholds = resolveThresholds(progress.tracker.goalConfig)
-        if (!thresholds) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'THRESHOLD tracker has no valid goalConfig' })
-        }
-        value = countThresholdsCrossed(input.value, thresholds)
-        isComplete = value >= thresholds.length
-      } else {
-        // NUMERICAL
-        if (typeof input.value !== 'number') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'NUMERICAL tracker requires a numeric value' })
-        }
-        value = input.value
-        const goalValue = (progress.tracker.goalConfig as { goalValue?: number } | null)?.goalValue
-        isComplete = goalValue !== undefined && input.value >= goalValue
-      }
+      const { value, isComplete } = computeProgressUpdate(
+        progress.tracker.trackerType.valueKind,
+        progress.tracker.goalConfig,
+        input.value,
+      )
 
       return ctx.db.trackerProgress.update({
         where: { challengeRunTrackerId: input.challengeRunTrackerId },
         data: {
           value: value as Prisma.InputJsonValue,
-          ...(!progress.completedAt && isComplete ? { completedAt: now } : {}),
+          ...(!progress.completedAt && isComplete ? { completedAt: new Date() } : {}),
         },
       })
     }),

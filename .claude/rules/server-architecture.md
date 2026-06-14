@@ -69,8 +69,23 @@ imports the pure conflict rule from `lib/traits/validate-traits.ts`;
 `lib/sims/*` calls `lib/challenges/trackerComputation.ts` to trigger
 recomputes.
 
-Ownership asserts are the exception: they all live together in
-`lib/auth/ownership.ts`. Add new `assert<Entity>Owned` functions there.
+## Ownership asserts vs. domain finders
+
+These are two different things; keep them apart.
+
+- An **ownership assert** is a *guard*: it validates that the current user owns
+  an entity and **throws** (`NOT_FOUND`, or `FORBIDDEN` when the entity exists
+  but belongs to someone else) before any action proceeds. All asserts live
+  together in `lib/auth/ownership.ts` as `assert<Entity>Owned(db, id, userId)` —
+  add new ones there. They are an auth concern, not a domain concern, which is
+  why they share one home regardless of which entity they guard.
+- A **finder** is a plain query *utility* that locates an entity and **returns
+  it or `null`** — it makes no security promise and never throws on absence.
+  Finders belong in their entity's domain (e.g. `lib/legacies/getOwnedLegacy.ts`
+  `getOwnedLegacyBySlug` returns `legacy | null` for an RSC page to turn into
+  `notFound()`). Do NOT put finders in `lib/auth/ownership.ts`, and do NOT make
+  an assert non-throwing — if a caller needs the "or null" shape, that's a
+  finder in the domain, not a softened assert.
 
 ## Who may consume `lib/<domain>/`
 

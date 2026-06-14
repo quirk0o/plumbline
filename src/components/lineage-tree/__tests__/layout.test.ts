@@ -276,6 +276,40 @@ describe('computeLineageLayout — cross-gen bonds', () => {
     )
     expect(laneX).toBeGreaterThan(coParentRightEdge)
   })
+
+  it('brackets toward the upper partner so it never spans across the lower partner', () => {
+    // Reproduces the reported tree: the bond's upper partner (sw, gen3) lands
+    // LEFT of the lower partner (gy, gen4), whose lone parent (khk, gen3) sits to
+    // gy's RIGHT. A right bracket would run the lane between gy and khk, cutting
+    // through gy's parental descent — so the lane must go LEFT, toward sw.
+    const l = computeLineageLayout(
+      [
+        sim('kjh', 1), sim('khk', 3), sim('jgvj', 2), sim('jgf', 1), sim('gy', 4),
+        sim('hfa', 4), sim('hfch', 2), sim('tres', 3), sim('gj', 5), sim('de', 4), sim('sw', 3),
+      ],
+      [
+        { parentId: 'kjh', childId: 'khk' }, { parentId: 'jgvj', childId: 'khk' },
+        { parentId: 'khk', childId: 'gy' }, { parentId: 'khk', childId: 'hfa' },
+        { parentId: 'hfa', childId: 'gj' }, { parentId: 'tres', childId: 'gj' },
+      ],
+      [
+        { simAId: 'hfa', simBId: 'tres', romanticStatus: 'DATING', endedAt: null },
+        { simAId: 'kjh', simBId: 'jgvj', romanticStatus: 'DATING', endedAt: new Date('2026-01-01') },
+        { simAId: 'kjh', simBId: 'jgf', romanticStatus: 'MARRIED', endedAt: null },
+        { simAId: 'gy', simBId: 'sw', romanticStatus: 'PARTNER', endedAt: null },
+        { simAId: 'hfch', simBId: 'gj', romanticStatus: 'PARTNER', endedAt: null },
+      ],
+    )
+    const bond = l.bonds.find((b) => b.a === 'gy' || b.b === 'gy' ? b.a === 'sw' || b.b === 'sw' : false)!
+    expect(bond).toBeDefined()
+    expect(bond.points).toHaveLength(4)
+    const laneX = bond.points[1].x
+    // sw (upper) is left of gy (lower); the lane must be on the left, clear of the
+    // khk→gy descent that runs between gy and khk on the right.
+    expect(l.byId['sw'].x).toBeLessThan(l.byId['gy'].x)
+    expect(laneX).toBeLessThan(l.byId['gy'].x + CREST_ANCHORS.left)
+    expect(laneX).toBeLessThan(l.byId['khk'].x) // never reaches the right-side parent
+  })
 })
 
 describe('computeLineageLayout — components and singles', () => {

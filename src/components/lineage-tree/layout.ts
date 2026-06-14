@@ -143,11 +143,13 @@ function isOnColumn(
 }
 
 /**
- * [low] A 4-point bracket attaching to the partners' RIGHT side edges and
- * running the vertical lane right of the column, so it never coincides with any
- * descent (descents make their vertical approach on column CENTERS). The lane is
- * pushed past any co-parent connector that spans the bond's rows near the column
- * (see bracketLaneX) so it never cuts through a partner's parents' elbows.
+ * [low] A 4-point bracket attaching to the partners' side edges and running the
+ * vertical lane just outside the column, so it never coincides with any descent
+ * (descents make their vertical approach on column CENTERS). The lane goes on the
+ * side of the UPPER partner — so the bond hugs that side instead of spanning
+ * across the lower partner (and its parental descent) to reach the far gutter.
+ * The lane is pushed past any co-parent connector that spans the bond's rows near
+ * the column (see bracketLaneX) so it never cuts through a partner's parents' elbows.
  */
 function sideBracketPoints(
   upper: PositionedNode,
@@ -155,44 +157,53 @@ function sideBracketPoints(
   byId: Record<string, PositionedNode>,
   hangingUnions: HangingUnion[],
 ): { x: number; y: number }[] {
-  const rightEdge = (n: PositionedNode) => n.x + CREST_ANCHORS.right
-  const laneX = bracketLaneX(upper, lower, byId, hangingUnions)
+  const goLeft = upper.x < lower.x
+  const sideEdge = (n: PositionedNode) => n.x + (goLeft ? CREST_ANCHORS.left : CREST_ANCHORS.right)
+  const laneX = bracketLaneX(upper, lower, byId, hangingUnions, goLeft)
   const upperY = upper.y + CREST_ANCHORS.cy
   const lowerY = lower.y + CREST_ANCHORS.cy
   return [
-    { x: rightEdge(upper), y: upperY },
+    { x: sideEdge(upper), y: upperY },
     { x: laneX, y: upperY },
     { x: laneX, y: lowerY },
-    { x: rightEdge(lower), y: lowerY },
+    { x: sideEdge(lower), y: lowerY },
   ]
 }
 
 /**
- * [low] The bracket's vertical lane x: just right of the partners' medallions,
- * but pushed further right to clear any hanging-union co-parent whose connector
- * elbows span the bond's rows near the column. Without this, a lane in the
- * gutter beside the lower partner can cut through that partner's parents' elbows
- * (a co-parent on the right runs its elbow leftward to the union over the gutter).
+ * [low] The bracket's vertical lane x: just outside the partners' medallions on
+ * the chosen side, but pushed further out to clear any hanging-union co-parent
+ * whose connector elbows span the bond's rows near the column. Without this, a
+ * lane in the gutter beside the lower partner can cut through that partner's
+ * parents' elbows (a co-parent runs its elbow toward the union over the gutter).
  */
 function bracketLaneX(
   upper: PositionedNode,
   lower: PositionedNode,
   byId: Record<string, PositionedNode>,
   hangingUnions: HangingUnion[],
+  goLeft: boolean,
 ): number {
-  let rightmost = Math.max(upper.x, lower.x) + CREST_ANCHORS.right
   const top = Math.min(upper.y, lower.y)
   const bottom = Math.max(upper.y, lower.y)
   const colLeft = Math.min(upper.x, lower.x) - NODE_WIDTH
   const colRight = Math.max(upper.x, lower.x) + NODE_WIDTH
+  const coParents: PositionedNode[] = []
   for (const hu of hangingUnions) {
     if (hu.y <= top || hu.y >= bottom) continue // not within the bond's vertical span
     if (hu.x < colLeft || hu.x > colRight) continue // not near the bond column
     for (const parentId of [hu.parentA, hu.parentB]) {
       const parent = byId[parentId]
-      if (parent) rightmost = Math.max(rightmost, parent.x + CREST_ANCHORS.right)
+      if (parent) coParents.push(parent)
     }
   }
+  if (goLeft) {
+    let leftmost = Math.min(upper.x, lower.x) + CREST_ANCHORS.left
+    for (const p of coParents) leftmost = Math.min(leftmost, p.x + CREST_ANCHORS.left)
+    return leftmost - BOND_LANE_GUTTER
+  }
+  let rightmost = Math.max(upper.x, lower.x) + CREST_ANCHORS.right
+  for (const p of coParents) rightmost = Math.max(rightmost, p.x + CREST_ANCHORS.right)
   return rightmost + BOND_LANE_GUTTER
 }
 

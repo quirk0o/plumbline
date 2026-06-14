@@ -1,4 +1,14 @@
-import type { PrismaClient } from '@prisma/client'
+import { TRPCError } from '@trpc/server'
+import type { PrismaClient, Prisma } from '@prisma/client'
+
+type Db = PrismaClient | Prisma.TransactionClient
+
+/** Throw unless the world exists. The household selects filter worlds by owned
+ *  packs as a UX concern; the server only requires that the world is real. */
+export async function assertWorldExists(db: Db, worldId: string) {
+  const world = await db.world.findUnique({ where: { id: worldId }, select: { id: true } })
+  if (!world) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown world' })
+}
 
 export interface WorldOptionRow {
   id: string

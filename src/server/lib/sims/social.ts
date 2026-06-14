@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server'
 import type { Prisma, PrismaClient, RomanticStatus, Sim } from '@prisma/client'
 import { recomputeGenerations } from '../legacies/generation'
 import { recomputeLegacyTrackers } from '../challenges/trackerComputation'
@@ -18,6 +19,9 @@ export async function addSocialRelationship(
   simB: Sim,
   args: AddSocialRelationshipArgs,
 ) {
+  if (simA.legacyId !== simB.legacyId) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
+  }
   const [normalA, normalB] = [simA.id, simB.id].sort()
   const result = await db.$transaction(async (tx) => {
     const created = await tx.socialRelationship.create({

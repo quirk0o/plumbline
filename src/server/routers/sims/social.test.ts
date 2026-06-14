@@ -34,6 +34,15 @@ describe('sims.social.add / sims.social.update / sims.social.remove', () => {
     expect(row?.friendshipScore).toBe(0)
   })
 
+  test('rejects a relationship between sims in two different legacies of the same user', async ({ trpcCaller, userId, legacyId }) => {
+    const otherLegacy = await createTestLegacy(userId)
+    const here = await createTestSim(legacyId, { firstName: 'Here' })
+    const there = await createTestSim(otherLegacy.id, { firstName: 'There' })
+    await expect(
+      trpcCaller.sims.social.add({ simAId: here.id, simBId: there.id, romanticStatus: RomanticStatus.DATING }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST', message: 'Sims must belong to the same legacy' })
+  })
+
   test('does not persist the relationship when the partner adoption write fails', async ({ userId, legacyId }) => {
     const [simAId, simBId] = await makePair(legacyId)
     const parent = await createTestSim(legacyId, { firstName: 'ParentOfB', generationNumber: 1 })

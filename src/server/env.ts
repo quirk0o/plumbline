@@ -3,9 +3,15 @@ import { z } from 'zod'
 // Required in every environment: the database and S3-compatible object storage
 // (MinIO in dev, R2 in prod). Image uploads work in all environments, so the
 // S3 credentials are never optional.
+// Require an http(s) scheme. Bare `z.url()` accepts schemeless strings like
+// "localhost:9000" (the URL parser reads "localhost:" as the scheme), which the
+// S3 client would then reject at request time with a cryptic error — exactly
+// the late failure this module exists to turn into a startup crash.
+const httpUrl = z.url({ protocol: /^https?$/ })
+
 const sharedEnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
-  S3_ENDPOINT: z.url(),
+  S3_ENDPOINT: httpUrl,
   S3_REGION: z.string().min(1),
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: z.string().min(1),
@@ -13,7 +19,7 @@ const sharedEnvSchema = z.object({
   // Optional even in production: Auth.js infers the canonical URL from the
   // request host when AUTH_URL is unset, so it is not a required prod secret
   // the way AUTH_SECRET / the OAuth credentials are.
-  AUTH_URL: z.url().optional(),
+  AUTH_URL: httpUrl.optional(),
 })
 
 // Development and test are lenient: auth/email/OAuth secrets are absent from
@@ -27,7 +33,7 @@ const developmentEnvSchema = sharedEnvSchema.extend({
   EMAIL_FROM: z.string().min(1).optional(),
   // Parsed to a real boolean (defaults to false when unset) so downstream
   // truthiness checks can't be fooled by a stray string like "false".
-  AUTH_TEST_MODE: z.stringbool().optional().default(false),
+  AUTH_TEST_MODE: z.stringbool().default(false),
 })
 
 // Test is identical to development except for the discriminator.
@@ -47,7 +53,6 @@ const productionEnvSchema = sharedEnvSchema.extend({
   // Reject ANY truthy form ("true", "1", "yes", "on", …), not just "true".
   AUTH_TEST_MODE: z
     .stringbool()
-    .optional()
     .default(false)
     .refine((enabled) => enabled === false, {
       message: 'AUTH_TEST_MODE must never be enabled in production',

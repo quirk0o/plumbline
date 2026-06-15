@@ -102,6 +102,14 @@ describe('parseEnv', () => {
     expect(() => parseEnv(env)).toThrow(/S3_ENDPOINT/)
   })
 
+  it('rejects a schemeless S3_ENDPOINT (must have an http/https scheme)', () => {
+    // The URL parser reads "localhost:9000" as scheme "localhost:", which a
+    // bare url() validator would wave through — but the S3 client needs http(s).
+    const env = validProdEnv()
+    env.S3_ENDPOINT = 'localhost:9000'
+    expect(() => parseEnv(env)).toThrow(/S3_ENDPOINT/)
+  })
+
   it('requires AUTH_SECRET in production', () => {
     const env = validProdEnv()
     delete env.AUTH_SECRET

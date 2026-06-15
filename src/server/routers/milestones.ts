@@ -1,19 +1,10 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure } from '../trpc'
-import type { PrismaClient } from '@prisma/client'
 import { assertLegacyOwned, assertMilestoneOwned } from '../lib/auth/ownership'
+import { assertSimsInLegacy } from '../lib/sims/assertSimsInLegacy'
 
 const milestoneInclude = { sims: { select: { simId: true } } } as const
-
-/** Throw unless every simId belongs to the given legacy. */
-async function assertSimsInLegacy(db: PrismaClient, simIds: string[], legacyId: string) {
-  if (simIds.length === 0) return
-  const count = await db.sim.count({ where: { id: { in: simIds }, legacyId } })
-  if (count !== simIds.length) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'All tagged sims must belong to this legacy' })
-  }
-}
 
 export const milestonesRouter = router({
   create: protectedProcedure
@@ -29,7 +20,7 @@ export const milestonesRouter = router({
       const userId = ctx.session.user.id
       const simIds = [...new Set(input.simIds)]
       await assertLegacyOwned(ctx.db, input.legacyId, userId)
-      await assertSimsInLegacy(ctx.db, simIds, input.legacyId)
+      await assertSimsInLegacy(ctx.db, simIds, input.legacyId, 'All tagged sims must belong to this legacy')
 
       return ctx.db.milestone.create({
         data: {
@@ -56,7 +47,7 @@ export const milestonesRouter = router({
       const userId = ctx.session.user.id
       const simIds = [...new Set(input.simIds)]
       const existing = await assertMilestoneOwned(ctx.db, input.id, userId)
-      await assertSimsInLegacy(ctx.db, simIds, existing.legacyId)
+      await assertSimsInLegacy(ctx.db, simIds, existing.legacyId, 'All tagged sims must belong to this legacy')
 
       return ctx.db.$transaction(async (tx) => {
         await tx.milestoneSim.deleteMany({ where: { milestoneId: input.id } })

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { assertWorldExists } from './world-options'
+import { assertSimsInLegacy } from '../sims/assertSimsInLegacy'
 
 export const createHouseholdInput = z.object({
   legacyId: z.string(),
@@ -48,14 +49,6 @@ export async function createHousehold(db: PrismaClient, legacy: LegacyForCreate,
     }
     return { id: household.id }
   })
-}
-
-async function assertSimsInLegacy(db: PrismaClient, simIds: string[], legacyId: string) {
-  if (simIds.length === 0) return
-  const count = await db.sim.count({ where: { id: { in: simIds }, legacyId } })
-  if (count !== simIds.length) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'All sims must belong to this legacy' })
-  }
 }
 
 async function deriveFoundedGeneration(db: PrismaClient, legacyId: string): Promise<number> {

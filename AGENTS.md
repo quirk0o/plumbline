@@ -58,7 +58,7 @@ Then resolve each conflict hunk individually, choosing the better data from each
 
 # Subagent-driven development
 
-Always use git butler when using sub-agent driven development. Never commit directly to the main branch. Each sub-agent project should have its own  branch, which can be merged into master when ready.
+Always use git butler when using sub-agent driven development. Never commit directly to the master branch. Each sub-agent project should have its own  branch, which can be merged into master when ready. Subagents should never perform git operations (`git`) or git butler operations. The orchestrator agent should do all the `but` operations after the sub-agent work is complete and approved by the user.
 
 # Code Quality Rules
 
@@ -92,7 +92,9 @@ npm run test:e2e
 
 All tests must pass before the work is considered done.
 
-Before merging your work, run the /code-review skill to review your work. If your work includes changes to the UI, also run the design-system-reviewer agent and the web-qa-tester agent to check for unintended visual changes. Address any issues these reviews surface before merging. If the reviews find issues that you believe are false positives, document your reasoning in the review comments and ask for a second opinion from another agent or the user. If the reviews find significant issues that require large changes, rerun the reviews after making those changes to ensure all issues are addressed. 
+After finalizing your work, run the /code-review skill. If your work includes changes to the UI, also run the design-system-reviewer agent and the web-qa-tester agent to check for unintended visual changes. Address any issues these reviews surface. If the reviews find issues that you believe are false positives, document your reasoning in the review comments and ask for a second opinion from another agent or the user. If the reviews find significant issues that require large changes, rerun the reviews after making those changes to ensure all issues are addressed. 
+
+Your work is considered complete only after all checks and reviews are passed.
 
 # Local Development: Signing In
 

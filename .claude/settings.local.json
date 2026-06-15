@@ -41,7 +41,10 @@
       "Bash(but status *)",
       "Bash(but diff *)",
       "Bash(but pull *)",
-      "Skill(code-review)"
+      "Skill(code-review)",
+      "Read(//Users/beatka/.claude/plugins/**)",
+      "Read(//Users/beatka/.claude/skills/**)",
+      "Read(//Users/beatka/.claude/**)"
     ]
   }
 }

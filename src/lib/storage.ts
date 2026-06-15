@@ -3,18 +3,19 @@ import {
   PutObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3'
+import { env } from '../server/env'
 
 const s3 = new S3Client({
-  endpoint: process.env.S3_ENDPOINT,
-  region: process.env.S3_REGION,
+  endpoint: env.S3_ENDPOINT,
+  region: env.S3_REGION,
   forcePathStyle: true,
   credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID ?? '',
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? '',
+    accessKeyId: env.S3_ACCESS_KEY_ID,
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
   },
 })
 
-const bucket = process.env.S3_BUCKET ?? ''
+const bucket = env.S3_BUCKET
 
 export async function putObject(
   key: string,

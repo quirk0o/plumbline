@@ -4,7 +4,9 @@ import Credentials from 'next-auth/providers/credentials'
 import type { EmailConfig } from '@auth/core/providers'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { db } from './src/server/db'
+import { env } from './src/server/env'
 import { authConfig } from './auth.config'
+import { buildAuthProviders } from './src/server/auth-providers'
 
 const devEmailProvider: EmailConfig = {
   id: 'email',
@@ -19,28 +21,33 @@ const devEmailProvider: EmailConfig = {
 }
 
 const emailProvider =
-  process.env.NODE_ENV === 'production'
-    ? Resend({ apiKey: process.env.RESEND_API_KEY, from: process.env.EMAIL_FROM })
+  env.NODE_ENV === 'production'
+    ? Resend({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM })
     : devEmailProvider
 
-// Only active when AUTH_TEST_MODE=true — never set this in production or .env.test
+// Passwordless login-as-anyone for E2E. Registered ONLY when test mode is on
+// (see buildAuthProviders); the env module additionally hard-fails if
+// AUTH_TEST_MODE=true in production, so it can never reach a real deployment.
 const testProvider = Credentials({
   id: 'test',
   credentials: { email: { type: 'text' } },
-  authorize: async ({ email }) => {
-    if (process.env.AUTH_TEST_MODE !== 'true') return null
-    return db.user.upsert({
+  authorize: async ({ email }) =>
+    db.user.upsert({
       where: { email: email as string },
       update: {},
       create: { email: email as string, name: 'E2E Test User' },
-    })
-  },
+    }),
 })
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(db),
-  providers: [...authConfig.providers, emailProvider, testProvider],
+  providers: buildAuthProviders({
+    baseProviders: authConfig.providers,
+    emailProvider,
+    testProvider,
+    isTestMode: env.AUTH_TEST_MODE,
+  }),
   callbacks: {
     jwt({ token, user }) {
       if (user?.id) token.id = user.id

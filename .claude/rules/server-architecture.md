@@ -49,7 +49,18 @@ of:
 
 - Take a `db`/`tx` client (`PrismaClient` or `Prisma.TransactionClient`) plus
   typed arguments; entity rows the router already loaded (e.g. from an
-  ownership assert) are passed in, not re-fetched.
+  ownership assert) are passed in, not re-fetched. **Exception — RSC page
+  readers:** a module written purely to feed a server component (`getSimDetail`,
+  `getLegacyChronicleData`, `listUserLegacies`, `packReads`) instead imports the
+  `db` singleton at module scope and omits the `db` parameter, so the page never
+  references `db` at all (see "Who may consume" below). Router-consumed helpers
+  keep the `db`/`tx` parameter — it lets the router thread its request client and
+  compose them inside a transaction. Pick the side by the consumer: router →
+  param; page → owns `db`.
+- A function that opens its own `db.$transaction(...)` (e.g. `createSim`,
+  `createHousehold`, `linkChallenge`) must type `db` as `PrismaClient`, not the
+  union — `$transaction` doesn't exist on a `TransactionClient`. That narrowing
+  is correct, not an oversight.
 - One clear purpose per file, named for the action: `createSim.ts`,
   `buildMiniTree.ts`. Soft cap ~200 lines — if a file grows past it, split.
 - Throw `TRPCError` directly (matches `lib/auth/ownership.ts`); there is no

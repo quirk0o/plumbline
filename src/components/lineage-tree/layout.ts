@@ -5,7 +5,7 @@
  */
 export * from './layout-shared'
 import {
-  BOND_LANE_GUTTER,
+  BOND_LANE_FROM_CENTER,
   CREST_ANCHORS,
   HANGING_UNION_BASE_OFFSET,
   HANGING_UNION_LANE_PITCH,
@@ -143,12 +143,13 @@ function isOnColumn(
 }
 
 /**
- * [low] A 4-point bracket attaching to the partners' side edges and running the
- * vertical lane just outside the column, so it never coincides with any descent
- * (descents make their vertical approach on column CENTERS). The lane goes on the
- * side of the UPPER partner — so the bond hugs that side instead of spanning
- * across the lower partner (and its parental descent) to reach the far gutter.
- * The lane is pushed past any co-parent connector that spans the bond's rows near
+ * [low] A 4-point bracket: each partner is met at its MEDALLION side edge (at
+ * medallion-center height, above the text), then a short horizontal stub runs out
+ * to a vertical lane that sits clear of the whole crest CARD — so the lane never
+ * coincides with a descent (which approach on column CENTERS) nor grazes the
+ * name/stage text (which fills the card width). The lane goes on the side of the
+ * UPPER partner, so the bond hugs that side instead of spanning across the lower
+ * partner. It is pushed past any co-parent card that spans the bond's rows near
  * the column (see bracketLaneX) so it never cuts through a partner's parents' elbows.
  */
 function sideBracketPoints(
@@ -171,11 +172,13 @@ function sideBracketPoints(
 }
 
 /**
- * [low] The bracket's vertical lane x: just outside the partners' medallions on
- * the chosen side, but pushed further out to clear any hanging-union co-parent
- * whose connector elbows span the bond's rows near the column. Without this, a
- * lane in the gutter beside the lower partner can cut through that partner's
- * parents' elbows (a co-parent runs its elbow toward the union over the gutter).
+ * [low] The bracket's vertical lane x: just outside the crest CARDS on the chosen
+ * side (not the medallion — the card carries the name/stage text, which fills its
+ * full width, so a lane at the medallion edge would graze that text). It is pushed
+ * past any co-parent crest that spans the bond's rows near the column, so the
+ * lane never cuts through a partner's parents' elbows or their label. Measured
+ * from each crest's CENTER (node.x + CREST_ANCHORS.cx) so it tracks the label,
+ * not the full card width.
  */
 function bracketLaneX(
   upper: PositionedNode,
@@ -188,23 +191,22 @@ function bracketLaneX(
   const bottom = Math.max(upper.y, lower.y)
   const colLeft = Math.min(upper.x, lower.x) - NODE_WIDTH
   const colRight = Math.max(upper.x, lower.x) + NODE_WIDTH
-  const coParents: PositionedNode[] = []
+  const crests = [upper, lower]
   for (const hu of hangingUnions) {
     if (hu.y <= top || hu.y >= bottom) continue // not within the bond's vertical span
     if (hu.x < colLeft || hu.x > colRight) continue // not near the bond column
     for (const parentId of [hu.parentA, hu.parentB]) {
       const parent = byId[parentId]
-      if (parent) coParents.push(parent)
+      if (parent) crests.push(parent)
     }
   }
+  const center = (n: PositionedNode) => n.x + CREST_ANCHORS.cx
   if (goLeft) {
-    let leftmost = Math.min(upper.x, lower.x) + CREST_ANCHORS.left
-    for (const p of coParents) leftmost = Math.min(leftmost, p.x + CREST_ANCHORS.left)
-    return leftmost - BOND_LANE_GUTTER
+    const leftmost = Math.min(...crests.map(center))
+    return leftmost - BOND_LANE_FROM_CENTER
   }
-  let rightmost = Math.max(upper.x, lower.x) + CREST_ANCHORS.right
-  for (const p of coParents) rightmost = Math.max(rightmost, p.x + CREST_ANCHORS.right)
-  return rightmost + BOND_LANE_GUTTER
+  const rightmost = Math.max(...crests.map(center))
+  return rightmost + BOND_LANE_FROM_CENTER
 }
 
 /** [low] Drop self-edges and edges referencing unknown sims; dedupe family edges. */

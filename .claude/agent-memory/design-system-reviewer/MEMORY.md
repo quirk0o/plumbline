@@ -1,2 +1,3 @@
 - [Lineage tree token patterns](project_lineage_tree_tokens.md) — amber usage in marriage bond, union diamond, gen pill; descent edges use --border-bright
 - [Caption overflow guard](feedback_caption_overflow_guard.md) — absolutely-positioned caption spans need overflow containment; `.stage` in crest-flow-node is the canonical example
+- [Meta-chip pattern in sim detail identity row](project_meta_chip_pattern.md) — `.metaChip` base class composed by `.heirToggle` and `.metaChipReadOnly`; editable gen uses `Combobox variant="chip"` directly

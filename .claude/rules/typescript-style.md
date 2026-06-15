@@ -54,3 +54,9 @@ can't check: making code easy for the next person to read.
   missing case.
 - Reach for `??` and `?.` rather than truthiness checks that mishandle
   `0`/`''` — they say "default when absent" more precisely.
+
+## Avoid god files
+
+- Avoid large files (>300 lines) with many exports. This avoids conflicts when multiple agents
+  edit the same domain and makes it easier to find where a concept lives. 
+  Group files by domain and keep them small and focused.

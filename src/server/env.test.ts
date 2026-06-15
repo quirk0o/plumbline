@@ -55,6 +55,34 @@ describe('parseEnv', () => {
     ).not.toThrow()
   })
 
+  it('treats present-but-empty optional secrets as absent in development', () => {
+    // A local .env commonly has unconfigured placeholders like `RESEND_API_KEY=`.
+    // These empty strings must be treated as "not set", not as a non-empty
+    // string that fails validation.
+    expect(() =>
+      parseEnv({
+        NODE_ENV: 'development',
+        DATABASE_URL: 'postgresql://localhost/db',
+        S3_ENDPOINT: 'http://localhost:9000',
+        S3_REGION: 'us-east-1',
+        S3_ACCESS_KEY_ID: 'minioadmin',
+        S3_SECRET_ACCESS_KEY: 'minioadmin',
+        S3_BUCKET: 'simtrack-dev',
+        AUTH_GOOGLE_ID: '',
+        AUTH_GOOGLE_SECRET: '',
+        RESEND_API_KEY: '',
+        EMAIL_FROM: '',
+        AUTH_SECRET: '',
+      }),
+    ).not.toThrow()
+  })
+
+  it('rejects a present-but-empty required variable (empty = absent)', () => {
+    const env = validProdEnv()
+    env.S3_BUCKET = ''
+    expect(() => parseEnv(env)).toThrow(/S3_BUCKET/)
+  })
+
   it('requires S3 credentials in every environment', () => {
     const env = validProdEnv()
     env.NODE_ENV = 'development'

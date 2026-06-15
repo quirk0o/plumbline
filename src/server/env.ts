@@ -67,14 +67,20 @@ export type Env = z.infer<typeof envSchema>
  * aggregate error if anything is missing or malformed. Exported separately
  * from `env` so it can be unit-tested with crafted inputs.
  *
- * NODE_ENV is normalized to 'development' when absent before discrimination —
- * a discriminated union needs the discriminator present to pick a member.
+ * A present-but-empty variable (`FOO=` in a `.env`, common for unconfigured
+ * placeholders) is treated as absent: `''` is normalized to `undefined` so an
+ * optional field stays optional rather than tripping its non-empty check.
+ * NODE_ENV is then defaulted to 'development' when absent — a discriminated
+ * union needs the discriminator present to pick a member.
  */
 export function parseEnv(source: Record<string, string | undefined>): Env {
-  const result = envSchema.safeParse({
-    ...source,
-    NODE_ENV: source.NODE_ENV ?? 'development',
-  })
+  const normalized: Record<string, string | undefined> = {}
+  for (const [key, value] of Object.entries(source)) {
+    normalized[key] = value === '' ? undefined : value
+  }
+  normalized.NODE_ENV = normalized.NODE_ENV ?? 'development'
+
+  const result = envSchema.safeParse(normalized)
   if (result.success) return result.data
 
   const details = result.error.issues
